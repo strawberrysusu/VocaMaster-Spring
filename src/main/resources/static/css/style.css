@@ -7,13 +7,15 @@ h2 { font-size: 1.2rem; margin-bottom: 12px; }
 .card { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .card:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
 
-input, button, textarea { font-size: 0.95rem; padding: 10px 14px; border-radius: 6px; border: 1px solid #ddd; width: 100%; }
+input, button, textarea, select { font-size: 0.95rem; padding: 10px 14px; border-radius: 6px; border: 1px solid #ddd; width: 100%; }
 input:focus, textarea:focus { outline: none; border-color: #4a90d9; }
 button { background: #4a90d9; color: #fff; border: none; cursor: pointer; margin-top: 8px; }
 button:hover { background: #357abd; }
+button:disabled { background: #ccc; cursor: not-allowed; }
 button.secondary { background: #6c757d; }
-button.danger { background: #dc3545; }
-button.star { background: transparent; border: none; font-size: 1.2rem; width: auto; padding: 4px 8px; margin: 0; }
+button.danger { background: #dc3545; color: #fff; }
+button.star { background: transparent; border: none; font-size: 1.3rem; width: auto; padding: 4px 8px; margin: 0; color: #f5a623; cursor: pointer; }
+button.star:hover { transform: scale(1.2); }
 
 .form-group { margin-bottom: 12px; }
 .form-group label { display: block; font-size: 0.85rem; color: #666; margin-bottom: 4px; }
@@ -29,14 +31,31 @@ button.star { background: transparent; border: none; font-size: 1.2rem; width: a
 
 .badge { display: inline-block; background: #e9ecef; border-radius: 12px; padding: 2px 10px; font-size: 0.8rem; color: #666; }
 
-.quiz-question { font-size: 1.4rem; text-align: center; padding: 24px; background: #fff; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.choice-btn { display: block; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 8px; background: #fff; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+/* 퀴즈 */
+.quiz-progress { text-align: center; font-size: 0.9rem; color: #888; margin-bottom: 12px; }
+.quiz-question { font-size: 1.4rem; text-align: center; padding: 24px; background: #fff; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: bold; }
+
+.choice-btn { display: block; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 8px; background: #fff; color: #333; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 1rem; }
 .choice-btn:hover { border-color: #4a90d9; background: #f0f6ff; }
-.choice-btn.correct { border-color: #28a745; background: #efffef; }
-.choice-btn.wrong { border-color: #dc3545; background: #fff0f0; }
+.choice-btn.correct { border-color: #28a745; background: #efffef; color: #1a7a32; font-weight: bold; }
+.choice-btn.wrong { border-color: #dc3545; background: #fff0f0; color: #c33; text-decoration: line-through; }
+.choice-btn.disabled { pointer-events: none; opacity: 0.6; }
 
 .hidden { display: none; }
 .stats { display: flex; gap: 16px; margin-bottom: 16px; }
 .stat-box { flex: 1; background: #fff; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .stat-box .num { font-size: 1.5rem; font-weight: bold; color: #4a90d9; }
 .stat-box .label { font-size: 0.8rem; color: #888; }
+
+/* 카드 항목 */
+.card-item { display: flex; justify-content: space-between; align-items: center; }
+.card-item .card-text { flex: 1; min-width: 0; }
+.card-item .card-actions { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+
+/* 덱 항목 */
+.deck-item { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.deck-item .deck-info { flex: 1; }
+.deck-delete { background: transparent; border: none; color: #999; font-size: 1.1rem; width: auto; padding: 4px 8px; margin: 0; cursor: pointer; }
+.deck-delete:hover { color: #dc3545; }
+
+.empty-state { color: #999; text-align: center; padding: 24px; font-size: 0.95rem; }

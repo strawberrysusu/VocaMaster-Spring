@@ -13,16 +13,22 @@ spring:
       hibernate:
         format_sql: true
 
+  mustache:
+    suffix: .mustache
+    charset: UTF-8
+
 jwt:
   secret: vocamaster-dev-secret-key-minimum-32-characters-long
   expiration: 604800000  # 7일 (밀리초)
 
-  mustache:
-    suffix: .mustache
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 springdoc:
   swagger-ui:
     path: /api-docs
-
-server:
-  port: 8080

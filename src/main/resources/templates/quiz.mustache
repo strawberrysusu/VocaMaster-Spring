@@ -27,31 +27,33 @@
         <h2>퀴즈 설정</h2>
         <div class="form-group">
             <label>방향</label>
-            <select id="direction" style="padding:10px;border-radius:6px;border:1px solid #ddd;width:100%;">
-                <option value="front_to_back">영어 → 뜻</option>
-                <option value="back_to_front">뜻 → 영어</option>
+            <select id="direction">
+                <option value="front_to_back">영어 &rarr; 뜻</option>
+                <option value="back_to_front">뜻 &rarr; 영어</option>
             </select>
         </div>
-        <button onclick="startQuiz()">시작</button>
+        <button onclick="startQuiz()">퀴즈 시작</button>
     </div>
 
     <!-- 퀴즈 문제 -->
     <div id="quiz-area" class="hidden">
+        <div class="quiz-progress" id="progress"></div>
         <div class="quiz-question" id="question-text"></div>
         <div id="choices"></div>
-        <button id="next-btn" class="hidden" onclick="nextQuestion()">다음 문제</button>
+        <div id="answer-feedback" class="hidden" style="text-align:center;padding:8px;margin-bottom:8px;border-radius:6px;font-weight:bold;"></div>
+        <button id="next-btn" class="hidden" onclick="nextQuestion()">다음 문제 &rarr;</button>
     </div>
 
     <!-- 결과 -->
     <div id="quiz-result" class="hidden">
         <div class="card" style="text-align:center;padding:24px;">
-            <h2>퀴즈 결과</h2>
-            <div class="stats" style="justify-content:center;">
+            <h2>퀴즈 완료!</h2>
+            <div class="stats" style="justify-content:center;margin-top:16px;">
                 <div class="stat-box"><div class="num" id="final-correct">0</div><div class="label">정답</div></div>
                 <div class="stat-box"><div class="num" id="final-wrong" style="color:#dc3545;">0</div><div class="label">오답</div></div>
                 <div class="stat-box"><div class="num" id="final-accuracy">0%</div><div class="label">정답률</div></div>
             </div>
-            <button onclick="startQuiz()">다시 풀기</button>
+            <button onclick="startQuiz()" style="margin-top:16px;">다시 풀기</button>
             <button class="secondary" onclick="location.href='/pages/decks/'+deckId">단어장으로</button>
         </div>
     </div>
@@ -70,6 +72,7 @@ let correctCount = 0;
 let wrongCount = 0;
 let questionCount = 0;
 const MAX_QUESTIONS = 10;
+let answered = false;
 
 function showMsg(text, type) {
     const el = document.getElementById('msg');
@@ -78,17 +81,22 @@ function showMsg(text, type) {
 }
 
 async function startQuiz() {
-    correctCount = 0; wrongCount = 0; questionCount = 0;
+    correctCount = 0; wrongCount = 0; questionCount = 0; answered = false;
     document.getElementById('score-correct').textContent = '0';
     document.getElementById('score-wrong').textContent = '0';
     document.getElementById('quiz-setup').classList.add('hidden');
     document.getElementById('quiz-result').classList.add('hidden');
     document.getElementById('quiz-area').classList.remove('hidden');
     document.getElementById('msg').className = 'msg hidden';
+    document.getElementById('answer-feedback').classList.add('hidden');
     await loadQuestion();
 }
 
 async function loadQuestion() {
+    answered = false;
+    document.getElementById('answer-feedback').classList.add('hidden');
+    document.getElementById('progress').textContent = (questionCount + 1) + ' / ' + MAX_QUESTIONS;
+
     const direction = document.getElementById('direction').value;
     const res = await fetch('/decks/'+deckId+'/quiz/generate', {
         method:'POST', headers,
@@ -96,7 +104,7 @@ async function loadQuestion() {
     });
     if (!res.ok) {
         const d = await res.json();
-        showMsg(d.message, 'error');
+        showMsg(d.message || '퀴즈를 불러올 수 없습니다', 'error');
         document.getElementById('quiz-area').classList.add('hidden');
         document.getElementById('quiz-setup').classList.remove('hidden');
         return;
@@ -107,50 +115,74 @@ async function loadQuestion() {
     document.getElementById('next-btn').classList.add('hidden');
 
     const choicesEl = document.getElementById('choices');
-    choicesEl.innerHTML = data.choices.map((c, i) => `
-        <button class="choice-btn" onclick="submitAnswer(${data.cardId}, '${escJs(c)}', this)">${escHtml(c)}</button>
-    `).join('');
+    choicesEl.innerHTML = '';
+    data.choices.forEach(function(c) {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = c;
+        btn.addEventListener('click', function() {
+            submitAnswer(data.cardId, c, btn);
+        });
+        choicesEl.appendChild(btn);
+    });
 }
 
 async function submitAnswer(cardId, selected, btnEl) {
-    // 이미 답변한 경우 무시
-    if (document.querySelector('.choice-btn.correct') || document.querySelector('.choice-btn.wrong')) return;
+    if (answered) return;
+    answered = true;
 
     const direction = document.getElementById('direction').value;
     const res = await fetch('/decks/'+deckId+'/quiz/submit', {
         method:'POST', headers,
-        body: JSON.stringify({cardId, selectedAnswer: selected, direction})
+        body: JSON.stringify({cardId: cardId, selectedAnswer: selected, direction: direction})
     });
     const data = await res.json();
     questionCount++;
 
     // 모든 버튼 비활성화 + 정답/오답 표시
-    document.querySelectorAll('.choice-btn').forEach(btn => {
+    document.querySelectorAll('.choice-btn').forEach(function(btn) {
+        btn.classList.add('disabled');
         if (btn.textContent === data.correctAnswer) {
             btn.classList.add('correct');
         }
-        if (btn === btnEl && !data.correct) {
-            btn.classList.add('wrong');
-        }
     });
+    if (!data.correct) {
+        btnEl.classList.add('wrong');
+    }
 
+    // 피드백 표시
+    const feedback = document.getElementById('answer-feedback');
     if (data.correct) {
         correctCount++;
+        feedback.textContent = '정답!';
+        feedback.style.background = '#efffef';
+        feedback.style.color = '#1a7a32';
     } else {
         wrongCount++;
+        feedback.textContent = '오답! 정답: ' + data.correctAnswer;
+        feedback.style.background = '#fff0f0';
+        feedback.style.color = '#c33';
     }
+    feedback.classList.remove('hidden');
+
     document.getElementById('score-correct').textContent = correctCount;
     document.getElementById('score-wrong').textContent = wrongCount;
 
     if (questionCount >= MAX_QUESTIONS) {
-        setTimeout(showResult, 1200);
+        document.getElementById('next-btn').textContent = '결과 보기';
+        document.getElementById('next-btn').classList.remove('hidden');
     } else {
+        document.getElementById('next-btn').textContent = '다음 문제 \u2192';
         document.getElementById('next-btn').classList.remove('hidden');
     }
 }
 
 function nextQuestion() {
-    loadQuestion();
+    if (questionCount >= MAX_QUESTIONS) {
+        showResult();
+    } else {
+        loadQuestion();
+    }
 }
 
 function showResult() {
@@ -161,9 +193,6 @@ function showResult() {
     const total = correctCount + wrongCount;
     document.getElementById('final-accuracy').textContent = total > 0 ? Math.round(correctCount/total*100) + '%' : '0%';
 }
-
-function escHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
-function escJs(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 </script>
 </body>
 </html>

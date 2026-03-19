@@ -9,7 +9,7 @@
 <body>
 <div class="container">
     <div class="nav">
-        <h1>내 단어장</h1>
+        <h1 style="margin:0;">내 단어장</h1>
         <div>
             <span id="user-email" style="font-size:0.85rem;color:#888;"></span>
             <a href="#" onclick="logout()" style="margin-left:12px;">로그아웃</a>
@@ -45,6 +45,7 @@ function showMsg(text, type) {
     const el = document.getElementById('msg');
     el.textContent = text;
     el.className = 'msg ' + type;
+    if (type === 'ok') setTimeout(function() { el.className = 'msg hidden'; }, 3000);
 }
 
 async function loadDecks() {
@@ -54,26 +55,36 @@ async function loadDecks() {
 
     const el = document.getElementById('deck-list');
     if (decks.length === 0) {
-        el.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">단어장이 없습니다. 위에서 추가하세요.</p>';
+        el.innerHTML = '<p class="empty-state">단어장이 없습니다. 위에서 추가하세요.</p>';
         return;
     }
-    el.innerHTML = decks.map(d => `
-        <div class="card" onclick="location.href='/pages/decks/${d.id}'" style="cursor:pointer;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <strong>${escHtml(d.title)}</strong>
-                <span class="badge">${d.cardCount}장</span>
-            </div>
-            ${d.description ? '<p style="color:#888;font-size:0.85rem;margin-top:4px;">' + escHtml(d.description) + '</p>' : ''}
-        </div>
-    `).join('');
+    el.innerHTML = decks.map(function(d) {
+        return '<div class="card deck-item">' +
+            '<div class="deck-info" onclick="location.href=\'/pages/decks/' + d.id + '\'">' +
+                '<strong>' + escHtml(d.title) + '</strong>' +
+                ' <span class="badge">' + d.cardCount + '장</span>' +
+                (d.description ? '<p style="color:#888;font-size:0.85rem;margin-top:4px;">' + escHtml(d.description) + '</p>' : '') +
+            '</div>' +
+            '<button class="deck-delete" onclick="event.stopPropagation();deleteDeck(' + d.id + ',\'' + escJs(d.title) + '\')" title="삭제">&times;</button>' +
+        '</div>';
+    }).join('');
 }
 
 async function createDeck() {
     const title = document.getElementById('deck-title').value.trim();
-    if (!title) return;
-    const res = await fetch('/decks', {method:'POST', headers, body: JSON.stringify({title})});
-    if (!res.ok) { const d = await res.json(); showMsg(d.message, 'error'); return; }
+    if (!title) { showMsg('단어장 이름을 입력하세요', 'error'); return; }
+    const res = await fetch('/decks', {method:'POST', headers, body: JSON.stringify({title:title})});
+    if (!res.ok) { const d = await res.json(); showMsg(d.message || '생성 실패', 'error'); return; }
+    showMsg('단어장 생성 완료', 'ok');
     document.getElementById('deck-title').value = '';
+    loadDecks();
+}
+
+async function deleteDeck(id, title) {
+    if (!confirm('"' + title + '" 단어장을 삭제할까요?\n포함된 카드도 모두 삭제됩니다.')) return;
+    const res = await fetch('/decks/' + id, {method:'DELETE', headers});
+    if (!res.ok) { showMsg('삭제 실패', 'error'); return; }
+    showMsg('삭제 완료', 'ok');
     loadDecks();
 }
 
@@ -84,13 +95,13 @@ function logout() {
 }
 
 function escHtml(s) {
-    const div = document.createElement('div');
+    var div = document.createElement('div');
     div.textContent = s;
     return div.innerHTML;
 }
+function escJs(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
-// Enter 키로 추가
-document.getElementById('deck-title').addEventListener('keydown', e => {
+document.getElementById('deck-title').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') createDeck();
 });
 
