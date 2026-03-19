@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocaMaster - 로그인</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="container">
+    <h1>VocaMaster</h1>
+
+    <div id="msg" class="msg hidden"></div>
+
+    <!-- 로그인 폼 -->
+    <div id="login-form">
+        <h2>로그인</h2>
+        <div class="form-group">
+            <label>이메일</label>
+            <input type="email" id="login-email" placeholder="test@example.com">
+        </div>
+        <div class="form-group">
+            <label>비밀번호</label>
+            <input type="password" id="login-pw" placeholder="6자 이상">
+        </div>
+        <button onclick="login()">로그인</button>
+        <button class="secondary" onclick="toggleForm()">회원가입으로</button>
+    </div>
+
+    <!-- 회원가입 폼 -->
+    <div id="register-form" class="hidden">
+        <h2>회원가입</h2>
+        <div class="form-group">
+            <label>이메일</label>
+            <input type="email" id="reg-email" placeholder="test@example.com">
+        </div>
+        <div class="form-group">
+            <label>비밀번호</label>
+            <input type="password" id="reg-pw" placeholder="6자 이상">
+        </div>
+        <div class="form-group">
+            <label>닉네임</label>
+            <input type="text" id="reg-nick" placeholder="닉네임">
+        </div>
+        <button onclick="register()">회원가입</button>
+        <button class="secondary" onclick="toggleForm()">로그인으로</button>
+    </div>
+</div>
+
+<script>
+const API = '';
+
+function showMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = 'msg ' + type;
+}
+
+function toggleForm() {
+    document.getElementById('login-form').classList.toggle('hidden');
+    document.getElementById('register-form').classList.toggle('hidden');
+    document.getElementById('msg').className = 'msg hidden';
+}
+
+async function login() {
+    const email = document.getElementById('login-email').value;
+    const pw = document.getElementById('login-pw').value;
+    try {
+        const res = await fetch(API + '/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: email, password: pw})
+        });
+        const data = await res.json();
+        if (!res.ok) { showMsg(data.message, 'error'); return; }
+        localStorage.setItem('token', data.accessToken);
+        localStorage.setItem('email', email);
+        window.location.href = '/pages/decks';
+    } catch(e) { showMsg('서버 연결 실패', 'error'); }
+}
+
+async function register() {
+    const email = document.getElementById('reg-email').value;
+    const pw = document.getElementById('reg-pw').value;
+    const nick = document.getElementById('reg-nick').value;
+    try {
+        const res = await fetch(API + '/auth/register', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: email, password: pw, nickname: nick})
+        });
+        const data = await res.json();
+        if (!res.ok) { showMsg(data.message, 'error'); return; }
+        localStorage.setItem('token', data.accessToken);
+        localStorage.setItem('email', email);
+        window.location.href = '/pages/decks';
+    } catch(e) { showMsg('서버 연결 실패', 'error'); }
+}
+
+// 이미 로그인 상태면 decks로
+if (localStorage.getItem('token')) {
+    window.location.href = '/pages/decks';
+}
+</script>
+</body>
+</html>

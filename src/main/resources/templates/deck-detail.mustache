@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocaMaster - 단어장</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="container">
+    <div class="nav">
+        <a href="/pages/decks">&larr; 목록으로</a>
+        <a href="#" onclick="logout()">로그아웃</a>
+    </div>
+
+    <h1 id="deck-title">로딩중...</h1>
+    <div class="stats" id="deck-stats"></div>
+
+    <div id="msg" class="msg hidden"></div>
+
+    <!-- 카드 추가 -->
+    <div class="card">
+        <h2>카드 추가</h2>
+        <div class="form-row" style="margin-bottom:8px;">
+            <input type="text" id="card-front" placeholder="영어 (앞면)">
+            <input type="text" id="card-back" placeholder="뜻 (뒷면)">
+            <button onclick="addCard()" style="width:auto;min-width:60px;">추가</button>
+        </div>
+    </div>
+
+    <!-- txt 일괄 등록 -->
+    <div class="card">
+        <h2>텍스트 일괄 등록</h2>
+        <textarea id="import-text" rows="3" placeholder="apple - 사과&#10;banana - 바나나"></textarea>
+        <button onclick="importCards()">일괄 등록</button>
+    </div>
+
+    <!-- 퀴즈 버튼 -->
+    <div style="margin:16px 0;">
+        <button onclick="goQuiz()" id="quiz-btn">퀴즈 풀기</button>
+    </div>
+
+    <!-- 카드 목록 -->
+    <h2>카드 목록</h2>
+    <div id="card-list"></div>
+    <div id="pagination" style="text-align:center;margin-top:12px;"></div>
+</div>
+
+<script>
+const TOKEN = localStorage.getItem('token');
+if (!TOKEN) window.location.href = '/pages/login';
+
+const headers = {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN};
+const deckId = window.location.pathname.split('/').pop();
+let currentPage = 0;
+
+function showMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = 'msg ' + type;
+    setTimeout(() => el.className = 'msg hidden', 3000);
+}
+
+async function loadDeck() {
+    const res = await fetch('/decks/' + deckId, {headers});
+    if (!res.ok) { window.location.href = '/pages/decks'; return; }
+    const d = await res.json();
+    document.getElementById('deck-title').textContent = d.title;
+    document.getElementById('deck-stats').innerHTML = `
+        <div class="stat-box"><div class="num">${d.cardCount}</div><div class="label">전체</div></div>
+        <div class="stat-box"><div class="num">${d.starredCount}</div><div class="label">별표</div></div>
+    `;
+    if (d.cardCount < 5) {
+        document.getElementById('quiz-btn').disabled = true;
+        document.getElementById('quiz-btn').textContent = '퀴즈 (5장 이상 필요)';
+        document.getElementById('quiz-btn').style.background = '#ccc';
+    }
+}
+
+async function loadCards(page) {
+    currentPage = page || 0;
+    const res = await fetch('/decks/'+deckId+'/cards?page='+currentPage+'&size=20', {headers});
+    const data = await res.json();
+
+    const el = document.getElementById('card-list');
+    if (data.content.length === 0) {
+        el.innerHTML = '<p style="color:#999;text-align:center;padding:16px;">카드가 없습니다.</p>';
+        return;
+    }
+    el.innerHTML = data.content.map(c => `
+        <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <strong>${escHtml(c.front)}</strong>
+                <span style="color:#888;margin:0 8px;">&rarr;</span>
+                <span>${escHtml(c.back)}</span>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center;">
+                <button class="star" onclick="toggleStar(${c.id})">${c.starred ? '★' : '☆'}</button>
+                <button class="danger" onclick="deleteCard(${c.id})" style="width:auto;padding:6px 10px;font-size:0.8rem;">삭제</button>
+            </div>
+        </div>
+    `).join('');
+
+    // 페이지네이션
+    if (data.totalPages > 1) {
+        let html = '';
+        for (let i = 0; i < data.totalPages; i++) {
+            html += `<button onclick="loadCards(${i})" style="width:auto;display:inline;margin:2px;${i===currentPage?'background:#357abd;':''}">${i+1}</button>`;
+        }
+        document.getElementById('pagination').innerHTML = html;
+    }
+}
+
+async function addCard() {
+    const front = document.getElementById('card-front').value.trim();
+    const back = document.getElementById('card-back').value.trim();
+    if (!front || !back) return;
+    const res = await fetch('/decks/'+deckId+'/cards', {method:'POST', headers, body:JSON.stringify({front,back})});
+    if (!res.ok) { const d = await res.json(); showMsg(d.message,'error'); return; }
+    document.getElementById('card-front').value = '';
+    document.getElementById('card-back').value = '';
+    document.getElementById('card-front').focus();
+    loadDeck();
+    loadCards(currentPage);
+}
+
+async function importCards() {
+    const text = document.getElementById('import-text').value.trim();
+    if (!text) return;
+    const res = await fetch('/decks/'+deckId+'/import', {method:'POST', headers, body:JSON.stringify({text, separator:' - '})});
+    const data = await res.json();
+    if (!res.ok) { showMsg(data.message, 'error'); return; }
+    showMsg(data.imported + '개 등록, ' + data.failedCount + '개 실패', 'ok');
+    document.getElementById('import-text').value = '';
+    loadDeck();
+    loadCards(0);
+}
+
+async function toggleStar(cardId) {
+    await fetch('/cards/'+cardId+'/star', {method:'PATCH', headers});
+    loadDeck();
+    loadCards(currentPage);
+}
+
+async function deleteCard(cardId) {
+    if (!confirm('삭제할까요?')) return;
+    await fetch('/cards/'+cardId, {method:'DELETE', headers});
+    loadDeck();
+    loadCards(currentPage);
+}
+
+function goQuiz() { window.location.href = '/pages/decks/'+deckId+'/quiz'; }
+function logout() { localStorage.removeItem('token'); localStorage.removeItem('email'); window.location.href='/pages/login'; }
+function escHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+document.getElementById('card-front').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('card-back').focus(); }
+});
+document.getElementById('card-back').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addCard();
+});
+
+loadDeck();
+loadCards(0);
+</script>
+</body>
+</html>

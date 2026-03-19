@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocaMaster - 내 단어장</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="container">
+    <div class="nav">
+        <h1>내 단어장</h1>
+        <div>
+            <span id="user-email" style="font-size:0.85rem;color:#888;"></span>
+            <a href="#" onclick="logout()" style="margin-left:12px;">로그아웃</a>
+        </div>
+    </div>
+
+    <div id="msg" class="msg hidden"></div>
+
+    <!-- 단어장 생성 -->
+    <div class="card">
+        <div class="form-row">
+            <input type="text" id="deck-title" placeholder="새 단어장 이름">
+            <button onclick="createDeck()" style="width:auto;min-width:80px;">추가</button>
+        </div>
+    </div>
+
+    <!-- 단어장 목록 -->
+    <div id="deck-list"></div>
+</div>
+
+<script>
+const TOKEN = localStorage.getItem('token');
+if (!TOKEN) window.location.href = '/pages/login';
+
+const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + TOKEN
+};
+
+document.getElementById('user-email').textContent = localStorage.getItem('email') || '';
+
+function showMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = 'msg ' + type;
+}
+
+async function loadDecks() {
+    const res = await fetch('/decks', {headers});
+    if (res.status === 403 || res.status === 401) { logout(); return; }
+    const decks = await res.json();
+
+    const el = document.getElementById('deck-list');
+    if (decks.length === 0) {
+        el.innerHTML = '<p style="color:#999;text-align:center;padding:24px;">단어장이 없습니다. 위에서 추가하세요.</p>';
+        return;
+    }
+    el.innerHTML = decks.map(d => `
+        <div class="card" onclick="location.href='/pages/decks/${d.id}'" style="cursor:pointer;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <strong>${escHtml(d.title)}</strong>
+                <span class="badge">${d.cardCount}장</span>
+            </div>
+            ${d.description ? '<p style="color:#888;font-size:0.85rem;margin-top:4px;">' + escHtml(d.description) + '</p>' : ''}
+        </div>
+    `).join('');
+}
+
+async function createDeck() {
+    const title = document.getElementById('deck-title').value.trim();
+    if (!title) return;
+    const res = await fetch('/decks', {method:'POST', headers, body: JSON.stringify({title})});
+    if (!res.ok) { const d = await res.json(); showMsg(d.message, 'error'); return; }
+    document.getElementById('deck-title').value = '';
+    loadDecks();
+}
+
+function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    window.location.href = '/pages/login';
+}
+
+function escHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+}
+
+// Enter 키로 추가
+document.getElementById('deck-title').addEventListener('keydown', e => {
+    if (e.key === 'Enter') createDeck();
+});
+
+loadDecks();
+</script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VocaMaster - 퀴즈</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="container">
+    <div class="nav">
+        <a href="#" id="back-link">&larr; 단어장으로</a>
+        <div class="stats" style="margin:0;gap:8px;">
+            <div class="stat-box" style="padding:6px 12px;">
+                <span class="label">정답</span> <span id="score-correct" class="num" style="font-size:1.1rem;">0</span>
+            </div>
+            <div class="stat-box" style="padding:6px 12px;">
+                <span class="label">오답</span> <span id="score-wrong" class="num" style="font-size:1.1rem;color:#dc3545;">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="msg" class="msg hidden"></div>
+
+    <!-- 퀴즈 설정 -->
+    <div id="quiz-setup" class="card">
+        <h2>퀴즈 설정</h2>
+        <div class="form-group">
+            <label>방향</label>
+            <select id="direction" style="padding:10px;border-radius:6px;border:1px solid #ddd;width:100%;">
+                <option value="front_to_back">영어 → 뜻</option>
+                <option value="back_to_front">뜻 → 영어</option>
+            </select>
+        </div>
+        <button onclick="startQuiz()">시작</button>
+    </div>
+
+    <!-- 퀴즈 문제 -->
+    <div id="quiz-area" class="hidden">
+        <div class="quiz-question" id="question-text"></div>
+        <div id="choices"></div>
+        <button id="next-btn" class="hidden" onclick="nextQuestion()">다음 문제</button>
+    </div>
+
+    <!-- 결과 -->
+    <div id="quiz-result" class="hidden">
+        <div class="card" style="text-align:center;padding:24px;">
+            <h2>퀴즈 결과</h2>
+            <div class="stats" style="justify-content:center;">
+                <div class="stat-box"><div class="num" id="final-correct">0</div><div class="label">정답</div></div>
+                <div class="stat-box"><div class="num" id="final-wrong" style="color:#dc3545;">0</div><div class="label">오답</div></div>
+                <div class="stat-box"><div class="num" id="final-accuracy">0%</div><div class="label">정답률</div></div>
+            </div>
+            <button onclick="startQuiz()">다시 풀기</button>
+            <button class="secondary" onclick="location.href='/pages/decks/'+deckId">단어장으로</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const TOKEN = localStorage.getItem('token');
+if (!TOKEN) window.location.href = '/pages/login';
+
+const headers = {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN};
+const pathParts = window.location.pathname.split('/');
+const deckId = pathParts[pathParts.length - 2];
+document.getElementById('back-link').href = '/pages/decks/' + deckId;
+
+let correctCount = 0;
+let wrongCount = 0;
+let questionCount = 0;
+const MAX_QUESTIONS = 10;
+
+function showMsg(text, type) {
+    const el = document.getElementById('msg');
+    el.textContent = text;
+    el.className = 'msg ' + type;
+}
+
+async function startQuiz() {
+    correctCount = 0; wrongCount = 0; questionCount = 0;
+    document.getElementById('score-correct').textContent = '0';
+    document.getElementById('score-wrong').textContent = '0';
+    document.getElementById('quiz-setup').classList.add('hidden');
+    document.getElementById('quiz-result').classList.add('hidden');
+    document.getElementById('quiz-area').classList.remove('hidden');
+    document.getElementById('msg').className = 'msg hidden';
+    await loadQuestion();
+}
+
+async function loadQuestion() {
+    const direction = document.getElementById('direction').value;
+    const res = await fetch('/decks/'+deckId+'/quiz/generate', {
+        method:'POST', headers,
+        body: JSON.stringify({direction})
+    });
+    if (!res.ok) {
+        const d = await res.json();
+        showMsg(d.message, 'error');
+        document.getElementById('quiz-area').classList.add('hidden');
+        document.getElementById('quiz-setup').classList.remove('hidden');
+        return;
+    }
+    const data = await res.json();
+
+    document.getElementById('question-text').textContent = data.question;
+    document.getElementById('next-btn').classList.add('hidden');
+
+    const choicesEl = document.getElementById('choices');
+    choicesEl.innerHTML = data.choices.map((c, i) => `
+        <button class="choice-btn" onclick="submitAnswer(${data.cardId}, '${escJs(c)}', this)">${escHtml(c)}</button>
+    `).join('');
+}
+
+async function submitAnswer(cardId, selected, btnEl) {
+    // 이미 답변한 경우 무시
+    if (document.querySelector('.choice-btn.correct') || document.querySelector('.choice-btn.wrong')) return;
+
+    const direction = document.getElementById('direction').value;
+    const res = await fetch('/decks/'+deckId+'/quiz/submit', {
+        method:'POST', headers,
+        body: JSON.stringify({cardId, selectedAnswer: selected, direction})
+    });
+    const data = await res.json();
+    questionCount++;
+
+    // 모든 버튼 비활성화 + 정답/오답 표시
+    document.querySelectorAll('.choice-btn').forEach(btn => {
+        if (btn.textContent === data.correctAnswer) {
+            btn.classList.add('correct');
+        }
+        if (btn === btnEl && !data.correct) {
+            btn.classList.add('wrong');
+        }
+    });
+
+    if (data.correct) {
+        correctCount++;
+    } else {
+        wrongCount++;
+    }
+    document.getElementById('score-correct').textContent = correctCount;
+    document.getElementById('score-wrong').textContent = wrongCount;
+
+    if (questionCount >= MAX_QUESTIONS) {
+        setTimeout(showResult, 1200);
+    } else {
+        document.getElementById('next-btn').classList.remove('hidden');
+    }
+}
+
+function nextQuestion() {
+    loadQuestion();
+}
+
+function showResult() {
+    document.getElementById('quiz-area').classList.add('hidden');
+    document.getElementById('quiz-result').classList.remove('hidden');
+    document.getElementById('final-correct').textContent = correctCount;
+    document.getElementById('final-wrong').textContent = wrongCount;
+    const total = correctCount + wrongCount;
+    document.getElementById('final-accuracy').textContent = total > 0 ? Math.round(correctCount/total*100) + '%' : '0%';
+}
+
+function escHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function escJs(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+</script>
+</body>
+</html>
