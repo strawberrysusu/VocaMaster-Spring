@@ -3,6 +3,7 @@ package com.vocamaster.quiz;
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.card.dto.CardResponse;
+import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.deck.DeckService;
 import com.vocamaster.quiz.dto.*;
 import com.vocamaster.user.User;
@@ -34,7 +35,7 @@ public class QuizService {
         if (Boolean.TRUE.equals(req.getWrongOnly())) {
             List<Long> wrongIds = quizAttemptRepository.findWrongCardIds(deckId, userId);
             if (wrongIds.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "오답 카드가 없습니다");
+                throw new BadRequestException("오답 카드가 없습니다");
             }
             cards = cardRepository.findAllById(wrongIds).stream()
                     .filter(c -> c.getDeck().getId().equals(deckId))
@@ -46,8 +47,8 @@ public class QuizService {
         }
 
         if (cards.size() < 5) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "퀴즈를 만들려면 최소 5개의 카드가 필요합니다. 현재 " + cards.size() + "개입니다.");
+            throw new BadRequestException
+                    ("퀴즈를 만들려면 최소 5개의 카드가 필요합니다. 현재 " + cards.size() + "개입니다.");
         }
 
         Direction direction = Direction.from(req.getDirection());
@@ -84,7 +85,7 @@ public class QuizService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "카드를 찾을 수 없습니다"));
 
         if (!card.getDeck().getId().equals(deckId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이 덱에 속하지 않는 카드입니다");
+            throw new BadRequestException("이 덱에 속하지 않는 카드입니다");
         }
 
         Direction dir = Direction.from(req.getDirection());

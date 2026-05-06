@@ -3,6 +3,7 @@ package com.vocamaster.card;
 import com.vocamaster.card.dto.CardResponse;
 import com.vocamaster.card.dto.CreateCardRequest;
 import com.vocamaster.card.dto.UpdateCardRequest;
+import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
 import com.vocamaster.user.User;
@@ -108,7 +109,7 @@ class CardServiceTest {
                 .nickname("other")
                 .build());
 
-        assertThrows(ResponseStatusException.class, () ->
+        assertThrows(ForbiddenException.class, () ->
                 cardService.findOne(card.getId(), other.getId()));
     }
 

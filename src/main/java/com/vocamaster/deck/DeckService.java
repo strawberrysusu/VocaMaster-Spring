@@ -1,6 +1,7 @@
 package com.vocamaster.deck;
 
 import com.vocamaster.card.CardRepository;
+import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.deck.dto.CreateDeckRequest;
 import com.vocamaster.deck.dto.DeckResponse;
 import com.vocamaster.deck.dto.UpdateDeckRequest;
@@ -67,7 +68,7 @@ public class DeckService {
         Deck deck = deckRepository.findById(deckId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "단어장을 찾을 수 없습니다"));
         if (!deck.getUser().getId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "접근 권한이 없습니다");
+            throw new ForbiddenException("접근 권한이 없습니다");
         }
         return deck;
     }

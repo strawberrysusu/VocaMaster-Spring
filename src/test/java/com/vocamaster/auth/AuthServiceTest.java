@@ -3,6 +3,8 @@ package com.vocamaster.auth;
 import com.vocamaster.auth.dto.LoginRequest;
 import com.vocamaster.auth.dto.RegisterRequest;
 import com.vocamaster.auth.dto.TokenResponse;
+import com.vocamaster.common.exception.BadRequestException;
+import com.vocamaster.common.exception.UnauthorizedException;
 import com.vocamaster.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,7 +53,7 @@ class AuthServiceTest {
     void register_duplicateEmail() {
         authService.register(registerRequest());
 
-        assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(BadRequestException.class, () ->
                 authService.register(registerRequest()));
     }
 
@@ -81,7 +83,7 @@ class AuthServiceTest {
         loginReq.setEmail("test@example.com");
         loginReq.setPassword("wrongpassword");
 
-        assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(UnauthorizedException.class, () ->
                 authService.login(loginReq));
     }
 
@@ -92,7 +94,7 @@ class AuthServiceTest {
         loginReq.setEmail("nobody@example.com");
         loginReq.setPassword("password123");
 
-        assertThrows(IllegalArgumentException.class, () ->
+        assertThrows(UnauthorizedException.class, () ->
                 authService.login(loginReq));
     }
 }

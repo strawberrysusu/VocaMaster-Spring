@@ -206,10 +206,10 @@
 - [x] **[보너스]** 6개 테스트 클래스에 `@ActiveProfiles("test")` 명시 (default profile=dev로 떨어져 H2에 MySQL용 V1이 실행되던 문제 해결)
 
 ### 🧹 코드 정리
-- [ ] **[SHOULD]** `BaseTimeEntity` 추가 (`createdAt`, `updatedAt`) — 모든 엔티티 상속
-- [ ] **[MUST]** `ErrorResponse` DTO 통일 형식 정의 (status/code/message/timestamp)
-- [ ] **[MUST]** `GlobalExceptionHandler` 보강 — `NotFoundException`, `ForbiddenException`, `BadRequestException`, `UnauthorizedException` 분리
-- [ ] **[MUST]** 서비스 코드의 `ResponseStatusException`, `IllegalArgumentException` 사용처 정리
+- [ ] **[SHOULD]** `BaseTimeEntity` 추가 (`createdAt`, `updatedAt`) — 모든 엔티티 상속 (다음 Phase에서)
+- [x] **[MUST]** `ErrorResponse` DTO 통일 형식 정의 (status/code/message/timestamp)
+- [x] **[MUST]** `GlobalExceptionHandler` 보강 — `NotFoundException`, `ForbiddenException`, `BadRequestException`, `UnauthorizedException` 분리 + 보안 일관성 (이메일 없음/비번 틀림 모두 401)
+- [x] **[MUST]** 서비스 코드의 `ResponseStatusException`, `IllegalArgumentException` 사용처 정리 (11건 교체 + legacy 핸들러 제거 + 9개 테스트 assertThrows 갱신)
 - [ ] **[STRETCH]** 패키지 구조 점검
 
 ### 📓 학습 노트

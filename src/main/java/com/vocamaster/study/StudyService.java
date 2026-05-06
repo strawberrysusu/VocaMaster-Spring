@@ -4,6 +4,9 @@ import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.card.dto.CardResponse;
 import com.vocamaster.common.Direction;
+import com.vocamaster.common.exception.BadRequestException;
+import com.vocamaster.common.exception.ForbiddenException;
+import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckService;
 import com.vocamaster.quiz.QuizAttemptRepository;
@@ -44,7 +47,7 @@ public class StudyService {
         }
 
         if (cards.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "학습할 카드가 없습니다");
+            throw new NotFoundException("학습할 카드가 없습니다");
         }
 
         StudySession session = StudySession.builder()
@@ -70,7 +73,7 @@ public class StudyService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "학습 세션을 찾을 수 없습니다"));
 
         if (!session.getUser().getId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "접근 권한이 없습니다");
+            throw new ForbiddenException("접근 권한이 없습니다");
         }
 
         Card card = cardRepository.findById(req.getCardId())
@@ -78,7 +81,7 @@ public class StudyService {
 
         // 이 카드가 세션의 deck에 속하는지 검증
         if (!card.getDeck().getId().equals(session.getDeck().getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이 학습 세션의 단어장에 속하지 않는 카드입니다");
+            throw new BadRequestException("이 학습 세션의 단어장에 속하지 않는 카드입니다");
         }
 
         StudyRecord record = StudyRecord.builder()
@@ -94,10 +97,10 @@ public class StudyService {
     // 학습 세션 결과 요약 (모르는 카드 목록 포함)
     public StudySummaryResponse getSessionSummary(Long sessionId, Long userId) {
         StudySession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "학습 세션을 찾을 수 없습니다"));
+                .orElseThrow(() -> new ForbiddenException("학습 세션을 찾을 수 없습니다"));
 
         if (!session.getUser().getId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "접근 권한이 없습니다");
+            throw new ForbiddenException("접근 권한이 없습니다");
         }
 
         List<StudyRecord> records = session.getRecords();

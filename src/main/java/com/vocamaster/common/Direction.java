@@ -1,5 +1,6 @@
 package com.vocamaster.common;
 
+import com.vocamaster.common.exception.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -27,7 +28,7 @@ public enum Direction {
                 return d;
             }
         }
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "direction은 'front_to_back' 또는 'back_to_front'만 가능합니다. 입력값: " + value);
+        throw new BadRequestException
+                ("direction은 'front_to_back' 또는 'back_to_front'만 가능합니다. 입력값: " + value);
     }
 }

@@ -3,6 +3,8 @@ package com.vocamaster.auth;
 import com.vocamaster.auth.dto.LoginRequest;
 import com.vocamaster.auth.dto.RegisterRequest;
 import com.vocamaster.auth.dto.TokenResponse;
+import com.vocamaster.common.exception.BadRequestException;
+import com.vocamaster.common.exception.UnauthorizedException;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +21,7 @@ public class AuthService {
 
     public TokenResponse register(RegisterRequest req) {
         if (userRepository.existsByEmail(req.getEmail())) {
-            throw new IllegalArgumentException("이미 사용 중인 이메일입니다");
+            throw new BadRequestException("이미 사용 중인 이메일입니다");
         }
 
         User user = User.builder()
@@ -36,10 +38,10 @@ public class AuthService {
 
     public TokenResponse login(LoginRequest req) {
         User user = userRepository.findByEmail(req.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다"));
+                .orElseThrow(() -> new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다"));
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("이메일 또는 비밀번호가 올바르지 않습니다");
+            throw new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다");
         }
 
         String token = jwtProvider.createToken(user.getId(), user.getEmail());

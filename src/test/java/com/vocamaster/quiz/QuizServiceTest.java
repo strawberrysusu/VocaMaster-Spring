@@ -2,6 +2,8 @@ package com.vocamaster.quiz;
 
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
+import com.vocamaster.common.exception.BadRequestException;
+import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
 import com.vocamaster.quiz.dto.GenerateQuizRequest;
@@ -17,7 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -82,10 +84,10 @@ class QuizServiceTest {
         GenerateQuizRequest req = new GenerateQuizRequest();
         req.setDirection("front_to_back");
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+        BadRequestException ex = assertThrows(BadRequestException.class, () ->
                 quizService.generateQuiz(deck.getId(), user.getId(), req));
 
-        assertTrue(ex.getReason().contains("최소 5개"));
+        assertTrue(ex.getMessage().contains("최소 5개"));
     }
 
     @Test
@@ -135,7 +137,7 @@ class QuizServiceTest {
         GenerateQuizRequest req = new GenerateQuizRequest();
         req.setDirection("front_to_back");
 
-        assertThrows(ResponseStatusException.class, () ->
+        assertThrows(ForbiddenException.class, () ->
                 quizService.generateQuiz(deck.getId(), other.getId(), req));
     }
 
@@ -147,10 +149,10 @@ class QuizServiceTest {
         GenerateQuizRequest req = new GenerateQuizRequest();
         req.setDirection("wrong_value");
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+        BadRequestException ex = assertThrows(BadRequestException.class, () ->
                 quizService.generateQuiz(deck.getId(), user.getId(), req));
 
-        assertTrue(ex.getReason().contains("front_to_back"));
+        assertTrue(ex.getMessage().contains("front_to_back"));
     }
 
     @Test
@@ -164,7 +166,7 @@ class QuizServiceTest {
         req.setSelectedAnswer("anything");
         req.setDirection("garbage");
 
-        assertThrows(ResponseStatusException.class, () ->
+        assertThrows(BadRequestException.class, () ->
                 quizService.submitAnswer(deck.getId(), user.getId(), req));
     }
 }

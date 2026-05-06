@@ -2,6 +2,7 @@ package com.vocamaster.study;
 
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
+import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
 import com.vocamaster.study.dto.RecordStudyRequest;
@@ -16,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -67,10 +67,10 @@ class StudyServiceTest {
         recordReq.setCardId(cardInDeck2.getId());
         recordReq.setKnown(true);
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+        BadRequestException ex = assertThrows(BadRequestException.class, () ->
                 studyService.recordAnswer(session.getSessionId(), user.getId(), recordReq));
 
-        assertTrue(ex.getReason().contains("속하지 않는 카드"));
+        assertTrue(ex.getMessage().contains("속하지 않는 카드"));
     }
 
     @Test
@@ -79,7 +79,7 @@ class StudyServiceTest {
         StartStudyRequest req = new StartStudyRequest();
         req.setDirection("invalid_direction");
 
-        assertThrows(ResponseStatusException.class, () ->
+        assertThrows(BadRequestException.class, () ->
                 studyService.startSession(deck1.getId(), user.getId(), req));
     }
 
