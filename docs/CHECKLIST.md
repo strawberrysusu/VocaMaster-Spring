@@ -9,10 +9,10 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | Phase 0 — 부트스트랩 |
-| **이번 주 집중** | 문서 → 설정 분리 → Flyway |
-| **전체 진행도** | MVP 베이스 완료 / Phase 0 ~ 8 진행 중 |
-| **다음 마일스톤** | Phase 1 진입 (인증 강화, refresh token) |
+| **진행 중인 Phase** | **Phase 0 완료** → Phase 1 대기 |
+| **이번 주 집중** | (Week 1 종료) Phase 1 진입 준비 |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ~ 8 진행 중 |
+| **다음 마일스톤** | Phase 1 시작 — Refresh Token Rotation |
 
 ---
 
@@ -213,15 +213,15 @@
 - [ ] **[STRETCH]** 패키지 구조 점검
 
 ### 📓 학습 노트
-- [ ] **[SHOULD]** `docs/notes/week-1.md` 작성 (한 일 / 이해한 것 / 헷갈리는 것 / 면접 질문 3개)
+- [x] **[SHOULD]** `docs/notes/week-1.md` 작성 (한 일 / 이해한 것 / 헷갈리는 것 / 면접 질문 3개)
 
 ### ✅ Phase 0 완료 기준
-- [ ] 모든 MUST 항목 완료
-- [ ] `gradlew bootRun`으로 dev profile 정상 실행
-- [ ] `gradlew test` 그린
-- [ ] `application-prod.yml`에 비밀 정보 0개 (전부 env var)
-- [ ] Flyway로 빈 DB → 현재 스키마 재현 성공
-- [ ] README에 환경변수 설정 안내 반영
+- [x] 모든 MUST 항목 완료
+- [x] `gradlew bootRun`으로 dev profile 정상 실행
+- [x] `gradlew test` 그린 (24/24)
+- [x] `application-prod.yml`에 비밀 정보 0개 (전부 env var)
+- [x] Flyway로 빈 DB → 현재 스키마 재현 성공
+- [x] README에 환경변수 설정 안내 반영
 
 ### 🆕 추가 아이디어
 *(공란)*
