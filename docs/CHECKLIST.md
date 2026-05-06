@@ -186,14 +186,14 @@
 - [ ] **[SHOULD]** `docs/notes/week-1.md` — 학습 노트 첫 주 시작
 
 ### ⚙️ 설정 분리 + 환경변수화
-- [ ] **[MUST]** `application.yml` 공통 설정만 남기기
-- [ ] **[MUST]** `application-dev.yml` 분리 (로컬 MySQL, show-sql=true)
-- [ ] **[MUST]** `application-test.yml` 분리 (H2, ddl-auto=create-drop)
-- [ ] **[MUST]** `application-prod.yml` 분리 (env vars only, ddl-auto=validate, show-sql=false)
-- [ ] **[MUST]** DB url/username/password → `${DB_URL}` 등으로 추출
-- [ ] **[MUST]** JWT secret → `${JWT_SECRET}` 추출
-- [ ] **[MUST]** `.env.example` 작성 (실제 `.env`는 `.gitignore`에 추가)
-- [ ] **[SHOULD]** README에 "로컬 실행 시 환경변수 설정 방법" 보강
+- [x] **[MUST]** `application.yml` 공통 설정만 남기기
+- [x] **[MUST]** `application-dev.yml` 분리 (로컬 MySQL, show-sql=true)
+- [x] **[MUST]** `application-test.yml` 분리 (H2, ddl-auto=create-drop)
+- [x] **[MUST]** `application-prod.yml` 분리 (env vars only, ddl-auto=validate, show-sql=false)
+- [x] **[MUST]** DB url/username/password → `${DB_URL}` 등으로 추출 (prod만, dev는 yml에 직접)
+- [x] **[MUST]** JWT secret → `${JWT_SECRET}` 추출 (prod만, dev는 yml에 직접)
+- [x] **[MUST]** `.env.example` 작성 (실제 `.env`는 이미 `.gitignore`에 등록됨)
+- [ ] **[SHOULD]** README에 "로컬 실행 시 환경변수 설정 방법" 보강 (prod 배포 시점에)
 
 ### 🗄️ Flyway 도입
 - [ ] **[MUST]** `build.gradle`에 `flyway-core` + `flyway-mysql` 추가
