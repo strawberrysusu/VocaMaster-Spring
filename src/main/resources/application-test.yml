@@ -10,5 +10,8 @@ spring:
       ddl-auto: create-drop
     show-sql: false
 
+  flyway:
+    enabled: false    # 테스트는 H2 + JPA 자동 생성, MySQL용 Flyway 끄기
+
 jwt:
   secret: vocamaster-test-secret-key-minimum-32-characters-long

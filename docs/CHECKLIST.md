@@ -174,9 +174,9 @@
 > **모드:** 🟢 A (전부 직접)
 
 ### ⚠️ Flyway 안전 규칙 (작업 전 필독)
-- [ ] **[MUST]** 한 번 적용한 `V*.sql`은 **절대 수정 금지** (checksum mismatch 발생)
-- [ ] **[MUST]** 변경이 필요하면 새 `V{n+1}__변경.sql` 파일 추가
-- [ ] **[MUST]** 로컬 DB는 마이그레이션 시작 전 drop 후 재생성
+- [x] **[MUST]** 한 번 적용한 `V*.sql`은 **절대 수정 금지** (checksum mismatch 발생)
+- [x] **[MUST]** 변경이 필요하면 새 `V{n+1}__변경.sql` 파일 추가
+- [x] **[MUST]** 로컬 DB는 마이그레이션 시작 전 drop 후 재생성
 - [ ] **[SHOULD]** `docs/migration-rule.md` 작성 (이 규칙 + 실수 사례)
 
 ### 📝 문서
@@ -196,13 +196,14 @@
 - [ ] **[SHOULD]** README에 "로컬 실행 시 환경변수 설정 방법" 보강 (prod 배포 시점에)
 
 ### 🗄️ Flyway 도입
-- [ ] **[MUST]** `build.gradle`에 `flyway-core` + `flyway-mysql` 추가
-- [ ] **[MUST]** `src/main/resources/db/migration/` 디렉토리 생성
-- [ ] **[MUST]** `V1__init_schema.sql` — 현재 엔티티 직접 SQL로 작성
-- [ ] **[MUST]** `application.yml`에 Flyway 설정 추가
-- [ ] **[MUST]** dev profile에서 `ddl-auto: validate`로 변경
-- [ ] **[MUST]** 로컬에서 마이그레이션 한 번 돌려서 검증
-- [ ] **[SHOULD]** test profile은 `ddl-auto=create-drop` 유지 (Flyway off)
+- [x] **[MUST]** `build.gradle`에 `flyway-core` + `flyway-mysql` 추가
+- [x] **[MUST]** `src/main/resources/db/migration/` 디렉토리 생성
+- [x] **[MUST]** `V1__init_schema.sql` — 현재 엔티티 직접 SQL로 작성
+- [x] **[MUST]** `application.yml`에 Flyway 설정 추가 (dev: enabled, test: disabled)
+- [x] **[MUST]** dev profile에서 `ddl-auto: validate`로 변경
+- [x] **[MUST]** 로컬에서 마이그레이션 한 번 돌려서 검증 (DB drop → recreate → bootRun → V1 적용 + JPA validate 통과)
+- [x] **[SHOULD]** test profile은 `ddl-auto=create-drop` 유지 (Flyway off)
+- [x] **[보너스]** 6개 테스트 클래스에 `@ActiveProfiles("test")` 명시 (default profile=dev로 떨어져 H2에 MySQL용 V1이 실행되던 문제 해결)
 
 ### 🧹 코드 정리
 - [ ] **[SHOULD]** `BaseTimeEntity` 추가 (`createdAt`, `updatedAt`) — 모든 엔티티 상속
