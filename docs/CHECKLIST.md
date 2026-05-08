@@ -257,7 +257,7 @@
 ### 🍪 Refresh Token 전달 방식 결정
 - [x] **[MUST]** Refresh token = **httpOnly cookie**로 결정 (XSS 노출 차단)
 - [x] **[MUST]** Cookie path `/auth`로 제한 (Controller 매핑 따라 — `/auth/refresh`, `/auth/logout`만 첨부)
-- [ ] **[MUST]** prod: `Secure=true` + `SameSite=Strict` (yml 환경별 분기 — Phase 1 후속)
+- [x] **[MUST]** prod: `Secure=true` + `SameSite=Strict` (`auth.cookie.*` yml 키 + `@Value` 주입으로 환경별 분기)
 - [x] **[MUST]** dev: `SameSite=Lax` + `Secure=false`
 - [x] **[SHOULD]** Access token은 body로 반환, 클라이언트가 메모리/localStorage 저장
 

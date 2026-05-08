@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,12 @@ public class AuthController {
     private static final Duration REFRESH_COOKIE_MAX_AGE = Duration.ofDays(14);
 
     private final AuthService authService;
+
+    @Value("${auth.cookie.secure}")
+    private boolean cookieSecure;
+
+    @Value("${auth.cookie.same-site}")
+    private String cookieSameSite;
 
     @PostMapping("/register")
     @Operation(summary = "회원가입 (자동 로그인 — access body + refresh httpOnly cookie)")
@@ -60,8 +67,8 @@ public class AuthController {
         authService.logout(refreshToken);
         ResponseCookie clear = ResponseCookie.from(REFRESH_COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(false)        // dev: false. prod 분기는 다음 단계에서.
-                .sameSite("Lax")
+                .secure(cookieSecure)
+                .sameSite(cookieSameSite)
                 .path(REFRESH_COOKIE_PATH)
                 .maxAge(0)
                 .build();
@@ -75,14 +82,15 @@ public class AuthController {
     private ResponseEntity<TokenResponse> tokenResponseWithCookie(TokenPair pair) {
         ResponseCookie cookie = ResponseCookie.from(REFRESH_COOKIE_NAME, pair.refreshToken())
                 .httpOnly(true)         // JS에서 못 읽음 (XSS 방어)
-                .secure(false)          // dev: false. prod 분기는 다음 단계에서.
-                .sameSite("Lax")        // dev: Lax. prod: Strict.
+                .secure(cookieSecure)          // dev: false. prod 분기는 다음 단계에서.
+                .sameSite(cookieSameSite)        // dev: Lax. prod: Strict.
                 .path(REFRESH_COOKIE_PATH)
                 .maxAge(REFRESH_COOKIE_MAX_AGE)
                 .build();
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .body(new TokenResponse(pair.accessToken()));
+
     }
 
     private String getUserAgent(HttpServletRequest request) {

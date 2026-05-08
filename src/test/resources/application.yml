@@ -20,3 +20,8 @@ jwt:
 
 server:
   port: 0
+
+auth:
+  cookie:
+    secure: false
+    same-site: Lax

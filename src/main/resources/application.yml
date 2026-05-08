@@ -21,3 +21,8 @@ server:
 springdoc:
   swagger-ui:
     path: /api-docs
+
+auth:
+  cookie:
+    secure: false
+    same-site: Lax
