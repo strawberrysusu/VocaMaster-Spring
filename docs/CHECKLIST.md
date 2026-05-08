@@ -9,10 +9,10 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 1 진행 중** (인프라 ✅ / 인증 흐름 본체 진행) |
-| **이번 주 집중** | JWT claim 변경 + AuthService rotation + /refresh /logout 엔드포인트 |
-| **전체 진행도** | Phase 0 ✅ / Phase 1 ~50% / Phase 2~8 대기 |
-| **다음 마일스톤** | Phase 1 — `/api/auth/refresh` rotation + reuse detection 동작 |
+| **진행 중인 Phase** | **Phase 1 진행 중** (인증 흐름 본체 ✅ / 회원 관리 + 보안 정리 남음) |
+| **이번 주 집중** | 회원 정보 조회/수정/탈퇴 + CustomUserDetails + 페이지네이션 안전장치 |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ~75% / Phase 2~8 대기 |
+| **다음 마일스톤** | Phase 1 완료 — 회원 관리 API + CustomUserDetails 도입 |
 
 ---
 
@@ -245,21 +245,21 @@
 - [x] **[MUST]** Access token 수명 30분~1시간으로 단축, Refresh 14일
 - [x] **[MUST]** JWT claim에 `jti(UUID)` 추가
 - [x] **[MUST]** Access는 `type=access`, Refresh는 `type=refresh` claim 추가
-- [ ] **[MUST]** `POST /api/auth/refresh` 엔드포인트
-- [ ] **[MUST]** Refresh token rotation 로직 (사용 시 즉시 폐기 + 새 토큰 발급) — Repository 메서드는 준비됨, Service 통합 필요
-- [ ] **[MUST]** `POST /api/auth/logout` — refresh token 폐기
+- [x] **[MUST]** `POST /api/auth/refresh` 엔드포인트
+- [x] **[MUST]** Refresh token rotation 로직 (사용 시 즉시 폐기 + 새 토큰 발급)
+- [x] **[MUST]** `POST /api/auth/logout` — refresh token 폐기
 
 ### 🛡️ Reuse Detection (면접 차별화 포인트) 🔵
-- [ ] **[MUST]** 폐기된 토큰 재사용 시 **해당 사용자 모든 세션 무효화** (mass logout)
-- [ ] **[SHOULD]** 비밀번호 변경 시 모든 refresh token 폐기
-- [ ] **[SHOULD]** Refresh token 동시성 처리 (`PESSIMISTIC_WRITE` 또는 atomic update)
+- [x] **[MUST]** 폐기된 토큰 재사용 시 **해당 사용자 모든 세션 무효화** (mass logout)
+- [ ] **[SHOULD]** 비밀번호 변경 시 모든 refresh token 폐기 (비번 변경 API 추가 시 처리)
+- [x] **[SHOULD]** Refresh token 동시성 처리 — atomic UPDATE (CAS) 적용 + `@Modifying(flushAutomatically, clearAutomatically)`
 
 ### 🍪 Refresh Token 전달 방식 결정
-- [ ] **[MUST]** Refresh token = **httpOnly cookie**로 결정 (XSS 노출 차단)
-- [ ] **[MUST]** Cookie path `/api/auth`로 제한
-- [ ] **[MUST]** prod: `Secure=true` + `SameSite=Strict`
-- [ ] **[MUST]** dev: `SameSite=Lax`
-- [ ] **[SHOULD]** Access token은 body로 반환, 클라이언트가 메모리/localStorage 저장
+- [x] **[MUST]** Refresh token = **httpOnly cookie**로 결정 (XSS 노출 차단)
+- [x] **[MUST]** Cookie path `/auth`로 제한 (Controller 매핑 따라 — `/auth/refresh`, `/auth/logout`만 첨부)
+- [ ] **[MUST]** prod: `Secure=true` + `SameSite=Strict` (yml 환경별 분기 — Phase 1 후속)
+- [x] **[MUST]** dev: `SameSite=Lax` + `Secure=false`
+- [x] **[SHOULD]** Access token은 body로 반환, 클라이언트가 메모리/localStorage 저장
 
 ### 👤 회원 관리 보강 🟢
 - [ ] **[MUST]** `GET /api/users/me`
@@ -276,11 +276,13 @@
 - [ ] **[STRETCH]** 만료/폐기 refresh token cleanup 스케줄러
 
 ### 🧪 테스트
-- [ ] **[MUST]** AuthService — refresh rotation 성공
-- [ ] **[MUST]** AuthService — 만료된 refresh 거부
-- [ ] **[MUST]** AuthService — **reuse detection** (폐기된 토큰 재사용 시 mass logout)
-- [ ] **[SHOULD]** AuthService — 비밀번호 변경 시 기존 refresh 무효화
-- [ ] **[MUST]** DeckService — 남의 덱 접근 시 403
+- [x] **[MUST]** AuthService — refresh rotation 성공
+- [ ] **[MUST]** AuthService — 만료된 refresh 거부 (시간 시뮬레이션 — Clock 주입 후 가능. 후속 작업)
+- [x] **[MUST]** AuthService — **reuse detection** (폐기된 토큰 재사용 시 mass logout)
+- [x] **[보너스]** AuthService — access token으로 /refresh 시도 거부 (type 검증)
+- [x] **[보너스]** AuthService — logout 후 refresh 사용 불가
+- [ ] **[SHOULD]** AuthService — 비밀번호 변경 시 기존 refresh 무효화 (비번 변경 API 추가 후)
+- [x] **[MUST]** DeckService — 남의 덱 접근 시 403 (기존 테스트)
 
 ### 📓 학습 노트
 - [ ] **[SHOULD]** week-2 ~ week-5 학습 노트
