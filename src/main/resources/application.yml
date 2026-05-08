@@ -7,7 +7,8 @@ spring:
     charset: UTF-8
 
 jwt:
-  expiration: 604800000  # 7일 (밀리초)
+  access-expiration: 3600000      # 1시간 (밀리초)
+  refresh-expiration: 1209600000  # 14일 (밀리초)
 
 server:
   port: 8080

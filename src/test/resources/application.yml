@@ -15,7 +15,8 @@ spring:
 
 jwt:
   secret: test-secret-key-minimum-32-characters-long-for-test
-  expiration: 3600000
+  access-expiration: 3600000
+  refresh-expiration: 1209600000
 
 server:
   port: 0

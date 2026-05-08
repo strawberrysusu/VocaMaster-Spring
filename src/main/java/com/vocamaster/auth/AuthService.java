@@ -32,7 +32,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String token = jwtProvider.createToken(user.getId(), user.getEmail());
+        String token = jwtProvider.createAccessToken(user.getId(), user.getEmail());
         return new TokenResponse(token);
     }
 
@@ -44,7 +44,7 @@ public class AuthService {
             throw new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다");
         }
 
-        String token = jwtProvider.createToken(user.getId(), user.getEmail());
+        String token = jwtProvider.createAccessToken(user.getId(), user.getEmail());
         return new TokenResponse(token);
     }
 }

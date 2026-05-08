@@ -242,9 +242,9 @@
 - [x] **[MUST]** `refresh_tokens.user_id` index (FK 부수효과로 자동 생성)
 - [x] **[MUST]** `RefreshToken` 엔티티 + Repository (atomic UPDATE `revokeIfActive`, mass logout `revokeAllByUserId`)
 - [x] **[MUST]** Refresh token raw 값은 DB 저장 X — **SHA-256 해시만** 저장 (CHAR(64))
-- [ ] **[MUST]** Access token 수명 30분~1시간으로 단축, Refresh 14일
-- [ ] **[MUST]** JWT claim에 `jti(UUID)` 추가
-- [ ] **[MUST]** Access는 `type=access`, Refresh는 `type=refresh` claim 추가
+- [x] **[MUST]** Access token 수명 30분~1시간으로 단축, Refresh 14일
+- [x] **[MUST]** JWT claim에 `jti(UUID)` 추가
+- [x] **[MUST]** Access는 `type=access`, Refresh는 `type=refresh` claim 추가
 - [ ] **[MUST]** `POST /api/auth/refresh` 엔드포인트
 - [ ] **[MUST]** Refresh token rotation 로직 (사용 시 즉시 폐기 + 새 토큰 발급) — Repository 메서드는 준비됨, Service 통합 필요
 - [ ] **[MUST]** `POST /api/auth/logout` — refresh token 폐기
