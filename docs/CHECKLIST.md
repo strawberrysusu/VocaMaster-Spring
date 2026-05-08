@@ -9,10 +9,10 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 0 완료** → Phase 1 대기 |
-| **이번 주 집중** | (Week 1 종료) Phase 1 진입 준비 |
-| **전체 진행도** | Phase 0 ✅ / Phase 1 ~ 8 진행 중 |
-| **다음 마일스톤** | Phase 1 시작 — Refresh Token Rotation |
+| **진행 중인 Phase** | **Phase 1 진행 중** (인프라 ✅ / 인증 흐름 본체 진행) |
+| **이번 주 집중** | JWT claim 변경 + AuthService rotation + /refresh /logout 엔드포인트 |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ~50% / Phase 2~8 대기 |
+| **다음 마일스톤** | Phase 1 — `/api/auth/refresh` rotation + reuse detection 동작 |
 
 ---
 
@@ -235,18 +235,18 @@
 > **모드:** 🔵 B (refresh token / reuse detection) + 🟢 A (회원 관리)
 
 ### 🔐 Refresh Token Rotation 🔵
-- [ ] **[MUST]** `docs/auth-design.md` — Access/Refresh 흐름 설계 문서 *먼저* 작성
-- [ ] **[MUST]** `refresh_tokens` 테이블 설계 (id, user_id, **token_hash**, expires_at, revoked_at, created_at)
-- [ ] **[MUST]** `V2__add_refresh_tokens.sql` 작성
-- [ ] **[MUST]** `refresh_tokens.token_hash` unique index
-- [ ] **[MUST]** `refresh_tokens.user_id` index
-- [ ] **[MUST]** `RefreshToken` 엔티티 + Repository
-- [ ] **[MUST]** Refresh token raw 값은 DB 저장 X — **SHA-256 해시만** 저장
+- [x] **[MUST]** `docs/auth-design.md` — Access/Refresh 흐름 설계 문서 *먼저* 작성
+- [x] **[MUST]** `refresh_tokens` 테이블 설계 (id, user_id, **token_hash**, expires_at, revoked_at, created_at + forensics: user_agent, last_used_ip)
+- [x] **[MUST]** `V2__add_refresh_tokens.sql` 작성
+- [x] **[MUST]** `refresh_tokens.token_hash` unique index
+- [x] **[MUST]** `refresh_tokens.user_id` index (FK 부수효과로 자동 생성)
+- [x] **[MUST]** `RefreshToken` 엔티티 + Repository (atomic UPDATE `revokeIfActive`, mass logout `revokeAllByUserId`)
+- [x] **[MUST]** Refresh token raw 값은 DB 저장 X — **SHA-256 해시만** 저장 (CHAR(64))
 - [ ] **[MUST]** Access token 수명 30분~1시간으로 단축, Refresh 14일
 - [ ] **[MUST]** JWT claim에 `jti(UUID)` 추가
 - [ ] **[MUST]** Access는 `type=access`, Refresh는 `type=refresh` claim 추가
 - [ ] **[MUST]** `POST /api/auth/refresh` 엔드포인트
-- [ ] **[MUST]** Refresh token rotation 로직 (사용 시 즉시 폐기 + 새 토큰 발급)
+- [ ] **[MUST]** Refresh token rotation 로직 (사용 시 즉시 폐기 + 새 토큰 발급) — Repository 메서드는 준비됨, Service 통합 필요
 - [ ] **[MUST]** `POST /api/auth/logout` — refresh token 폐기
 
 ### 🛡️ Reuse Detection (면접 차별화 포인트) 🔵
