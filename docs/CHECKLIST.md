@@ -9,10 +9,10 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 1 진행 중** (인증 흐름 본체 ✅ / 회원 관리 + 보안 정리 남음) |
-| **이번 주 집중** | 회원 정보 조회/수정/탈퇴 + CustomUserDetails + 페이지네이션 안전장치 |
-| **전체 진행도** | Phase 0 ✅ / Phase 1 ~75% / Phase 2~8 대기 |
-| **다음 마일스톤** | Phase 1 완료 — 회원 관리 API + CustomUserDetails 도입 |
+| **진행 중인 Phase** | **Phase 1 사실상 완료** (회원탈퇴 / prod cookie / 만료refresh 테스트만 남음) |
+| **이번 주 집중** | Phase 1 완료 기준 점검 → Phase 2 진입 준비 |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ~95% / Phase 2~8 대기 |
+| **다음 마일스톤** | Phase 2 — Card 검색/정렬, Quiz 강화, Typing 모드 |
 
 ---
 
@@ -262,15 +262,16 @@
 - [x] **[SHOULD]** Access token은 body로 반환, 클라이언트가 메모리/localStorage 저장
 
 ### 👤 회원 관리 보강 🟢
-- [ ] **[MUST]** `GET /api/users/me`
-- [ ] **[MUST]** `PATCH /api/users/me` — 닉네임 변경
-- [ ] **[MUST]** `PATCH /api/users/me/password` — 비밀번호 변경
-- [ ] **[SHOULD]** `DELETE /api/users/me` — 회원 탈퇴 (소프트 삭제)
+- [x] **[MUST]** `GET /users/me`
+- [x] **[MUST]** `PATCH /users/me` — 닉네임 변경
+- [x] **[MUST]** `PATCH /users/me/password` — 비밀번호 변경 + mass logout 자동
+- [ ] **[SHOULD]** `DELETE /users/me` — 회원 탈퇴 (소프트 삭제, 후속 단계)
 
 ### 🛡️ 보안/유틸 정리 🔵
-- [ ] **[MUST]** `CustomUserDetails` 도입 (현재 `CurrentUser.get()` 직접 캐스팅 제거)
-- [ ] **[MUST]** `@AuthenticationPrincipal CustomUserDetails` 패턴으로 컨트롤러 정리
-- [ ] **[MUST]** 페이지네이션 안전장치 (`page < 0 → 0`, `size 1~100 제한`)
+- [x] **[MUST]** `CustomUserDetails` 도입 (`CurrentUser.get()` 직접 캐스팅 제거 + JwtAuthFilter DB 조회 제거)
+- [x] **[MUST]** `@AuthenticationPrincipal CustomUserDetails` 패턴으로 UserController 정리 (기존 컨트롤러는 `CurrentUser.getId()` 호환)
+- [x] **[MUST]** 페이지네이션 안전장치 (`PageableUtils.safe`: `page<0→0`, `size 1~100`)
+- [x] **[보너스]** JwtAuthFilter `type=access` 검증 — refresh 토큰으로 일반 API 호출 차단
 
 ### 🧹 운영 보조
 - [ ] **[STRETCH]** 만료/폐기 refresh token cleanup 스케줄러
@@ -281,7 +282,7 @@
 - [x] **[MUST]** AuthService — **reuse detection** (폐기된 토큰 재사용 시 mass logout)
 - [x] **[보너스]** AuthService — access token으로 /refresh 시도 거부 (type 검증)
 - [x] **[보너스]** AuthService — logout 후 refresh 사용 불가
-- [ ] **[SHOULD]** AuthService — 비밀번호 변경 시 기존 refresh 무효화 (비번 변경 API 추가 후)
+- [x] **[SHOULD]** AuthService — 비밀번호 변경 시 기존 refresh 무효화 (UserService.changePassword에서 mass logout)
 - [x] **[MUST]** DeckService — 남의 덱 접근 시 403 (기존 테스트)
 
 ### 📓 학습 노트

@@ -62,6 +62,11 @@ public class JwtProvider {
         return parse(token).get("type", String.class);
     }
 
+    // 토큰의 email claim (access 토큰에만 들어 있음)
+    public String getEmail(String token) {
+        return parse(token).get("email", String.class);
+    }
+
     // 토큰의 jti (고유 ID)
     public String getJti(String token) {
         return parse(token).getId();

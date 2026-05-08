@@ -4,8 +4,6 @@ import com.vocamaster.auth.dto.LoginRequest;
 import com.vocamaster.auth.dto.RegisterRequest;
 import com.vocamaster.auth.dto.TokenPair;
 import com.vocamaster.auth.dto.TokenResponse;
-import com.vocamaster.common.CurrentUser;
-import com.vocamaster.user.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
-import java.util.Map;
 
 @Tag(name = "Auth - 인증")
 @RestController
@@ -71,17 +68,6 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clear.toString())
                 .build();
-    }
-
-    @GetMapping("/me")
-    @Operation(summary = "내 정보 조회")
-    public Map<String, Object> me() {
-        User user = CurrentUser.get();
-        return Map.of(
-                "id", user.getId(),
-                "email", user.getEmail(),
-                "nickname", user.getNickname()
-        );
     }
 
     // === helpers ===
