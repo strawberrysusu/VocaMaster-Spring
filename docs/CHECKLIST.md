@@ -278,7 +278,7 @@
 
 ### 🧪 테스트
 - [x] **[MUST]** AuthService — refresh rotation 성공
-- [ ] **[MUST]** AuthService — 만료된 refresh 거부 (시간 시뮬레이션 — Clock 주입 후 가능. 후속 작업)
+- [x] **[MUST]** AuthService — 만료된 refresh 거부 (`@TestPropertySource`로 expiration=1ms override + Thread.sleep — Clock 주입 없이 깔끔)
 - [x] **[MUST]** AuthService — **reuse detection** (폐기된 토큰 재사용 시 mass logout)
 - [x] **[보너스]** AuthService — access token으로 /refresh 시도 거부 (type 검증)
 - [x] **[보너스]** AuthService — logout 후 refresh 사용 불가
