@@ -9,10 +9,10 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 1 마감** (인증 + 회원 도메인 + 30/30 테스트) |
-| **이번 주 집중** | Phase 2 진입 — Card 검색/정렬부터 |
-| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2~8 대기 |
-| **다음 마일스톤** | Phase 2 — Card 검색/정렬, Quiz 강화, Typing 모드 |
+| **진행 중인 Phase** | **Phase 2 진행 중** (Card 검색 ✅ / 필드 확장 + 일괄등록 + Quiz + Typing 남음) |
+| **이번 주 집중** | Card 필드 확장(position 등) → 일괄 등록 강화 |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~15% / Phase 3~8 대기 |
+| **다음 마일스톤** | Phase 2 — Quiz 세션 단위 + Typing 모드 |
 
 ---
 
