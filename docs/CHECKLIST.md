@@ -340,9 +340,9 @@
 - [ ] **[STRETCH]** 드래그 순서 변경 API
 
 ### 🔍 Card 검색/정렬 🟢
-- [ ] **[MUST]** `GET /api/decks/{deckId}/cards?keyword=&sort=&starred=` (front/back LIKE 검색)
-- [ ] **[MUST]** 별표 카드만 필터
-- [ ] **[MUST]** 정렬 옵션 (생성일/위치/별표)
+- [x] **[MUST]** `GET /decks/{deckId}/cards?keyword=&starred=` (front/back LIKE 검색, 대소문자 무시, 한국어 OK)
+- [x] **[MUST]** 별표 카드만 필터 (기존 + search 메서드에 통합)
+- [ ] **[MUST]** 정렬 옵션 (생성일/위치/별표) — 생성일 기본 적용, position은 Card 필드 확장 후
 
 ### 📥 일괄 등록 강화 🟢
 - [ ] **[MUST]** 실패 라인 미리보기 응답

@@ -30,8 +30,9 @@ public class CardController {
             @PathVariable Long deckId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Boolean starred) {
-        return cardService.findAll(deckId, CurrentUser.getId(), page, size, starred);
+        return cardService.findAll(deckId, CurrentUser.getId(), page, size, keyword, starred);
     }
 
     @GetMapping("/cards/{id}")

@@ -31,17 +31,14 @@ public class CardService {
         return CardResponse.from(cardRepository.save(card));
     }
 
-    public Page<CardResponse> findAll(Long deckId, Long userId, int page, int size, Boolean starredOnly) {
+    public Page<CardResponse> findAll(Long deckId, Long userId, int page, int size, String keyword, Boolean starredOnly) {
         deckService.verifyOwner(deckId, userId);
         PageRequest pageable = PageableUtils.safe(page, size);
 
-        Page<Card> cards;
-        if (Boolean.TRUE.equals(starredOnly)) {
-            cards = cardRepository.findByDeckIdAndStarredTrue(deckId, pageable);
-        } else {
-            cards = cardRepository.findByDeckId(deckId, pageable);
-        }
+        String safeKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        Page<Card> cards = cardRepository.search(deckId, safeKeyword, starredOnly, pageable);
         return cards.map(CardResponse::from);
+
     }
 
     public CardResponse findOne(Long id, Long userId) {
