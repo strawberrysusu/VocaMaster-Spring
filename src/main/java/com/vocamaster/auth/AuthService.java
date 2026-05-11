@@ -50,8 +50,14 @@ public class AuthService {
     public TokenPair login(LoginRequest req, String userAgent, String ip) {
         User user = userRepository.findByEmail(req.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다"));
+
+        if (user.isDeleted()) {                 // ← 별도 if 블록 (비번 검증 전)
+            throw new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다");
+        }
+
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다");
+
         }
         return issueTokens(user, userAgent, ip);
     }

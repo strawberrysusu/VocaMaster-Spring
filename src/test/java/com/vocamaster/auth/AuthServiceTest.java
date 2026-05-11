@@ -6,6 +6,8 @@ import com.vocamaster.auth.dto.TokenPair;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.UnauthorizedException;
 import com.vocamaster.user.UserRepository;
+import com.vocamaster.user.UserService;
+import com.vocamaster.user.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,9 @@ class AuthServiceTest {
 
     @Autowired
     private JwtProvider jwtProvider;
+
+    @Autowired
+    private UserService userService;
 
     private RegisterRequest registerRequest() {
         RegisterRequest req = new RegisterRequest();
@@ -152,5 +157,29 @@ class AuthServiceTest {
 
         assertThrows(UnauthorizedException.class, () ->
                 authService.refresh(pair.refreshToken(), UA, IP));
+    }
+    @Test
+    @DisplayName("회원 탈퇴 - deletedAt 설정 = mass logout = 재로그인 차단")
+    void deleteAccount_fullFlow() {
+        TokenPair pair = authService.register(registerRequest(), UA, IP);
+        Long userId = jwtProvider.getUserId(pair.accessToken());
+
+        //회원탈퇴
+        userService.deleteAccount(userId);
+
+        // deletedAt 설정 되었는지
+        User user = userRepository.findById(userId).orElseThrow();
+        assertTrue(user.isDeleted());
+
+        // mass logout - refresh 사용불가  => mass logout 은 모든 세션에서 로그아웃
+        assertThrows(UnauthorizedException.class, () ->
+                authService.refresh(pair.refreshToken(), UA, IP));
+
+        // then 3: 같은 이메일로 재로그인 차단
+        LoginRequest loginReq = new LoginRequest();
+        loginReq.setEmail("test@example.com");
+        loginReq.setPassword("password123");
+        assertThrows(UnauthorizedException.class, () ->
+                authService.login(loginReq, UA, IP));
     }
 }

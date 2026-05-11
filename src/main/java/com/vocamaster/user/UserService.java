@@ -61,4 +61,16 @@ public class UserService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다"));
     }
+    @Transactional
+    public void deleteAccount(Long userId) {
+        User user = findUser(userId);
+        if (user.isDeleted()) {
+            return;  //idempotent — 이미 탈퇴면 그냥 무시
+        }
+        LocalDateTime now = LocalDateTime.now();
+        user.setDeletedAt(now);
+        userRepository.save(user);
+        refreshTokenRepository.revokeAllByUserId(userId, now);
+    }
+
 }

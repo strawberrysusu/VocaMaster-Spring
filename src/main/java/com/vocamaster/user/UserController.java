@@ -40,4 +40,11 @@ public class UserController {
         userService.changePassword(me.getUserId(), req);
         return ResponseEntity.noContent().build();
     }
+    @DeleteMapping("/me")
+    @Operation(summary = "회원 탈퇴 (소프트 삭제 + 모든 세션 폐기)")
+    public ResponseEntity<Void> deleteMe(@AuthenticationPrincipal CustomUserDetails me){
+        userService.deleteAccount(me.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
 }

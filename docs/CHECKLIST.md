@@ -9,9 +9,9 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 1 사실상 완료** (회원탈퇴 / prod cookie / 만료refresh 테스트만 남음) |
-| **이번 주 집중** | Phase 1 완료 기준 점검 → Phase 2 진입 준비 |
-| **전체 진행도** | Phase 0 ✅ / Phase 1 ~95% / Phase 2~8 대기 |
+| **진행 중인 Phase** | **Phase 1 마감** (인증 + 회원 도메인 + 30/30 테스트) |
+| **이번 주 집중** | Phase 2 진입 — Card 검색/정렬부터 |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2~8 대기 |
 | **다음 마일스톤** | Phase 2 — Card 검색/정렬, Quiz 강화, Typing 모드 |
 
 ---
@@ -289,7 +289,7 @@
 - [x] **[MUST]** `GET /users/me`
 - [x] **[MUST]** `PATCH /users/me` — 닉네임 변경
 - [x] **[MUST]** `PATCH /users/me/password` — 비밀번호 변경 + mass logout 자동
-- [ ] **[SHOULD]** `DELETE /users/me` — 회원 탈퇴 (소프트 삭제, 후속 단계)
+- [x] **[SHOULD]** `DELETE /users/me` — 회원 탈퇴 (소프트 삭제: `deletedAt` + mass logout + 재로그인 차단)
 
 ### 🛡️ 보안/유틸 정리 🔵
 - [x] **[MUST]** `CustomUserDetails` 도입 (`CurrentUser.get()` 직접 캐스팅 제거 + JwtAuthFilter DB 조회 제거)
@@ -314,12 +314,13 @@
 - [ ] **[SHOULD]** **닫고 다시 짜기 #1** (월말): JWT 로그인 흐름 빈 파일에서 90분 안에 재구현
 
 ### ✅ Phase 1 완료 기준
-- [ ] 회원가입/로그인/refresh/logout 수동 테스트 성공
-- [ ] refresh rotation + reuse detection 테스트 통과
-- [ ] 비밀번호 변경 후 기존 refresh 사용 불가 확인
-- [ ] 인증 흐름을 그림으로 설명 가능
-- [ ] `docs/auth-design.md` 완성 (다이어그램 포함)
-- [ ] 면접 질문 5개 답변 가능 (왜 rotation? reuse detection이 뭔가? cookie 왜 httpOnly? 등)
+- [x] 회원가입/로그인/refresh/logout — 자동화 테스트 통과 (수동 시연은 Phase 2 진입 전 한 번)
+- [x] refresh rotation + reuse detection 테스트 통과 (30/30)
+- [x] 비밀번호 변경 후 기존 refresh 사용 불가 (`UserService.changePassword` + mass logout)
+- [x] 회원 탈퇴 흐름 통과 (deletedAt + mass logout + 재로그인 차단)
+- [ ] 인증 흐름을 그림으로 설명 가능 (수동 작업 — 면접 준비 단계에서)
+- [x] `docs/auth-design.md` 작성 완료 (다이어그램 추가는 Phase 8에서)
+- [ ] 면접 질문 5개 답변 가능 (week-N 학습 노트에 점진적 작성 중)
 
 ### 🆕 추가 아이디어
 *(공란)*
