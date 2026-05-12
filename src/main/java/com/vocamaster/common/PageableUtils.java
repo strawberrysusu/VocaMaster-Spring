@@ -1,6 +1,7 @@
 package com.vocamaster.common;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 /**
  * 페이지네이션 안전장치.
@@ -17,9 +18,9 @@ public final class PageableUtils {
 
     private PageableUtils() {}
 
-    public static PageRequest safe(int page, int size) {
+    public static PageRequest safe(int page, int size, Sort sort) {
         int safePage = Math.max(0, page);
         int safeSize = Math.max(MIN_SIZE, Math.min(MAX_SIZE, size));
-        return PageRequest.of(safePage, safeSize);
+        return PageRequest.of(safePage, safeSize, sort);
     }
 }

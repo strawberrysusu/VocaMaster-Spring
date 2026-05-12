@@ -10,6 +10,7 @@ import com.vocamaster.deck.DeckService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -34,10 +35,11 @@ public class CardService {
         return CardResponse.from(cardRepository.save(card));
     }
 
-    public Page<CardResponse> findAll(Long deckId, Long userId, int page, int size, String keyword, Boolean starredOnly) {
+    public Page<CardResponse> findAll(Long deckId, Long userId, int page, int size, String keyword, Boolean starredOnly
+    , String sort) {
         deckService.verifyOwner(deckId, userId);
-        PageRequest pageable = PageableUtils.safe(page, size);
-
+        Sort sortOrder = resolveSort(sort);
+        PageRequest pageable = PageableUtils.safe(page, size, sortOrder);
         String safeKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
         Page<Card> cards = cardRepository.search(deckId, safeKeyword, starredOnly, pageable);
         return cards.map(CardResponse::from);
@@ -73,6 +75,16 @@ public class CardService {
         deckService.verifyOwner(card.getDeck().getId(), userId);
         card.setStarred(!card.getStarred());
         return CardResponse.from(cardRepository.save(card));
+    }
+    private Sort resolveSort(String sort) {
+        if (sort == null) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+        return switch (sort) {
+            case "position" -> Sort.by(Sort.Order.asc("position").nullsLast());
+            case "starred" -> Sort.by(Sort.Direction.DESC, "starred", "createdAt");
+            default -> Sort.by(Sort.Direction.DESC, "createdAt");
+        };
     }
 
     private Card getCard(Long id) {

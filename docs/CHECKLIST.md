@@ -9,9 +9,9 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 2 진행 중** (Card 검색 ✅ / Card 필드 ✅ / 일괄등록 + Quiz + Typing 남음) |
+| **진행 중인 Phase** | **Phase 2 진행 중** (Card 검색/정렬 ✅ / Card 필드 ✅ / 일괄등록 + Quiz + Typing 남음) |
 | **이번 주 집중** | 일괄 등록 강화 (#3) → Quiz 세션 단위 (#4) |
-| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~30% / Phase 3~8 대기 |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~35% / Phase 3~8 대기 |
 | **다음 마일스톤** | Phase 2 — 일괄 등록 + Quiz 강화 + Typing 모드 |
 
 ---
@@ -336,13 +336,13 @@
 ### 📚 Card 필드 확장 🟢
 - [x] **[SHOULD]** Card에 `example_sentence`, `memo`, `position` 컬럼 추가
 - [x] **[SHOULD]** `V4__extend_cards.sql` (V3는 users.deleted_at에 사용됨)
-- [ ] **[SHOULD]** `position` 기반 정렬 API (Card 검색에 sort 옵션 추가)
+- [x] **[SHOULD]** `position` 기반 정렬 API — Card 검색의 `?sort=position` 옵션
 - [ ] **[STRETCH]** 드래그 순서 변경 API
 
 ### 🔍 Card 검색/정렬 🟢
 - [x] **[MUST]** `GET /decks/{deckId}/cards?keyword=&starred=` (front/back LIKE 검색, 대소문자 무시, 한국어 OK)
 - [x] **[MUST]** 별표 카드만 필터 (기존 + search 메서드에 통합)
-- [ ] **[MUST]** 정렬 옵션 (생성일/위치/별표) — 생성일 기본 적용, position은 Card 필드 확장 후
+- [x] **[MUST]** 정렬 옵션 (생성일/위치/별표) — `?sort=createdAt|position|starred`, position은 NULL last
 
 ### 📥 일괄 등록 강화 🟢
 - [ ] **[MUST]** 실패 라인 미리보기 응답
