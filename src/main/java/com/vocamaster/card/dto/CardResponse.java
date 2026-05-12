@@ -14,6 +14,9 @@ public class CardResponse {
     private String front;
     private String back;
     private Boolean starred;
+    private String exampleSentence;
+    private String memo;
+    private Integer position;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -23,6 +26,9 @@ public class CardResponse {
                 .front(card.getFront())
                 .back(card.getBack())
                 .starred(card.getStarred())
+                .exampleSentence(card.getExampleSentence())
+                .memo(card.getMemo())
+                .position(card.getPosition())
                 .createdAt(card.getCreatedAt())
                 .updatedAt(card.getUpdatedAt())
                 .build();

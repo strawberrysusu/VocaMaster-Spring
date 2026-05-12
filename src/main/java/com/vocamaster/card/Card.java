@@ -31,6 +31,14 @@ public class Card {
     @Builder.Default
     private Boolean starred = false;
 
+    @Column(name = "example_sentence", length = 500)
+    private String exampleSentence;
+
+    @Column(length = 500)
+    private String memo;
+
+    private Integer position;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deck_id", nullable = false)
     @JsonIgnore

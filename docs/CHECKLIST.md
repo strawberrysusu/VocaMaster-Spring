@@ -9,10 +9,10 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 2 진행 중** (Card 검색 ✅ / 필드 확장 + 일괄등록 + Quiz + Typing 남음) |
-| **이번 주 집중** | Card 필드 확장(position 등) → 일괄 등록 강화 |
-| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~15% / Phase 3~8 대기 |
-| **다음 마일스톤** | Phase 2 — Quiz 세션 단위 + Typing 모드 |
+| **진행 중인 Phase** | **Phase 2 진행 중** (Card 검색 ✅ / Card 필드 ✅ / 일괄등록 + Quiz + Typing 남음) |
+| **이번 주 집중** | 일괄 등록 강화 (#3) → Quiz 세션 단위 (#4) |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~30% / Phase 3~8 대기 |
+| **다음 마일스톤** | Phase 2 — 일괄 등록 + Quiz 강화 + Typing 모드 |
 
 ---
 
@@ -334,9 +334,9 @@
 > **모드:** 🟢 A (대부분) + 🔵 B (Typing 채점 정책)
 
 ### 📚 Card 필드 확장 🟢
-- [ ] **[SHOULD]** Card에 `example_sentence`, `memo`, `position` 컬럼 추가
-- [ ] **[SHOULD]** `V3__extend_cards.sql`
-- [ ] **[SHOULD]** `position` 기반 정렬 API
+- [x] **[SHOULD]** Card에 `example_sentence`, `memo`, `position` 컬럼 추가
+- [x] **[SHOULD]** `V4__extend_cards.sql` (V3는 users.deleted_at에 사용됨)
+- [ ] **[SHOULD]** `position` 기반 정렬 API (Card 검색에 sort 옵션 추가)
 - [ ] **[STRETCH]** 드래그 순서 변경 API
 
 ### 🔍 Card 검색/정렬 🟢

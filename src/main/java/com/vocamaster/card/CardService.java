@@ -25,6 +25,9 @@ public class CardService {
         Card card = Card.builder()
                 .front(req.getFront())
                 .back(req.getBack())
+                .exampleSentence(req.getExampleSentence())
+                .memo(req.getMemo())
+                .position(req.getPosition())
                 .deck(deck)
                 .build();
 
@@ -53,6 +56,9 @@ public class CardService {
 
         if (req.getFront() != null) card.setFront(req.getFront());
         if (req.getBack() != null) card.setBack(req.getBack());
+        if (req.getExampleSentence() != null) card.setExampleSentence(req.getExampleSentence());
+        if (req.getMemo() != null) card.setMemo(req.getMemo());
+        if (req.getPosition() != null) card.setPosition(req.getPosition());
         return CardResponse.from(cardRepository.save(card));
     }
 

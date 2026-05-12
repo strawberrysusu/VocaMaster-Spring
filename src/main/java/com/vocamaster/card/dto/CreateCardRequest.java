@@ -12,4 +12,7 @@ public class CreateCardRequest {
 
     @NotBlank
     private String back;
+    private String exampleSentence;
+    private String memo;
+    private Integer position;
 }
