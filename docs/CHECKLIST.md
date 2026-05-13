@@ -91,7 +91,43 @@
 - Claude는 *코드 안내 전에* 항상 "왜 이걸로 가는가 / 대안은" 제시 후 사용자 결정 받기
 - 양식: 상태 / 범위 / 컨텍스트 / 대안 3개+ / 결정 / 근거 / 트레이드오프
 - 5~10개 누적되면 디렉토리 분리 (한 파일 → 개별 파일)
-- 현재 ADR 15개 누적 — `docs/decisions.md` 참조
+- 현재 ADR 19개 누적 — `docs/decisions.md` 참조
+
+### 🔍 작업 시작 전 Claude 점검 루틴 (필수)
+
+새 작업 시작 시 Claude는 다음 6단계를 *반드시* 훑고 사용자에게 짧게 보고 후 진행:
+
+1. **현재 상태 확인**
+   - `git status` (작업 트리 clean한지)
+   - `git log --oneline -3` (최근 커밋)
+   - CHECKLIST 헤더의 "진행 중인 Phase" / 진척도
+
+2. **이 작업의 범위 + 의존성**
+   - CHECKLIST의 해당 Phase 어느 항목인지 *콕 짚기*
+   - 선후 작업 (이거 끝나야 뭐 가능한지 / 이거 전에 뭐 필요한지)
+
+3. **관련 ADR 참조**
+   - 이 작업의 결정 근거가 ADR-NNN에 있나? → 있으면 *참조 한 줄*로 요약
+   - 없으면 *지금 결정해야 하나?* → 대안 3개+ 제시 후 사용자 결정 받기
+
+4. **알려진 함정 점검**
+   - `application.yml` 변경? → `src/test/resources/application.yml` 동기화 짚기
+   - 마이그레이션 추가? → V1~V4는 *절대 수정 X*, 새 V_N만 추가
+   - 새 엔티티 필드? → DTO + Service + Controller + 테스트까지 영향 추적
+   - 예외 던지는 곳? → 새 커스텀 예외 사용 (옛 `ResponseStatusException` X)
+   - JPA `@Modifying` 쿼리? → `flushAutomatically + clearAutomatically` 박기
+
+5. **운영 모드 확인**
+   - **핵심 코드** (Service/Controller/Entity/Repository/테스트) = 🟢 **사용자 직접 타이핑**
+   - **보일러플레이트** (yml, build.gradle, DTO, 단순 import) = ⚪ Claude OK
+   - **React** (도입 시) = ⚪ Claude 작성 + 사용자 읽기 (ADR-016 예외)
+   - **Flyway SQL** = 🟡 사용자가 짜되 Claude가 형식/스타일 가이드
+
+6. **새 결정이면 ADR 먼저**
+   - 코드 손대기 *전에* — 대안 3개+ 검토 → ADR 작성 → 사용자 결정 → 코드 작업
+   - "대안 1개만 떠오르면 아직 고민 부족"
+
+> Claude가 이 6단계를 *생략하고* 코드부터 던지면 사용자가 "점검 루틴 빠뜨림"이라고 지적할 것. 강제 규칙.
 
 **핵심 기능(B 모드) 작업 루틴**
 1. 내가 요구사항 5줄 작성
