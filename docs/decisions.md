@@ -620,6 +620,163 @@ class ExpiredRefreshTest {
 
 ---
 
+## ADR-017: TTS — 비공식 Google Endpoint 시작 + Redis 캐싱으로 진화
+
+**상태:** 채택 (2026-05-12, A 시작은 Phase 5 React 도입 시 / C 캐싱은 Phase 5 Redis 작업과 결합)
+**범위:** 프론트엔드 + Phase 5 Redis
+
+### 컨텍스트
+영어 단어 발음 듣기. Web Speech API 음질 별로라 *Google 번역기 수준* 원함. 비용/약관/유지보수 트레이드오프.
+
+### 고려한 대안
+- **A. ✅ 비공식 Google Translate TTS endpoint**
+  - `https://translate.google.com/translate_tts?ie=UTF-8&q={text}&tl=en&client=tw-ob`
+  - 프론트 한 줄, 음질 = 번역기 그대로
+  - ❌ 비공식 (차단 가능), 약관 회색
+- **B. Google Cloud TTS (공식)**
+  - WaveNet 음성 = 번역기와 같은 엔진
+  - ❌ 결제 정보 등록 필요 (월 4M자 무료)
+- **C. ✅ A + Redis 캐싱 (같은 단어 재사용)**
+  - 단어 텍스트 → Redis 키 → mp3 URL/bytes 캐시
+  - 두 번째 호출부터 캐시 hit, Rate limit 회피
+- **D. Web Speech API** — 음질 별로 (거부됨)
+- **E. Amazon Polly** — B와 유사, AWS 의존
+- **F. 미리 녹음된 mp3** — 단어 수만큼 저장 부담
+
+### 결정
+**A로 시작 → Phase 5에서 C (Redis 캐싱) 도입.**
+
+### 근거
+- 학습/포트폴리오 단계엔 비공식 endpoint *충분* (실 서비스 트래픽 X)
+- Phase 5 Redis 작업과 *자연스럽게 결합* — 인기 단어장 캐시와 같은 패턴
+- 비용 0, 결제 정보 X
+- 음질 = Google 번역기 그대로
+- 트래픽 폭증 시 B로 전환 옵션 열어둠
+
+### 트레이드오프 / 한계
+- 비공식 API → 차단/변경 가능 (포트폴리오 단계엔 영향 최소)
+- Rate limit (캐싱으로 호출 ↓)
+- 면접 질문 "왜 비공식?" → "학습 단계의 의식적 선택, prod 진입 시 B/Polly로 전환 계획"
+
+### 진화 경로
+1. **Phase 5 React 도입 시:** 프론트가 비공식 endpoint 직접 호출 (백엔드 0)
+2. **Phase 5 Redis 작업 시:** 단어 텍스트 → Redis 캐싱 (같은 단어 두 번째부터 캐시)
+3. **트래픽 늘면:** Google Cloud TTS + 캐싱으로 전환 (코드 변경 작음)
+
+---
+
+## ADR-018: 콘텐츠 타입 다양화 — JPA 상속(JOINED)으로 별도 도메인
+
+**상태:** 채택 (2026-05-12, Phase 2 마지막 또는 Phase 3 시작에 도입)
+**범위:** Card 도메인 → ContentItem 도메인으로 확장
+
+### 컨텍스트
+현재 `Card` = 단어 카드 전용 (front/back). 사용자 요구: **독해 / 문법 / 빈칸 채우기** 등 다양한 문제 유형도 같은 단어장에 담고 학습/공유 가능해야 함.
+
+### 고려한 대안
+- **A. Card에 `type` 필드 + 모든 옵션 필드 nullable**
+  - 한 테이블에 다 박음 (`passage_text VARCHAR(2000) NULL` 등)
+  - ✅ 단순, 빠른 도입
+  - ❌ 모든 타입의 필드가 한 테이블 — 지저분, NULL 폭증
+- **B. ✅ JPA 상속 (`@Inheritance(JOINED)`) + 자식 엔티티들**
+  - 부모: `ContentItem` (id, deck, type, createdAt, updatedAt)
+  - 자식: `WordCard`, `PassageItem`, `GrammarItem`, `FillBlankItem`
+  - 각자 자기 테이블 + 부모 테이블 (JOIN으로 조회)
+- **C. Card 그대로 + 완전 별도 도메인** — Deck이 여러 도메인 못 담음
+- **D. JSON 필드 (`content_json`)** — 유연성 최대, 스키마 강제 X
+
+### 결정
+**B. JPA 상속 (JOINED).**
+- 부모: 추상 `ContentItem` — 공통 필드 (id, deck, type, position, starred, createdAt, updatedAt)
+- 자식: 각 타입별 자기 필드만
+
+### 근거
+- 깔끔한 도메인 모델 — 각 타입이 *자기 필드만* 가짐
+- 학습 가치 ↑ — JPA 상속 패턴은 면접 질문 단골
+- Repository / Service에서 *공통 처리* (학습 흐름)와 *타입별 처리* (퀴즈 생성 방식) 분리 가능
+- 새 타입 추가 = *자식 클래스만* 추가
+- Polymorphism으로 Deck.items 다형성 활용
+
+### 트레이드오프 / 한계
+- JOINED = JOIN 쿼리 증가 (학습 서비스 규모에선 무관, 인덱스로 해결)
+- `Card` → `WordCard` rename 마이그레이션 분량 큼 (~2주 예상)
+- `Deck.cards` 관계 → `Deck.items` (ContentItem 컬렉션)로 일반화 필요
+- Quiz/Study 서비스가 *모든 타입 지원*하도록 확장 (점진적, 처음엔 WordCard만)
+
+### 도입 계획
+1. **Phase 2 마지막** (Card 변경 영향 최소화):
+   - V5 마이그레이션: `content_items` 테이블 + `word_cards` 테이블 (Card → WordCard 이전)
+   - `ContentItem` 추상 부모 + `WordCard` 자식
+   - 기존 `Card` 코드 → `WordCard`로 rename + 호환 alias 유지 (점진 변경)
+2. **Phase 3 시작 전:** Quiz/Study 서비스 ContentItem 기반으로 일반화
+3. **Phase 4 사이:** `PassageItem` 추가 (독해 첫 타입)
+4. **Phase 5~:** `GrammarItem`, `FillBlankItem` 점진
+
+### 면접 답변 거리
+> "단어 카드만 있던 초기 모델에서 독해/문법 등 다양한 콘텐츠 요구가 늘 거라 JPA `@Inheritance(JOINED)`로 추상 `ContentItem` + 자식 분리. 각 타입의 필드 격리 + 다형성 학습 흐름."
+
+---
+
+## ADR-019: 게이미피케이션 — Quest 도메인 (별도 시스템)
+
+**상태:** 채택 (2026-05-12, Phase 6)
+**범위:** 사용자 진척도 / 미션 시스템
+
+### 컨텍스트
+사용자 요구: "게임 진척도 깨는거마냥" — 명시적 미션 + 진행도 추적 + 보상.
+
+### 고려한 대안
+- **A. Phase 6 배지에만 통합 (조건 자동 지급)**
+  - 단순
+  - ❌ 능동적 *진행도 추적* 없음, 사용자가 "5/20 완료" 같은 진행 못 봄
+- **B. ✅ 별도 Quest 도메인**
+  - `quests` 테이블 — 시스템 정의 미션
+  - `user_quest_progress` — 사용자별 진행도
+  - 학습 이벤트 시 자동 갱신
+- **C. 미션 없이 streak만** — 사용자 의도와 안 맞음
+
+### 결정
+**B. Quest 도메인 신설.**
+
+### 근거
+- 사용자 의도와 정확히 일치 (RPG 스타일 진척도)
+- Phase 6의 *이벤트 기반 아키텍처* 와 자연스럽게 결합 — `CardStudiedEvent`, `QuizAnsweredEvent` 리스너로 progress 갱신
+- 시스템 미션 정의 → 진행 추적 → 완료 시 배지 → 게임화 흐름 명확
+- 면접 답변 거리 (이벤트 리스너 + 비동기 처리 + 진척도 데이터 모델)
+
+### 트레이드오프 / 한계
+- Phase 6 분량 +1주
+- 시스템 미션은 *코드/SQL로 박힌* 정의 — 동적 추가하려면 관리자 UI (현재 X)
+- 사용자 정의 미션 (스스로 목표 설정)은 STRETCH
+
+### 시스템 미션 예시 (Phase 6 INSERT)
+- `DAILY_20` — 오늘 카드 20개 외우기
+- `STREAK_7` — 연속 7일 학습
+- `QUIZ_PERFECT_5` — 퀴즈 5문제 연속 정답
+- `COMPLETE_DECK` — 단어장 1개 완주 (모든 카드 known)
+- `SHARE_DECK` — 공개 단어장 1개 만들기
+- `COPY_5` — 다른 사용자 단어장 5개 복사
+
+### 데이터 모델
+```sql
+-- quests: 시스템 정의 미션
+id, code (UNIQUE), title, description, target_value, reward_badge_id, created_at
+
+-- user_quest_progress: 사용자별 진행도
+id, user_id, quest_id, current_value, completed_at, created_at, updated_at
+UNIQUE (user_id, quest_id)
+```
+
+### 이벤트 처리 흐름
+```
+CardStudiedEvent (사용자 카드 학습)
+  → @TransactionalEventListener(AFTER_COMMIT)
+  → 해당 사용자의 활성 quests 중 *카드 학습* 카운트 quest 찾음
+  → current_value++ → target 달성 시 completed_at + 배지 지급
+```
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)
