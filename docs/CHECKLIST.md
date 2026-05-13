@@ -403,7 +403,15 @@
 - [ ] 면접 질문 3개 답변 가능 (Typing 채점 정책 / 카드 부족 시 처리 등)
 
 ### 🆕 추가 아이디어
-*(공란)*
+
+**📐 ContentItem 리팩토링 (ADR-018, Phase 2 마지막 작업)** — *큰 작업, ~2주*
+- [ ] **[MUST]** V5 마이그레이션: `content_items` 부모 + `word_cards` 자식 테이블 (Card → WordCard 이전)
+- [ ] **[MUST]** `ContentItem` 추상 부모 + `WordCard` 자식 (JPA `@Inheritance(JOINED)`)
+- [ ] **[MUST]** `Deck.cards` → `Deck.items` (`List<ContentItem>`) 일반화
+- [ ] **[MUST]** CardRepository/CardService → ContentItem 또는 WordCard로 rename
+- [ ] **[MUST]** Quiz/Study 서비스가 ContentItem 기반으로 일반화 (처음엔 WordCard만 동작)
+- [ ] **[MUST]** 기존 31+ 테스트 모두 통과 유지
+- [ ] **[SHOULD]** `docs/migration-rule.md`에 *큰 리팩토링 패턴* 기록
 
 ---
 
@@ -463,7 +471,13 @@
 - [ ] 면접 질문 5개 답변 가능 (Leitner vs SM-2 vs FSRS / 왜 Leitner 선택? / 다음 단계 개선안?)
 
 ### 🆕 추가 아이디어
-*(공란)*
+
+**📖 추가 콘텐츠 타입 (ADR-018, 점진 도입)**
+- [ ] **[SHOULD]** `PassageItem` 추가 — 독해 지문 + 객관식 답 (V_N 마이그레이션 + 자식 엔티티)
+- [ ] **[STRETCH]** `GrammarItem` — 문법 설명 + 예문
+- [ ] **[STRETCH]** `FillBlankItem` — 빈칸 채우기
+- [ ] **[MUST]** Leitner Box 알고리즘은 *모든 ContentItem*에 동일 적용 (type 무관)
+- [ ] **[MUST]** PassageItem 추가 시 학습 흐름 / 퀴즈 흐름 분기 처리 (단어 = 단답 / 지문 = 다지선다 등)
 
 ---
 
@@ -586,7 +600,21 @@ review:summary:{userId}:{date}  TTL 5분
 - [ ] 면접 질문 5개 답변 가능 (Redis vs DB / 캐시 무효화 / TTL 정책 / 장애 fallback)
 
 ### 🆕 추가 아이디어
-*(공란)*
+
+**🔊 TTS — 영어 발음 듣기 (ADR-017, A → C 진화)**
+- [ ] **[MUST]** React 프론트에서 비공식 Google Translate endpoint 호출 (A):
+  `https://translate.google.com/translate_tts?ie=UTF-8&q={text}&tl=en&client=tw-ob`
+- [ ] **[MUST]** 단어 텍스트 → Redis 캐싱 (C, 같은 단어 재사용)
+- [ ] **[SHOULD]** Rate limit 모니터링 (호출 폭증 시 알림 또는 fallback)
+- [ ] **[STRETCH]** 트래픽 늘면 Google Cloud TTS (공식) 전환 계획 문서화
+
+**⚛️ React 도입 (ADR-016, Phase 5 이후 시작)**
+- [ ] **[MUST]** React + TypeScript + Vite 프로젝트 셋업 (NewsPick 스택과 동일)
+- [ ] **[MUST]** Spring 빌드에 React 결과물 번들 (`src/main/resources/static/react/`)
+- [ ] **[MUST]** 핵심 화면 3~5개 — 학습 / 퀴즈 / 결과 / 통계
+- [ ] **[MUST]** httpOnly Cookie + access token 자동 갱신 인터셉터
+- [ ] **[MUST]** TTS 버튼 통합 (위 항목과 결합)
+- [ ] **[SHOULD]** README에 "Mustache + React 공존 이유" 명시 (ADR-016 참조)
 
 ---
 
@@ -637,7 +665,23 @@ review:summary:{userId}:{date}  TTL 5분
 - [ ] 면접 질문 3개 답변 가능 (왜 Spring Event부터? Kafka 안 쓴 이유 / 쓴 이유?)
 
 ### 🆕 추가 아이디어
-*(공란)*
+
+**🎮 Quest 도메인 — 게이미피케이션 (ADR-019)**
+- [ ] **[SHOULD]** V_N 마이그레이션: `quests` 테이블 (시스템 정의 미션) + `user_quest_progress` 테이블 (사용자별 진행도)
+  - quests: id, code (UNIQUE), title, description, target_value, reward_badge_id
+  - user_quest_progress: id, user_id, quest_id, current_value, completed_at, UNIQUE(user_id, quest_id)
+- [ ] **[SHOULD]** `Quest`, `UserQuestProgress` 엔티티 + Repository
+- [ ] **[SHOULD]** `QuestProgressListener` — `@TransactionalEventListener(AFTER_COMMIT)` 으로 CardStudiedEvent/QuizAnsweredEvent 받아 진행도 갱신
+- [ ] **[SHOULD]** 시스템 미션 INSERT 마이그레이션 (V_N+1):
+  - `DAILY_20` (오늘 카드 20개)
+  - `STREAK_7` (연속 7일)
+  - `QUIZ_PERFECT_5` (퀴즈 5문제 연속 정답)
+  - `COMPLETE_DECK` (단어장 1개 완주)
+  - `SHARE_DECK` (공개 단어장 1개 만들기)
+  - `COPY_5` (단어장 5개 복사)
+- [ ] **[SHOULD]** `GET /quests` (시스템 미션 목록) / `GET /quests/me/progress` (내 진행도) API
+- [ ] **[SHOULD]** 완료 시 배지 자동 지급 (Phase 6 배지 시스템과 결합)
+- [ ] **[STRETCH]** 사용자 정의 미션 (스스로 목표 설정)
 
 ---
 
