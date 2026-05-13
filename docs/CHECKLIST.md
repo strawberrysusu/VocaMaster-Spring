@@ -765,7 +765,7 @@ review:summary:{userId}:{date}  TTL 5분
 - ❌ Elasticsearch (MySQL FULLTEXT로 충분)
 - ❌ 결제 / 구독
 - ❌ 모바일 앱
-- ❌ React 풀 SPA (Mustache UI + 최소 React 컴포넌트로 마감)
+- ❌ React 풀 SPA (Mustache 메인 + Phase 5 이후 핵심 화면 3~5개만 React, AI 작성 — ADR-016 참조)
 - ❌ AI/LLM 단어 자동 생성 (NewsPick과 차별화 위해)
 - ❌ 실시간 협업 편집
 - ❌ 소셜 팔로우 / 피드

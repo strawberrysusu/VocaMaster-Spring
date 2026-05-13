@@ -562,6 +562,64 @@ class ExpiredRefreshTest {
 
 ---
 
+## ADR-016: 프론트엔드 — Mustache 메인 + 후반 React 핵심 화면 (AI 작성, 백엔드 깊이 우선)
+
+**상태:** 채택 (2026-05-12, 도입 시점: Phase 5 이후)
+**범위:** 프론트엔드 전체
+
+### 컨텍스트
+현재 Mustache로 데모 UI만 있음. 어느 정도까지 React로 전환할지 결정 필요.
+
+**상황 변수:**
+- 사용자 = 백엔드 취준생, React 초보
+- 8개월 안에 백엔드 핵심 (Phase 3 반복학습 / 5 Redis / 6 비동기 / 7 배포) 마감
+- NewsPick (포트폴리오 1번)에 *React + Spring 풀스택* 경험 이미 있음
+- VocaMaster (포트폴리오 2번) = *백엔드 깊이*로 차별화 포지셔닝
+
+### 고려한 대안
+- **A. Mustache 유지 끝까지**
+  - ✅ 백엔드 100% 집중
+  - ❌ 모던 웹 인상 약함, 진짜 REST API 사용처 없음
+- **B. 즉시 React 도입 (Phase 2 직후)**
+  - ✅ 모던 풀스택
+  - ❌ 백엔드 시간 마이너스, React 초보라 학습 비용 ↑↑
+- **C. ✅ Mustache 유지 + 후반 핵심 화면만 React (NewsPick 패턴)**
+  - 학습/퀴즈/결과 3~5 화면만 React 컴포넌트
+  - Spring static에 빌드 결과 번들
+- **D. Mustache + Postman/Swagger 시연만**
+  - ✅ 시간 최대 절약
+  - ❌ 시각적 임팩트 약함
+
+### 결정
+**C. 추가 규칙:**
+1. **도입 시점:** Phase 5 (Redis) 이후 또는 Phase 7 (배포) 사이
+2. **범위:** 핵심 화면 3~5개만 (학습 / 퀴즈 / 결과 / 통계 정도)
+3. **풀 SPA X** — Mustache와 공존
+4. **모드:** React 코드는 *AI 작성, 사용자는 읽기*. 백엔드는 사용자 직접 타이핑 (새 모드 그대로)
+
+### 근거
+- VocaMaster의 *차별화 무기 = 백엔드*. React 깊이로는 NewsPick과 차별화 X.
+- NewsPick에서 React 풀스택 경험 이미 있음 → "React 협업 경험" 면접 어필은 그쪽으로 충분
+- 8개월 안에 Phase 3/5/6/7 백엔드 핵심 *깊게* 가려면 React에 큰 시간 투자 어려움
+- React는 *AI 활용에 적합한 영역*임을 의식적으로 선택 — 학습 가치 vs 시간 자원의 *의도적 트레이드오프*
+- 사용자 직접 결정 (2026-05-12): "백엔드는 깊이있게 끝까지, React는 최소한 + AI로 처리"
+
+### 트레이드오프 / 한계
+- React 자체 깊이는 *NewsPick 수준*에서 멈춤 (의도적)
+- VocaMaster의 React는 *백엔드 검증용*에 가까움 (CORS / httpOnly Cookie 동작 검증 / 토큰 자동 갱신 인터셉터 / SPA에서 인증된 API 호출 시연)
+- 두 시스템 공존 (Mustache + React) → README에 "왜 둘 다인지" 설명 필요
+- 면접에서 React 깊은 질문 들어오면 NewsPick으로 답변 유도 (역할 분담 명확히)
+- 만약 채용 시장이 *React/Vue 전문성* 강하게 요구하는 쪽으로 바뀌면 ADR 재검토
+
+### 도입 시 구체 계획 (Phase 5 이후 시작 시)
+- 스택: React + TypeScript + Vite (NewsPick과 동일)
+- 빌드 통합: Spring Boot 빌드 시 React 결과물을 `src/main/resources/static/react/`로
+- 라우팅: 2~3개 (학습 / 퀴즈 / 결과)
+- 인증: httpOnly Cookie 자동 첨부 + access token 인터셉터 (자동 갱신)
+- 예상 시간: 4~6주
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)
