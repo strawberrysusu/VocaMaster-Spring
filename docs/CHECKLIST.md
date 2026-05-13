@@ -84,6 +84,14 @@
 
 - **`application.yml`(main)에 새 키 추가 시 → `src/test/resources/application.yml`에도 *반드시* 같은 키 추가.** 두 파일이 따로 관리됨. 안 하면 PropertyPlaceholderHelper IllegalArgumentException 발생 (이미 두 번 당함)
 
+### 📜 ADR (Architecture Decision Record) 정책
+
+- 새 기능/기술 도입 *전*에 `docs/decisions.md`에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md` 분리)
+- Claude는 *코드 안내 전에* 항상 "왜 이걸로 가는가 / 대안은" 제시 후 사용자 결정 받기
+- 양식: 상태 / 범위 / 컨텍스트 / 대안 3개+ / 결정 / 근거 / 트레이드오프
+- 5~10개 누적되면 디렉토리 분리 (한 파일 → 개별 파일)
+- 현재 ADR 15개 누적 — `docs/decisions.md` 참조
+
 **핵심 기능(B 모드) 작업 루틴**
 1. 내가 요구사항 5줄 작성
 2. 내가 API 경로 / Request·Response 예시 / 테스트 케이스 목록 작성
