@@ -14,9 +14,9 @@ import com.vocamaster.study.dto.*;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,7 +37,7 @@ public class StudyService {
         Direction.from(req.getDirection()); // direction 유효성 검증
         Deck deck = deckService.verifyOwner(deckId, userId);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다"));
 
         List<Card> cards;
         if (Boolean.TRUE.equals(req.getStarredOnly())) {
@@ -70,14 +70,14 @@ public class StudyService {
     // 카드별 안다/모른다 기록
     public StudyRecordResponse recordAnswer(Long sessionId, Long userId, RecordStudyRequest req) {
         StudySession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "학습 세션을 찾을 수 없습니다"));
+                .orElseThrow(() -> new NotFoundException("학습 세션을 찾을 수 없습니다"));
 
         if (!session.getUser().getId().equals(userId)) {
             throw new ForbiddenException("접근 권한이 없습니다");
         }
 
         Card card = cardRepository.findById(req.getCardId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "카드를 찾을 수 없습니다"));
+                .orElseThrow(() -> new NotFoundException("카드를 찾을 수 없습니다"));
 
         // 이 카드가 세션의 deck에 속하는지 검증
         if (!card.getDeck().getId().equals(session.getDeck().getId())) {

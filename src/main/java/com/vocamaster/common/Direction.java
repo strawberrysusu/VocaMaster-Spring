@@ -1,8 +1,7 @@
 package com.vocamaster.common;
 
 import com.vocamaster.common.exception.BadRequestException;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+
 
 public enum Direction {
     FRONT_TO_BACK("front_to_back"),

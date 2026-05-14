@@ -16,7 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -135,17 +135,17 @@ class CardServiceTest {
         createCard("grape", "포도");
 
         // when 1 & then 1: 영어 front 검색
-        Page<CardResponse> en = cardService.findAll(deck.getId(), user.getId(), 0, 20, "apple", null);
+        Page<CardResponse> en = cardService.findAll(deck.getId(), user.getId(), 0, 20, "apple", null,null);
         assertEquals(1, en.getTotalElements());
         assertEquals("apple", en.getContent().get(0).getFront());
 
         // when 2 & then 2: 한국어 back 검색
-        Page<CardResponse> ko = cardService.findAll(deck.getId(), user.getId(), 0, 20, "바나나", null);
+        Page<CardResponse> ko = cardService.findAll(deck.getId(), user.getId(), 0, 20, "바나나", null,null);
         assertEquals(1, ko.getTotalElements());
         assertEquals("banana", ko.getContent().get(0).getFront());
 
         // when 3 & then 3: keyword=null이면 전체
-        Page<CardResponse> all = cardService.findAll(deck.getId(), user.getId(), 0, 20, null, null);
+        Page<CardResponse> all = cardService.findAll(deck.getId(), user.getId(), 0, 20, null, null,null);
         assertEquals(3, all.getTotalElements());
     }
 

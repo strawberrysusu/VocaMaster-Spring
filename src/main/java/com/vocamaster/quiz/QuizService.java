@@ -4,14 +4,15 @@ import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.card.dto.CardResponse;
 import com.vocamaster.common.exception.BadRequestException;
+import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.DeckService;
 import com.vocamaster.quiz.dto.*;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import com.vocamaster.common.Direction;
 
@@ -82,7 +83,7 @@ public class QuizService {
         deckService.verifyOwner(deckId, userId);
 
         Card card = cardRepository.findById(req.getCardId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "카드를 찾을 수 없습니다"));
+                .orElseThrow(() -> new NotFoundException("카드를 찾을 수 없습니다"));
 
         if (!card.getDeck().getId().equals(deckId)) {
             throw new BadRequestException("이 덱에 속하지 않는 카드입니다");
@@ -93,7 +94,7 @@ public class QuizService {
         boolean isCorrect = req.getSelectedAnswer().trim().equals(correctAnswer.trim());
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다"));
 
         QuizAttempt attempt = QuizAttempt.builder()
                 .deckId(deckId)
