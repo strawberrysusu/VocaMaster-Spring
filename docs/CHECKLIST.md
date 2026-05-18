@@ -13,7 +13,8 @@
 | **이번 주 집중** | 일괄 등록 강화 (#3) → Quiz 세션 단위 (#4) |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~35% / Phase 3~8 대기 |
 | **다음 마일스톤** | Phase 2 — 일괄 등록 + Quiz 강화 + Typing 모드 |
-| **신규 ADR** | ADR-016 (Frontend) / ADR-017 (TTS) / ADR-018 (콘텐츠 다양화) / ADR-019 (Quest) — `docs/decisions.md` |
+| **신규 ADR** | ADR-016 (Frontend) / ADR-017 (TTS) / ADR-018 (콘텐츠 다양화) / ADR-019 (Quest) / ADR-020 (일괄등록 1000줄 상한) — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | 일괄 등록 강화 #1 — `ImportService`에 1000줄 상한 체크 추가 (ADR-020). ① `BadRequestException` import ② `MAX_LINES=1000` 상수 ③ `parse()`의 `text.split` 다음에 `if (lines.length > MAX_LINES) throw ...`. 그 후 구분자 자동 감지 / 중복 정책 결정 |
 
 ---
 
