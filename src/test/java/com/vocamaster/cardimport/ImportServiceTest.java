@@ -4,6 +4,7 @@ import com.vocamaster.card.CardRepository;
 import com.vocamaster.cardimport.dto.ImportRequest;
 import com.vocamaster.cardimport.dto.ImportResponse;
 import com.vocamaster.cardimport.dto.PreviewResponse;
+import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
 import com.vocamaster.user.User;
@@ -79,5 +80,14 @@ class ImportServiceTest {
         ImportResponse result = importService.importCards(deck.getId(), user.getId(), req);
 
         assertEquals(2, result.getImported());
+    }
+    @Test
+    @DisplayName("1000줄 초과시 전체 거부")
+    void importCards_overLimit_rejected() {
+        ImportRequest req = new ImportRequest();
+        req.setText("apple - 사과\n".repeat(1001));    //1001줄 = 상한 초과
+
+        assertThrows(BadRequestException.class, () ->
+                importService.importCards(deck.getId(), user.getId(),req));
     }
 }

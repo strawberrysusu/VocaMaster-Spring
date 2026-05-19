@@ -5,6 +5,7 @@ import com.vocamaster.card.CardRepository;
 import com.vocamaster.cardimport.dto.ImportRequest;
 import com.vocamaster.cardimport.dto.ImportResponse;
 import com.vocamaster.cardimport.dto.PreviewResponse;
+import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class ImportService {
 
     private final CardRepository cardRepository;
     private final DeckService deckService;
+    private static final int MAX_LINES= 1000;
 
     // 텍스트 파싱 → 미리보기
     public PreviewResponse preview(ImportRequest req) {
@@ -60,6 +62,10 @@ public class ImportService {
         List<Map<String, Object>> failed = new ArrayList<>();
 
         String[] lines = text.split("\\n");
+        if (lines.length > MAX_LINES){
+            throw new BadRequestException(
+                    "한 번에 최대  " + MAX_LINES + "줄까지 등록할 수 있습니다. 현재 " + lines.length + "줄입니다.");
+        }
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
             if (line.isEmpty()) continue;
