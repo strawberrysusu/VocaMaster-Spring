@@ -13,8 +13,8 @@
 | **이번 주 집중** | 일괄 등록 강화 (#3) → Quiz 세션 단위 (#4) |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~35% / Phase 3~8 대기 |
 | **다음 마일스톤** | Phase 2 — 일괄 등록 + Quiz 강화 + Typing 모드 |
-| **신규 ADR** | ADR-016 (Frontend) / -017 (TTS) / -018 (콘텐츠) / -019 (Quest) / -020 (1000줄 상한) / -021 (테스트 정책) / -022 (구분자 자동 감지) — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | 일괄 등록 강화 — 1000줄 상한 ✅ / 실패 라인 미리보기 ✅ / 구분자 자동 감지 ✅. 다음: **중복 카드 처리 정책** (skip / overwrite 선택 — ADR 필요) → 그 후 CSV 업로드(STRETCH) 또는 Phase 2 #4 Quiz |
+| **신규 ADR** | ADR-016~023 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 상한 / 테스트 정책 / 구분자 자동 감지 / 중복 Skip — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | 일괄 등록 강화 #3 **완료** (1000줄 상한 / 실패 라인 / 구분자 자동 감지 / 중복 Skip 다 ✅. CSV 업로드는 STRETCH — 건너뜀). 다음: **Phase 2 #4 — Quiz 모드 강화** (퀴즈 세션 단위 관리) |
 
 ---
 
@@ -433,7 +433,7 @@
 - [x] **[MUST]** 실패 라인 미리보기 응답 (`preview()` — failed 목록 + count 반환, 기존 구현)
 - [x] **[MUST]** 최대 1000줄 제한 (ADR-020 — 초과 시 전체 거부 `BadRequestException`, 테스트 포함)
 - [x] **[SHOULD]** 구분자 자동 감지 (탭/파이프/콜론/콤마/하이픈 — ADR-022, "정확히 2조각" 검증 + 테스트)
-- [ ] **[SHOULD]** 중복 카드 처리 정책 (skip / overwrite 선택)
+- [x] **[SHOULD]** 중복 카드 처리 — Skip (front 기준, ADR-023). 응답에 skipped 카운트 + 테스트
 - [ ] **[STRETCH]** CSV 파일 업로드 (`multipart/form-data`)
 
 ### 🎯 Quiz 모드 강화 🔵

@@ -110,4 +110,22 @@ class ImportServiceTest {
         tab.setText("cat\t고양이\ndog\t개");
         assertEquals(2, importService.importCards(deck.getId(), user.getId(), tab).getImported());
     }
+    @Test
+    @DisplayName("중복카드 - 이미 있는 front 는 skip")
+    void importCards_skipDuplicate(){
+        // given: 1차 import — apple, banana 등록
+        ImportRequest first = new ImportRequest();
+        first.setText("apple,사과\nbanana,바나나");
+        importService.importCards(deck.getId(), user.getId(), first);
+
+        // when: 2차 import — apple·banana 중복 + cherry 신규
+        ImportRequest second = new ImportRequest();
+        second.setText("apple,사과\nbanana,바나나\ncherry,체리");
+        ImportResponse result = importService.importCards(deck.getId(), user.getId(), second);
+
+        // then: cherry만 등록, apple·banana는 skip
+        assertEquals(1, result.getImported());
+        assertEquals(2, result.getSkipped());
+        assertEquals(3, cardRepository.countByDeckId(deck.getId()));   // 1차 2개 + cherry 1개
+    }
 }

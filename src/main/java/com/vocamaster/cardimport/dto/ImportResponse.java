@@ -11,6 +11,7 @@ import java.util.Map;
 public class ImportResponse {
 
     private int imported;
+    private int skipped;
     private List<Map<String, Object>> failed;
     private int failedCount;
 }

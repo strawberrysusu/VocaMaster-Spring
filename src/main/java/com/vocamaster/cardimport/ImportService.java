@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,19 +44,32 @@ public class ImportService {
         Deck deck = deckService.verifyOwner(deckId, userId);
         var parsed = parse(req.getText(), req.getSeparator());
 
+        //기존 카드 front 수집(중복 검사용)
+        Set<String> existingFronts = cardRepository.findByDeckId(deckId).stream()
+                .map(Card::getFront)
+                .collect(Collectors.toSet());
+
         int imported = 0;
+        int skipped = 0;
         for (var c : parsed.cards) {
+            String front = c.get("front");
+            if (existingFronts.contains(front)) {
+                skipped++;
+                continue;                       // 이미 있음 → 건너뜀
+            }
             Card card = Card.builder()
-                    .front(c.get("front"))
+                    .front(front)
                     .back(c.get("back"))
                     .deck(deck)
                     .build();
             cardRepository.save(card);
+            existingFronts.add(front);          // 같은 import 내 중복도 막음
             imported++;
         }
 
         return ImportResponse.builder()
                 .imported(imported)
+                .skipped(skipped)
                 .failed(parsed.failed)
                 .failedCount(parsed.failed.size())
                 .build();
