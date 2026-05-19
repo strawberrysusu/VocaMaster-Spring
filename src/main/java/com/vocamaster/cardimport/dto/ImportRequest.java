@@ -10,5 +10,5 @@ public class ImportRequest {
     @NotBlank
     private String text;
 
-    private String separator = " - ";
+    private String separator;   // null/blank이면 ImportService가 자동 감지 (ADR-022)
 }

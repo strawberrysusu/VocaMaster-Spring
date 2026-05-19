@@ -24,10 +24,14 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class ImportServiceTest {
 
-    @Autowired private ImportService importService;
-    @Autowired private CardRepository cardRepository;
-    @Autowired private UserRepository userRepository;
-    @Autowired private DeckRepository deckRepository;
+    @Autowired
+    private ImportService importService;
+    @Autowired
+    private CardRepository cardRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private DeckRepository deckRepository;
 
     private User user;
     private Deck deck;
@@ -81,6 +85,7 @@ class ImportServiceTest {
 
         assertEquals(2, result.getImported());
     }
+
     @Test
     @DisplayName("1000줄 초과시 전체 거부")
     void importCards_overLimit_rejected() {
@@ -88,6 +93,21 @@ class ImportServiceTest {
         req.setText("apple - 사과\n".repeat(1001));    //1001줄 = 상한 초과
 
         assertThrows(BadRequestException.class, () ->
-                importService.importCards(deck.getId(), user.getId(),req));
+                importService.importCards(deck.getId(), user.getId(), req));
+    }
+
+    @Test
+    @DisplayName("구분자 자동 감지 - separator 미 지정시 콤마/탭 감지")
+    void detectSeparator_auto() {
+
+        // 콤마 — separator 안 줌 → 자동 감지
+        ImportRequest comma = new ImportRequest();
+        comma.setText("apple,사과\nbanana,바나나");
+        assertEquals(2, importService.importCards(deck.getId(), user.getId(), comma).getImported());
+
+        // 탭 — separator 안 줌 → 자동 감지
+        ImportRequest tab = new ImportRequest();
+        tab.setText("cat\t고양이\ndog\t개");
+        assertEquals(2, importService.importCards(deck.getId(), user.getId(), tab).getImported());
     }
 }

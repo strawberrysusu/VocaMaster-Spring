@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,8 @@ public class ImportService {
     private final CardRepository cardRepository;
     private final DeckService deckService;
     private static final int MAX_LINES= 1000;
+    private static final List<String> DEFAULT_SEPARATOR_CANDIDATES = List.of("\t", "|", ":", ",", "-");
+    private static final String DEFAULT_SEPARATOR = "-";
 
     // 텍스트 파싱 → 미리보기
     public PreviewResponse preview(ImportRequest req) {
@@ -66,19 +69,41 @@ public class ImportService {
             throw new BadRequestException(
                     "한 번에 최대  " + MAX_LINES + "줄까지 등록할 수 있습니다. 현재 " + lines.length + "줄입니다.");
         }
+        String sep = (separator == null || separator.isBlank())
+                ? detectSeparator(lines)
+                : separator;
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
             if (line.isEmpty()) continue;
 
-            String[] parts = line.split(separator.replace("|", "\\|"), 2);
+            String[] parts = line.split(Pattern.quote(sep), 2);
             if (parts.length == 2 && !parts[0].trim().isEmpty() && !parts[1].trim().isEmpty()) {
                 cards.add(Map.of("front", parts[0].trim(), "back", parts[1].trim()));
             } else {
                 failed.add(Map.of("line", i + 1, "content", line));
             }
         }
-
         return new ParseResult(cards, failed);
+    }
+
+    private String detectSeparator(String[] lines) {
+        for (String candidate : DEFAULT_SEPARATOR_CANDIDATES) {
+            int checked = 0;
+            int twoParts = 0;
+            for (String raw : lines) {
+                String line = raw.trim();
+                if (line.isEmpty()) continue;
+                if (checked >= 5) break;
+                checked++;
+                if (line.split(Pattern.quote(candidate)).length == 2) {   // limit 없음 = "정확히 2조각"
+                    twoParts++;
+                }
+            }
+            if (checked > 0 && twoParts * 2 > checked) {
+                return candidate;
+            }
+        }
+        return DEFAULT_SEPARATOR;
     }
 
     private record ParseResult(List<Map<String, String>> cards, List<Map<String, Object>> failed) {}
