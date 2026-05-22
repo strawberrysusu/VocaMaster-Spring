@@ -1,24 +1,19 @@
 package com.vocamaster.auth;
 
 
+import com.vocamaster.AbstractIntegrationTest;
 import com.vocamaster.auth.dto.RegisterRequest;
 import com.vocamaster.auth.dto.TokenPair;
 import com.vocamaster.common.exception.UnauthorizedException;
-import org.springframework.transaction.annotation.Transactional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Transactional
 @TestPropertySource(properties = "jwt.refresh-expiration=1")
-public class ExpiredRefreshTest {
+public class ExpiredRefreshTest extends AbstractIntegrationTest {
 
     @Autowired
     private AuthService authService;

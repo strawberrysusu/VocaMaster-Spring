@@ -13,8 +13,8 @@
 | **이번 주 집중** | 일괄 등록 강화 (#3) → Quiz 세션 단위 (#4) |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~35% / Phase 3~8 대기 |
 | **다음 마일스톤** | Phase 2 — 일괄 등록 + Quiz 강화 + Typing 모드 |
-| **신규 ADR** | ADR-016~023 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 상한 / 테스트 정책 / 구분자 자동 감지 / 중복 Skip — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | 일괄 등록 강화 #3 **완료** (1000줄 상한 / 실패 라인 / 구분자 자동 감지 / 중복 Skip 다 ✅. CSV 업로드는 STRETCH — 건너뜀). 다음: **Phase 2 #4 — Quiz 모드 강화** (퀴즈 세션 단위 관리) |
+| **신규 ADR** | ADR-016~025 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 / 테스트정책 / 구분자감지 / 중복Skip / **Quiz 세션(Eager)** / **Testcontainers** — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | Phase 2 #4 Quiz 모드 강화 **완료** (V5 마이그 / 엔티티 / 서비스 3메서드 / 컨트롤러 3엔드포인트 / 핵심 테스트 7개 ✅). Testcontainers + MySQL 인프라 전환 (ADR-025). 다음: **Phase 2 #5 — Typing 모드** |
 
 ---
 
@@ -438,7 +438,7 @@
 
 ### 🎯 Quiz 모드 강화 🔵
 - [ ] **[MUST]** 퀴즈 세션 단위 관리 (`quiz_sessions`, `quiz_questions`)
-- [ ] **[MUST]** `V4__add_quiz_sessions.sql`
+- [ ] **[MUST]** `V5__add_quiz_sessions.sql` (ADR-024: Eager 생성, quiz_questions.choices = JSON)
 - [ ] **[MUST]** 선택지 중복 제거 로직
 - [ ] **[MUST]** 카드 수 5개 미만일 때 2~4지선다로 fallback
 - [ ] **[MUST]** 정답 비교 정규화 (공백/대소문자)

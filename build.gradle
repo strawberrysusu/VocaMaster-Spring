@@ -11,6 +11,11 @@ java {
     sourceCompatibility = '17'
 }
 
+// Spring Boot 3.3 기본 Testcontainers(1.19.8)는 Docker 29 호환성 미보장 — 1.21.x로 상향
+ext {
+    set('testcontainers.version', '1.21.3')
+}
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -50,9 +55,14 @@ dependencies {
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testRuntimeOnly 'com.h2database:h2'
+
+    // Testcontainers (ADR-025) — 운영 동등 MySQL로 통합 테스트
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:mysql'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+    failFast = true                     // 첫 fail 즉시 중단 (디버깅 시간 단축)
 }

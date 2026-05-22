@@ -7,20 +7,15 @@ import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.UnauthorizedException;
 import com.vocamaster.user.UserRepository;
 import com.vocamaster.user.UserService;
+import com.vocamaster.AbstractIntegrationTest;
 import com.vocamaster.user.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Transactional
-class AuthServiceTest {
+class AuthServiceTest extends AbstractIntegrationTest {
 
     private static final String UA = "test-agent";
     private static final String IP = "127.0.0.1";

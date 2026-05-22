@@ -927,6 +927,100 @@ Quizlet도 이 방식. 동음이의어 때문에 카드를 쪼갤 필요 없음.
 
 ---
 
+## ADR-024: Quiz 세션 단위 관리 — Eager 생성 (시작 시 N문제 미리 확정)
+
+**상태:** 채택 (2026-05-18)
+**범위:** `QuizService`, 새 엔티티 `QuizSession` / `QuizQuestion`, V5 마이그레이션
+
+### 컨텍스트
+현재 Quiz는 한 문제씩 *독립 출제·제출* (QuizAttempt에 시도만 누적). 세션 개념 없음.
+목표: "1회 퀴즈 = N문제 묶음" — 시작 → 진행 → 요약. 중복 출제 방지, 일관성, 결과 요약.
+
+### 고려한 대안
+- **A. ✅ Eager** — 시작 시 N문제 미리 생성·DB 저장, 사용자는 하나씩 풀이
+- **B. Lazy** — 세션만, "다음 문제" 요청 시 생성 (중복 방지 어려움)
+- **C. 최소 변경** — quiz_attempts에 session_id만 추가 (세션 상태 약함)
+- **D. A + Pause/Resume/시간제한** — 과함 (지금 단계)
+
+### 결정
+**A. Eager 생성** + 부수 결정:
+- **choices 저장 = JSON 컬럼** (별도 choices 테이블 X — 단순)
+- **기존 `QuizAttempt` 유지** (호환, 점진 마이그레이션 — STRETCH로 deprecate 가능)
+- **세션당 기본 N=10 문제** (Quizlet 표준)
+
+### 근거
+- *일관성* — 시작 후 카드 추가/삭제돼도 그 세션 N문제는 고정
+- *중복 출제 방지* 자동 (미리 N개 골라놨으니 같은 카드 안 나옴)
+- *진행도/요약* 자연스러움 (DB에 다 있음)
+- 면접 답변: "세션 시작 시 문제 확정 → 풀이 중 카드 변동과 무관, 동시 진행도 안전"
+
+### 데이터 구조 (V5 마이그레이션)
+
+```
+quiz_sessions
+  id, user_id, deck_id, direction, total, started_at, ended_at
+
+quiz_questions
+  id, session_id, card_id,
+  question_text, choices_json (JSON 배열), correct_answer,
+  selected_answer (NULL=아직), is_correct (NULL=아직), answered_at (NULL=아직)
+```
+
+### 트레이드오프 / 한계
+- N개 row 미리 저장 (학습 서비스 규모엔 부담 0)
+- choices JSON은 쿼리/검증 제한 (단순함과의 트레이드 — 검색·필터 안 함)
+- 카드 < 5개면 fallback 필요 (CHECKLIST에 명시 — 2~4지선다)
+
+---
+
+## ADR-025: 통합 테스트를 Testcontainers + MySQL로 전환 (H2 폐기)
+
+**상태:** 채택 (2026-05-22)
+**범위:** `src/test/**`, `build.gradle`, `application.yml` (test)
+
+### 컨텍스트
+ADR-024 구현 중 `quiz_questions.choices_json JSON` 컬럼이 H2에서 깨짐 (역직렬화 실패). 원인 — H2의 JSON 동작이 MySQL과 미묘하게 다름. 운영(MySQL)에선 안 깨질 코드인데 *H2 테스트가 운영을 못 따라옴*.
+
+이 사건이 *원리적 위험*을 노출 — H2와 MySQL은 JSON / 함수 / 락 / 인덱스 / 트리거 동작이 다 다름. 옛 표준 패턴(H2 in-memory)은 *2024년 이후 사실상 안티패턴*.
+
+### 고려한 대안
+- **A. ✅ Testcontainers + MySQL** — 도커로 *진짜 MySQL 8 컨테이너* 띄워 테스트
+- B. H2 유지 + MODE=MySQL 강화 — JSON 동작은 여전히 다름
+- C. Mockito mock 확대 — DB 로직(트랜잭션/JPA 변경감지/FK) 검증 불가
+- D. JSON 컬럼 → TEXT로 회피 — 즉시 해결되지만 *근본 원인* 안 잡힘. 다음 차례 막힘
+
+### 결정
+**A. Testcontainers 정식 도입.**
+- 베이스 클래스 `AbstractIntegrationTest` — `@Container static MySQLContainer` (클래스 로딩 시 1회 시작)
+- `@ServiceConnection` (Spring Boot 3.1+) — datasource 자동 주입
+- 모든 통합 테스트 `extends AbstractIntegrationTest`
+- `application.yml` (test) — datasource 제거. Flyway/JPA만 유지 (`ddl-auto: validate`)
+- 컨테이너 reuse 옵션 (`~/.testcontainers.properties: testcontainers.reuse.enable=true`)으로 재시작 시간 흡수
+
+### 근거
+- *운영과 100% 동일 환경* — JSON, 함수, 락, FK, Flyway 마이그레이션까지 실제 검증
+- 면접 답변: "H2 쓰다가 운영에서 깨짐 → 도커로 진짜 MySQL 띄워 *운영 동등* 테스트로 전환"
+- 2024년 이후 *현업 표준* 트렌드와 정렬
+- Phase 5 Redis 도입 시 Testcontainers 인프라 이미 있어 자연스럽게 확장
+
+### 트레이드오프 / 한계
+- 컨테이너 부팅 시간 (~10초 초회 / reuse 시 ~0초)
+- Docker daemon 필수 — 사용자 PC 및 CI 환경에 도커 있어야
+- 의존성 3개 추가 (`spring-boot-testcontainers`, `testcontainers:junit-jupiter`, `testcontainers:mysql`)
+- **Testcontainers 1.21.3 강제** (Spring Boot 3.3 기본 1.19.8 오버라이드 — `build.gradle:14-16`). 사유: 사용자 PC Docker 29.4가 너무 신버전이라 1.19.8 호환성 미보장. 1.21.3이 Docker 29와 안전. Spring Boot 공식 검증 조합에서 벗어나는 *책임 감수*.
+- **Windows Docker named pipe 명시 필요** — `~/.testcontainers.properties`에 `docker.host=npipe:////./pipe/docker_engine`. 자동 감지는 `dockerDesktopLinuxEngine`(잘못된 pipe) 잡아 실패. CI(Linux)는 자동 감지로 동작.
+- **WSL Ubuntu 환경 권장** — Docker 29.4 + Windows named pipe 호환성 문제로 Windows 직접 실행보다 *WSL Ubuntu에서 unix socket* 경유가 안정. 셋업: `wsl --install -d Ubuntu` → Java 17 → `~/.docker-java.properties`에 `api.version=1.41` (Docker 29 info API 변경 우회).
+- **`@ServiceConnection` 미사용 → `@DynamicPropertySource` 명시 주입** — `spring-boot-testcontainers` 3.3.0이 Testcontainers 1.19.x 의존인데 우리는 1.21.3 강제 → 모듈 충돌로 `@ServiceConnection`이 *조용히 작동 안 함*. `AbstractIntegrationTest`에서 `static { MYSQL.start(); }` + `@DynamicPropertySource` 명시 주입 패턴이 호환성 ↑.
+- **`gradlew` 스크립트 Linux 호환 수정** — Spring Boot wrapper 옛 버전이 *Linux에서 `-Xmx64m`을 클래스명으로 넘김*. wrapper 한 줄 + CLASSPATH 위치 수정. Gradle wrapper 재생성 시 덮어쓰기 주의.
+- **테스트 옵션** — `tasks.named('test') { failFast = true }`로 첫 fail 즉시 중단 (디버깅 시간 단축).
+
+### 디버깅 교훈 (Phase 2 #4 마무리 시 누적)
+1. *Profile yml은 main/test 양쪽 모두 확인 필수* — `src/main/resources/application-test.yml`이 옛 H2 셋업으로 남아 *test 모듈 갱신*을 덮어씀 (한 쪽만 보는 함정)
+2. *Bulk Edit 시 한 파일이라도 빠지면 root cause 위장* — AuthServiceTest 1개만 `extends AbstractIntegrationTest` 누락 → 전체 39 테스트 fail로 보임. *grep으로 일괄 검증 필수*
+3. *디버깅 시간 단축 = failFast + 짧은 진단 명령 (grep "Caused by")*이 1시간 → 2분 단축
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)
