@@ -1021,6 +1021,36 @@ ADR-024 구현 중 `quiz_questions.choices_json JSON` 컬럼이 H2에서 깨짐 
 
 ---
 
+## ADR-026: Typing 모드 — Quiz Eager 패턴 재사용 + 채점 정책 중간 길
+
+**상태:** 채택 (2026-05-23)
+**범위:** 새 `TypingService`, 새 엔티티 `TypingSession`/`TypingQuestion`, V6 마이그, `docs/typing-policy.md`
+
+### 컨텍스트
+사용자가 *답을 직접 타이핑*해서 제출하는 학습 모드. Quiz(4지선다)와 달리 open-ended → 채점 정책이 핵심.
+
+### 결정 A — 세션 구조 = Quiz Eager 패턴 재사용
+- **선택:** `typing_sessions` + `typing_questions` (시작 시 N문제 미리 생성, ADR-024와 동일 패턴)
+- **대안:** Lazy (세션만, 즉석 출제) / Quiz 테이블 통합 (`type` 컬럼)
+- **그럼에도 Eager:** Quiz와 *동일 패턴*이라 학습/운영 비용 0, 일관성 ↑. Lazy는 *중복 출제 방지* 추적 코드 또 짜야. *답 노출 위험은 Typing엔 없음*(선택지 X)이지만 일관성 위해 Eager. 단 `typing_questions`는 `choices_json` 없음
+
+### 결정 B — 채점 정책 = 중간 길 (정규화 최소 + 쉼표 복수 정답)
+- **선택:** `trim()` + `equalsIgnoreCase()` + **쉼표로 구분된 복수 정답 분리** (예: `"사과, 능금"` 저장 시 둘 중 하나 입력해도 정답)
+- **대안:** (엄격) 정확 일치만 / (관대) Levenshtein 오타 허용 / (정규화 강화) 구두점/한글 자모 분리
+- **그럼에도 중간:** 너무 엄격 → "Apple"≠"apple" → 사용자 화남 / 너무 관대 → 학습 의미 사라짐. *중간 + `docs/typing-policy.md`로 명시 문서화*. Levenshtein은 STRETCH (정확 암기에 위험)
+
+### 부수 결정
+- Quiz와 데이터 분리 (typing_questions에 `choices_json` 없음, attempt 구조 단순)
+- V6 마이그
+- `docs/typing-policy.md`로 채점 정책 별도 문서
+
+### 트레이드오프 / 한계
+- Eager 패턴 *2번 반복* (Quiz/Typing) → 향후 *공통 SessionService 추출* 리팩토링 여지
+- 쉼표 분리는 "Hello, World" 같은 *답 자체에 쉼표 포함* 시 깨짐 (학습 서비스 규모엔 무관)
+- 채점 정책 변경 시 *과거 attempt 결과*는 그대로 (재채점 안 함)
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

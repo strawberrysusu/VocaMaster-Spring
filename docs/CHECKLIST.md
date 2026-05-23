@@ -13,8 +13,8 @@
 | **이번 주 집중** | 일괄 등록 강화 (#3) → Quiz 세션 단위 (#4) |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~35% / Phase 3~8 대기 |
 | **다음 마일스톤** | Phase 2 — 일괄 등록 + Quiz 강화 + Typing 모드 |
-| **신규 ADR** | ADR-016~025 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 / 테스트정책 / 구분자감지 / 중복Skip / **Quiz 세션(Eager)** / **Testcontainers** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | Phase 2 #4 Quiz 모드 강화 **완료** (V5 마이그 / 엔티티 / 서비스 3메서드 / 컨트롤러 3엔드포인트 / 핵심 테스트 7개 ✅). Testcontainers + MySQL 인프라 전환 (ADR-025). 다음: **Phase 2 #5 — Typing 모드** |
+| **신규 ADR** | ADR-016~026 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 / 테스트정책 / 구분자감지 / 중복Skip / Quiz세션(Eager) / Testcontainers / **Typing(Eager재사용+채점중간)** — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | Phase 2 #5 Typing 모드 **완료** (ADR-026: Eager 재사용 + trim/ignoreCase/쉼표복수정답 + 7 tests ✅ + `docs/typing-policy.md`). 다음: **Phase 2 #6 — Flashcard 모드 정리** |
 
 ---
 
@@ -446,11 +446,11 @@
 - [ ] **[SHOULD]** `GET /api/quiz-sessions/{id}/summary`
 
 ### ⌨️ Typing 모드 🔵
-- [ ] **[MUST]** `POST /api/decks/{deckId}/typing-sessions`
-- [ ] **[MUST]** 사용자 입력 vs 정답 채점 (정확 일치 / 공백 무시 / 대소문자 무시)
-- [ ] **[MUST]** 쉼표로 구분된 복수 정답 허용 (`사과, 능금`)
-- [ ] **[MUST]** 채점 정책 문서화 (`docs/typing-policy.md`)
-- [ ] **[STRETCH]** 오타 1~2개 허용 (Levenshtein)
+- [x] **[MUST]** `POST /api/decks/{deckId}/typing-sessions` (Eager 패턴, ADR-026)
+- [x] **[MUST]** 사용자 입력 vs 정답 채점 (trim + equalsIgnoreCase)
+- [x] **[MUST]** 쉼표로 구분된 복수 정답 허용 (`사과, 능금` → split + 각 trim)
+- [x] **[MUST]** 채점 정책 문서화 (`docs/typing-policy.md`)
+- [ ] **[STRETCH]** 오타 1~2개 허용 (Levenshtein) — 정확 암기 학습 가치 우선, 미도입
 
 ### 📖 Flashcard 모드 정리 🟢
 - [ ] **[SHOULD]** 기존 StudyService 흐름을 Flashcard 모드로 명확히 분리
