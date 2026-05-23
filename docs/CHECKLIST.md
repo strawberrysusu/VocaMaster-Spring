@@ -462,11 +462,11 @@
 - [x] **[SHOULD]** 오답만 모아서 재퀴즈/재타이핑 (Quiz `wrongOnly` 기존 + Typing `wrongOnly` 추가)
 
 ### 🧪 테스트
-- [ ] **[MUST]** Quiz — 카드 부족 시 fallback 검증
-- [ ] **[MUST]** Quiz — 선택지 중복 없음
-- [ ] **[MUST]** Typing — 채점 정책 케이스 (대소문자/공백/복수정답)
-- [ ] **[SHOULD]** Import — 중복 정책
-- [ ] **[SHOULD]** Card — 검색/정렬
+- [x] **[MUST]** Quiz — 카드 부족 시 fallback 검증 (`QuizSessionServiceTest.startSession_fallback_lessThan5Cards`)
+- [x] **[MUST]** Quiz — 선택지 중복 없음 (`QuizSessionServiceTest.startSession_choicesNoDuplicate`)
+- [x] **[MUST]** Typing — 채점 정책 케이스 (`TypingServiceTest` normalize/multipleAnswers/emptyInput 등)
+- [x] **[SHOULD]** Import — 중복 정책 (`ImportServiceTest.importCards_skipDuplicate`)
+- [x] **[SHOULD]** Card — 검색/정렬 (`CardServiceTest.카드 목록 - keyword로 front/back 검색 + 전체 조회`)
 
 ### 📓 학습 노트
 - [ ] **[SHOULD]** week-6 ~ week-9 학습 노트
