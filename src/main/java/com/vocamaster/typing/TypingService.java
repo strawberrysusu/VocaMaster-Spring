@@ -23,6 +23,7 @@ import java.util.*;
 public class TypingService {
 
     private static final int DEFAULT_TOTAL = 10;
+    private static final LocalDateTime EPOCH = LocalDateTime.of(1970, 1, 1, 0, 0);
 
     private final TypingSessionRepository typingSessionRepository;
     private final TypingQuestionRepository typingQuestionRepository;
@@ -39,9 +40,19 @@ public class TypingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다"));
 
-        // 1) 카드 풀 결정 (전체 / 즐겨찾기만 — wrongOnly는 Typing엔 미적용)
+        // 1) 카드 풀 결정 (전체 / 오답만 / 즐겨찾기만)
         List<Card> pool;
-        if (Boolean.TRUE.equals(req.getStarredOnly())) {
+        if (Boolean.TRUE.equals(req.getWrongOnly())) {
+            // ADR-028 부수 결정: Typing 오답만 재타이핑 (전체 기간 = EPOCH)
+            List<Long> wrongIds = typingQuestionRepository
+                    .findWrongCardIdsByDeckIdAndUserIdSince(deckId, userId, EPOCH);
+            if (wrongIds.isEmpty()) {
+                throw new BadRequestException("오답 카드가 없습니다");
+            }
+            pool = cardRepository.findAllById(wrongIds).stream()
+                    .filter(c -> c.getDeck().getId().equals(deckId))
+                    .toList();
+        } else if (Boolean.TRUE.equals(req.getStarredOnly())) {
             pool = cardRepository.findByDeckIdAndStarredTrue(deckId);
         } else {
             pool = cardRepository.findByDeckId(deckId);

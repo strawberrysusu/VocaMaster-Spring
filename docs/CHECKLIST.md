@@ -13,8 +13,8 @@
 | **이번 주 집중** | 일괄 등록 강화 (#3) → Quiz 세션 단위 (#4) |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~35% / Phase 3~8 대기 |
 | **다음 마일스톤** | Phase 2 — 일괄 등록 + Quiz 강화 + Typing 모드 |
-| **신규 ADR** | ADR-016~027 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 / 테스트정책 / 구분자감지 / 중복Skip / Quiz세션(Eager) / Testcontainers / Typing / **Flashcard명확화(리네임 X)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | Phase 2 #6 Flashcard 모드 정리 **완료** (ADR-027: javadoc + `docs/learning-modes.md`. 코드 변경 ~0, 회귀 0). 다음: **Phase 2 #7 — 오답노트** |
+| **신규 ADR** | ADR-016~028 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 / 테스트정책 / 구분자감지 / 중복Skip / Quiz세션 / Testcontainers / Typing / Flashcard명확화 / **통합오답노트(Aggregator)** — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | Phase 2 #7 오답노트 **완료** (ADR-028: Aggregator 패턴, 3 모드 통합 + Typing `wrongOnly`). Phase 2 종료. 다음: **Phase 2 마무리 또는 Phase 3 (Leitner Box) 진입** |
 
 ---
 
@@ -458,8 +458,8 @@
 - [x] **[SHOULD]** 세션 결과 요약 API — `GET /study/sessions/{id}/summary`
 
 ### 🗒️ 오답노트 🟢
-- [ ] **[SHOULD]** 최근 틀린 카드 조회 API
-- [ ] **[SHOULD]** 오답만 모아서 재퀴즈 생성
+- [x] **[SHOULD]** 최근 틀린 카드 조회 API (ADR-028: `GET /decks/{deckId}/wrong-notes?days=30`, Aggregator 패턴)
+- [x] **[SHOULD]** 오답만 모아서 재퀴즈/재타이핑 (Quiz `wrongOnly` 기존 + Typing `wrongOnly` 추가)
 
 ### 🧪 테스트
 - [ ] **[MUST]** Quiz — 카드 부족 시 fallback 검증

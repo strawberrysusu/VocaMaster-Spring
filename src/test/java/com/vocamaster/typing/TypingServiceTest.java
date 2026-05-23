@@ -222,4 +222,35 @@ class TypingServiceTest extends AbstractIntegrationTest {
             }
         }
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // 8. wrongOnly — Typing 오답만 풀로 사용 (ADR-028 부수 결정)
+    // ─────────────────────────────────────────────────────────────
+    @Test
+    @DisplayName("startSession - wrongOnly=true면 Typing 오답 카드만 풀로 사용")
+    void startSession_wrongOnly() {
+        for (int i = 0; i < 5; i++) addCard("W" + i, "ans" + i);
+        em.flush();
+
+        // 1차 세션 — 첫 카드만 일부러 오답
+        StartTypingSessionResponse first = typingService.startSession(deck.getId(), user.getId(), startReq(2));
+        StartTypingSessionResponse.QuestionDto firstQ = first.getQuestions().get(0);
+        typingService.submitTypedAnswer(first.getSessionId(), user.getId(),
+                submitReq(firstQ.getQuestionId(), "intentionally-wrong"));
+
+        em.flush();
+        em.clear();
+
+        // 2차 세션 — wrongOnly=true → 오답 카드 1장만 풀에 들어가야
+        StartTypingSessionRequest wrongOnlyReq = new StartTypingSessionRequest();
+        wrongOnlyReq.setDirection("front_to_back");
+        wrongOnlyReq.setTotal(10);
+        wrongOnlyReq.setWrongOnly(true);
+
+        StartTypingSessionResponse retry = typingService.startSession(deck.getId(), user.getId(), wrongOnlyReq);
+
+        // 풀이 1장이라 total=1
+        assertEquals(1, retry.getTotal(), "오답 카드 1장만 풀");
+        assertEquals(1, retry.getQuestions().size());
+    }
 }

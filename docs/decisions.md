@@ -1085,6 +1085,41 @@ Phase 2 #6 항목: "기존 StudyService 흐름을 Flashcard 모드로 명확히 
 
 ---
 
+## ADR-028: 통합 오답노트 — Aggregator 패턴 (3 모드 통합 + 최근 N일)
+
+**상태:** 채택 (2026-05-23)
+**범위:** 새 패키지 `com.vocamaster.wrongnote` (Service/Controller/DTO), 기존 Repository 3개에 시간 필터 메서드 추가, `TypingService.startSession`에 `wrongOnly` 분기
+
+### 컨텍스트
+Phase 2 #7 항목: 오답노트. 현재 *Quiz 단발 오답*만 `QuizService.getWrongCards`로 조회 가능. Typing/Flashcard 오답은 *DB엔 있지만 모아 보는 API 없음*. 사용자가 "내가 틀린 카드 한 번에 보여줘"를 원하는 자연스러운 학습 흐름.
+
+### 고려한 대안
+- **A. ✅ Aggregator 패턴** — 신규 `WrongNoteService`가 3 Repository를 병렬 호출 → 카드 ID 중복 제거 후 합쳐 응답. `GET /decks/{deckId}/wrong-notes?days=30`
+- B. *API 3개 분리* — `quiz/typing/study` 각각 wrong API, 클라이언트가 합침
+- C. *전용 테이블* — `wrong_card_ids(user_id, card_id, mode, created_at)` 신규. 오답 발생 시 트리거로 누적
+
+### 결정
+**A. Aggregator.**
+- 응답 형식: `{ quiz: [...], typing: [...], flashcard: [...], combined: [...], total: N }` (모드별 + 통합 둘 다)
+- 시간 필터: `?days=N` 쿼리 파라미터, 기본 30일 (없으면 전체)
+- 중복 제거: `Set<Long>`으로 카드 ID 기준
+
+### 근거
+- B의 단점: *클라이언트 3번 호출* + *합치기 로직 클라이언트 책임* + *3 모드 인지 강제* → API 사용성 ↓
+- C의 단점: *데이터 중복 저장* (원천이 3 테이블에 이미 있음) + *동기화 트리거* (오답 발생/취소 시) + *premature optimization* — 학습 서비스 규모엔 *서버 합산이 충분히 빠름*
+- A의 장점: 기존 Repository만 활용 (변경 최소), Phase 3 Leitner Box의 *복습 우선순위* 입력으로도 자연스러움 (같은 통합 결과 재사용)
+
+### 부수 결정
+- **Typing `wrongOnly` 옵션**: `StartTypingSessionRequest.wrongOnly` 추가 (Quiz 패턴 일치, "오답만 재타이핑" 학습 흐름)
+- **응답 분리**: 모드별 리스트 + 통합 리스트 *둘 다* 제공 — 클라이언트가 *모드별 본 후 통합 다시 본다*는 자연 UX
+
+### 트레이드오프 / 한계
+- 카드 1장이 *3 모드 모두 틀림* → combined에 1번만 노출 (정확). 단 *모드별 빈도* 정보는 없음 (필요해지면 응답 확장)
+- *시간 필터 기본 30일* — 평생 누적 오답을 한 번에 보고 싶으면 `?days=0` (또는 큰 값) 필요. 기본값은 UX 우선
+- *Eventually* 트래픽 폭증 시 C로 전환 트리거 — *오답 카드 한 번 조회에 100ms 초과* 시 검토
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

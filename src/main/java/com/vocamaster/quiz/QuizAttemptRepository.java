@@ -16,4 +16,10 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
     @Query("SELECT DISTINCT q.card.id FROM QuizAttempt q " +
            "WHERE q.deckId = :deckId AND q.user.id = :userId AND q.isCorrect = false")
     List<Long> findWrongCardIds(Long deckId, Long userId);
+
+    // ADR-028: 오답 카드 ID 목록 — 시간 필터 (since 이후만, 통합 오답노트용)
+    @Query("SELECT DISTINCT q.card.id FROM QuizAttempt q " +
+           "WHERE q.deckId = :deckId AND q.user.id = :userId AND q.isCorrect = false " +
+           "AND q.createdAt >= :since")
+    List<Long> findWrongCardIdsSince(Long deckId, Long userId, LocalDateTime since);
 }
