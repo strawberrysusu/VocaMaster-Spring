@@ -13,8 +13,8 @@
 | **이번 주 집중** | 일괄 등록 강화 (#3) → Quiz 세션 단위 (#4) |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~35% / Phase 3~8 대기 |
 | **다음 마일스톤** | Phase 2 — 일괄 등록 + Quiz 강화 + Typing 모드 |
-| **신규 ADR** | ADR-016~026 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 / 테스트정책 / 구분자감지 / 중복Skip / Quiz세션(Eager) / Testcontainers / **Typing(Eager재사용+채점중간)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | Phase 2 #5 Typing 모드 **완료** (ADR-026: Eager 재사용 + trim/ignoreCase/쉼표복수정답 + 7 tests ✅ + `docs/typing-policy.md`). 다음: **Phase 2 #6 — Flashcard 모드 정리** |
+| **신규 ADR** | ADR-016~027 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 / 테스트정책 / 구분자감지 / 중복Skip / Quiz세션(Eager) / Testcontainers / Typing / **Flashcard명확화(리네임 X)** — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | Phase 2 #6 Flashcard 모드 정리 **완료** (ADR-027: javadoc + `docs/learning-modes.md`. 코드 변경 ~0, 회귀 0). 다음: **Phase 2 #7 — 오답노트** |
 
 ---
 
@@ -453,9 +453,9 @@
 - [ ] **[STRETCH]** 오타 1~2개 허용 (Levenshtein) — 정확 암기 학습 가치 우선, 미도입
 
 ### 📖 Flashcard 모드 정리 🟢
-- [ ] **[SHOULD]** 기존 StudyService 흐름을 Flashcard 모드로 명확히 분리
-- [ ] **[SHOULD]** 학습 방향 (front→back / back→front) 옵션
-- [ ] **[SHOULD]** 세션 결과 요약 API
+- [x] **[SHOULD]** 기존 StudyService 흐름을 Flashcard 모드로 명확히 분리 (ADR-027: javadoc + `docs/learning-modes.md`)
+- [x] **[SHOULD]** 학습 방향 (front→back / back→front) 옵션 — `StartStudyRequest.direction`
+- [x] **[SHOULD]** 세션 결과 요약 API — `GET /study/sessions/{id}/summary`
 
 ### 🗒️ 오답노트 🟢
 - [ ] **[SHOULD]** 최근 틀린 카드 조회 API

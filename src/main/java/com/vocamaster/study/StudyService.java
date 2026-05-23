@@ -21,6 +21,24 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * <h2>Flashcard 학습 모드 서비스</h2>
+ *
+ * 이 서비스는 <b>Flashcard 모드</b>를 담당한다 — 사용자가 카드를 보고 *안다 / 모른다*를 기록하는 학습 방식.
+ * Quiz(4지선다), Typing(직접 입력)과 별개의 학습 모드.
+ *
+ * <p>클래스명이 {@code StudyService}로 일반적인 이유는 ADR-027 — *리네임 회귀 위험*을 피하고
+ * javadoc + {@code docs/learning-modes.md}로 명확화하는 선택. 향후 모드가 더 추가되면
+ * 공통 추상({@code AbstractSessionService}) 추출 검토.</p>
+ *
+ * <p>관련 ADR / 문서:</p>
+ * <ul>
+ *   <li>ADR-024: Quiz 세션 (Eager 패턴)</li>
+ *   <li>ADR-026: Typing 모드 (Eager 재사용 + 채점 정책)</li>
+ *   <li>ADR-027: Flashcard 명확화 (이 서비스의 위치)</li>
+ *   <li>{@code docs/learning-modes.md} — 3가지 모드 비교 표</li>
+ * </ul>
+ */
 @Service
 @RequiredArgsConstructor
 public class StudyService {

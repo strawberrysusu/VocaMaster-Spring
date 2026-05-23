@@ -1051,6 +1051,40 @@ ADR-024 구현 중 `quiz_questions.choices_json JSON` 컬럼이 H2에서 깨짐 
 
 ---
 
+## ADR-027: Flashcard 모드 명확화 — 리네임 대신 javadoc + 문서
+
+**상태:** 채택 (2026-05-23)
+**범위:** `StudyService.java` (javadoc), 새 `docs/learning-modes.md`
+
+### 컨텍스트
+Phase 2 #6 항목: "기존 StudyService 흐름을 Flashcard 모드로 명확히 분리". 현재 `StudyService`가 *안다/모른다 기록 + 통계* = 사실상 *Flashcard 모드*인데 클래스명이 일반적이라 *Quiz/Typing*과의 구분이 코드만 봐선 불명확.
+
+### 고려한 대안
+- **A. ✅ 클래스명 유지 + javadoc 보강 + `docs/learning-modes.md` 신규** (3가지 학습 모드 비교 표 + 각 ADR 링크)
+- B. `StudyService` → `FlashcardService` 리네임
+- C. Flashcard/Quiz/Typing 공통 추상 (`AbstractSessionService`) 추출 — 큰 리팩토링
+
+### 결정
+**A.** javadoc + 별도 문서로 명확화.
+
+### 근거
+- B는 *API 경로 (`/decks/{deckId}/study/...`) / 테스트 / DB 테이블 (`study_sessions`, `study_records`) / 기존 커밋 히스토리*까지 다 변경 필요 → 회귀 위험 ↑, 작업 비용 ↑
+- C는 *진짜로 추상이 필요해지는 시점* (모드 4개+ 또는 공통 흐름이 자연스럽게 추출됨)에 도입하는 게 정공. 지금은 *각 모드 흐름이 충분히 다름* (Flashcard=안다/모른다, Quiz=4지선다, Typing=open-ended) → *premature abstraction* 회피
+- A는 *코드 거의 안 건드림* (javadoc만) → 회귀 위험 0, 면접 답변용 *문서 자산*만 추가
+
+### 트레이드오프 / 한계
+- *코드만 보고* `StudyService = Flashcard`임을 알려면 javadoc 봐야 함 (이름만으론 여전히 모호)
+- 새 모드 추가될수록 *공통 패턴 추출* 압력 ↑ → 그 시점에 C로 전환 (트리거: 모드 4개+ 또는 *3 모드 사이 동일 흐름 발견*)
+
+### `docs/learning-modes.md` 구성
+3가지 학습 모드 (Flashcard / Quiz / Typing) 한 표로 비교:
+- 어떤 클래스/엔티티/API 경로
+- 어떤 ADR 결정
+- 채점/판정 방식
+- 사용처
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)
