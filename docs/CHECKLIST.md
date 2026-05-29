@@ -1,7 +1,7 @@
 # VocaMaster 진행 체크리스트
 
 > 시작일: 2026-05-04 · 목표 완료: 2027-01-04 (8개월 / ~34주)
-> 마지막 업데이트: 2026-05-04
+> 마지막 업데이트: 2026-05-29
 
 ---
 
@@ -9,12 +9,12 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 2 진행 중** (Card 검색/정렬 ✅ / Card 필드 ✅ / 일괄등록 + Quiz + Typing 남음) |
-| **이번 주 집중** | 일괄 등록 강화 (#3) → Quiz 세션 단위 (#4) |
-| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ~35% / Phase 3~8 대기 |
-| **다음 마일스톤** | Phase 2 — 일괄 등록 + Quiz 강화 + Typing 모드 |
+| **진행 중인 Phase** | **Phase 2 완료 ✅** (#3~#7 구현 + 3모드 API end-to-end 검증 + 완료기준 전부 충족, 2026-05-29). 다음: Phase 3 대기 |
+| **이번 주 집중** | Phase 3 (Leitner Box) 진입 — 간격 반복 알고리즘 (`card_progress` 모델 + ADR 먼저) |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ (코드 완료) / Phase 3~8 대기 |
+| **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~028 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 / 테스트정책 / 구분자감지 / 중복Skip / Quiz세션 / Testcontainers / Typing / Flashcard명확화 / **통합오답노트(Aggregator)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | Phase 2 #7 오답노트 **완료** (ADR-028: Aggregator 패턴, 3 모드 통합 + Typing `wrongOnly`). Phase 2 종료. 다음: **Phase 2 마무리 또는 Phase 3 (Leitner Box) 진입** |
+| **▶ 다음 액션 (resume)** | **Phase 2 완전 종료 (2026-05-29)** — 3모드 API end-to-end 검증 + 정답판정 설명 통과. **다음: Phase 3 — `card_progress` 테이블 + Leitner Box 박스증감 로직. ADR(왜 Leitner? SM-2/FSRS 대안) 먼저 작성 후 코드** |
 
 ---
 
@@ -437,13 +437,13 @@
 - [ ] **[STRETCH]** CSV 파일 업로드 (`multipart/form-data`)
 
 ### 🎯 Quiz 모드 강화 🔵
-- [ ] **[MUST]** 퀴즈 세션 단위 관리 (`quiz_sessions`, `quiz_questions`)
-- [ ] **[MUST]** `V5__add_quiz_sessions.sql` (ADR-024: Eager 생성, quiz_questions.choices = JSON)
-- [ ] **[MUST]** 선택지 중복 제거 로직
-- [ ] **[MUST]** 카드 수 5개 미만일 때 2~4지선다로 fallback
-- [ ] **[MUST]** 정답 비교 정규화 (공백/대소문자)
-- [ ] **[SHOULD]** 같은 세션 내 문제 중복 방지
-- [ ] **[SHOULD]** `GET /api/quiz-sessions/{id}/summary`
+- [x] **[MUST]** 퀴즈 세션 단위 관리 (`quiz_sessions`, `quiz_questions`) — `QuizSession`/`QuizQuestion` + `startSession` Eager
+- [x] **[MUST]** `V5__add_quiz_sessions.sql` (ADR-024: Eager 생성, quiz_questions.choices = JSON)
+- [x] **[MUST]** 선택지 중복 제거 로직 (`buildChoices`의 `Set<String> seen`)
+- [x] **[MUST]** 카드 수 5개 미만일 때 2~4지선다로 fallback (`choiceCount = Math.min(MAX_CHOICES, pool.size())`)
+- [x] **[MUST]** 정답 비교 정규화 (공백/대소문자) (`trim()` + `equalsIgnoreCase()`)
+- [x] **[SHOULD]** 같은 세션 내 문제 중복 방지 (shuffle 후 `subList` N장 — 같은 카드 재출제 X)
+- [x] **[SHOULD]** 세션 요약 API — `GET /decks/{deckId}/quiz-sessions/{sessionId}/summary` (덱 하위 경로로 구현)
 
 ### ⌨️ Typing 모드 🔵
 - [x] **[MUST]** `POST /api/decks/{deckId}/typing-sessions` (Eager 패턴, ADR-026)
@@ -473,10 +473,10 @@
 - [ ] **[SHOULD]** **닫고 다시 짜기 #2**: Typing 채점 로직 90분 재구현
 
 ### ✅ Phase 2 완료 기준
-- [ ] 모든 MUST 항목 완료
-- [ ] Flashcard / Quiz / Typing 3가지 모드 데모 페이지에서 동작
-- [ ] 퀴즈 정답 조작 방지 로직 설명 가능
-- [ ] 면접 질문 3개 답변 가능 (Typing 채점 정책 / 카드 부족 시 처리 등)
+- [x] 모든 MUST 항목 완료 (Card 검색/정렬 · 일괄등록 · Quiz 세션 · Typing 전부 구현 + 테스트 그린)
+- [x] Flashcard / Quiz / Typing 3가지 모드 **API end-to-end 검증 완료** (2026-05-29 — 회원가입→덱→카드5장→3모드. Quiz 서버판정+마스킹 / Typing trim / Flashcard known집계 전부 확인)
+- [x] 퀴즈 정답 조작 방지 로직 설명 가능 (2026-05-29 구두 통과 — "프론트 판정은 조작 가능, 서버만 신뢰" + 3중 방어 정확히 답)
+- [x] 면접 질문 3개 답변 가능 (week-3 노트 Q1~Q8 + 오늘 정답판정 설명 — 충분)
 
 ### 🆕 추가 아이디어
 
