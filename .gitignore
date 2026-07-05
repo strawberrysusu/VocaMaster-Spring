@@ -24,3 +24,6 @@ Thumbs.db
 # Claude Code
 .claude/
 bin/
+
+# Codex (개인 학습 자료, 프로젝트 무관)
+.codex/
