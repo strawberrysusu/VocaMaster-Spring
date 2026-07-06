@@ -9,12 +9,12 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 2 완료 ✅** (#3~#7 구현 + 3모드 API end-to-end 검증 + 완료기준 전부 충족, 2026-05-29). 다음: Phase 3 대기 |
-| **이번 주 집중** | Phase 3 (Leitner Box) 진입 — 간격 반복 알고리즘 (`card_progress` 모델 + ADR 먼저) |
-| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ (코드 완료) / Phase 3~8 대기 |
+| **진행 중인 Phase** | **Phase 3 진행 중 🔵** (2026-07-06 시작 — ADR-029 커밋 + V7 card_progress 테이블 완료) |
+| **이번 주 집중** | Phase 3 (Leitner Box) — `CardProgress` 엔티티/Repository → `ReviewService` 박스증감 로직 |
+| **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
-| **신규 ADR** | ADR-016~028 — Frontend / TTS / 콘텐츠 / Quest / 1000줄 / 테스트정책 / 구분자감지 / 중복Skip / Quiz세션 / Testcontainers / Typing / Flashcard명확화 / **통합오답노트(Aggregator)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **Phase 2 완전 종료 (2026-05-29)** — 3모드 API end-to-end 검증 + 정답판정 설명 통과. **다음: Phase 3 — `card_progress` 테이블 + Leitner Box 박스증감 로직. ADR(왜 Leitner? SM-2/FSRS 대안) 먼저 작성 후 코드** |
+| **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | **V7 테이블 완료 (2026-07-06, 전체 테스트 그린)** — 다음: `CardProgress` 엔티티 + Repository (`com.vocamaster.review` 패키지) → `ReviewService.recordAnswer` 박스증감. ⚠️ Docker 업데이트로 Testcontainers 깨졌었음 → 알려진 함정 참조 |
 
 ---
 
@@ -85,6 +85,7 @@
 ### 알려진 함정
 
 - **`application.yml`(main)에 새 키 추가 시 → `src/test/resources/application.yml`에도 *반드시* 같은 키 추가.** 두 파일이 따로 관리됨. 안 하면 PropertyPlaceholderHelper IllegalArgumentException 발생 (이미 두 번 당함)
+- **Docker Desktop 업데이트 후 Testcontainers 전멸 (`Could not find a valid Docker environment` + 400)** → 엔진이 구식 API를 거부하는 것. Testcontainers 1.21.3은 API v1.32로 요청하는데 Docker 29.x 엔진의 최소 지원은 1.40. **해결: `~/.docker-java.properties`에 `api.version=1.44` 한 줄** (2026-07-06 당함. env `DOCKER_API_VERSION`이나 `.testcontainers.properties`의 `api.version`은 안 먹힘 — 반드시 `.docker-java.properties`)
 
 ### 📜 ADR (Architecture Decision Record) 정책
 
@@ -497,10 +498,10 @@
 > **모드:** 🔵 B (전부 — 면접 메인 무기)
 
 ### 📊 Card Progress 모델
-- [ ] **[MUST]** `card_progress` 테이블 설계 (user_id, card_id, box_level, next_review_at, correct_streak, wrong_count, last_reviewed_at, version)
-- [ ] **[MUST]** `V5__add_card_progress.sql`
-- [ ] **[MUST]** `(user_id, card_id)` unique 제약
-- [ ] **[MUST]** `(user_id, next_review_at)` 복합 인덱스 (due 카드 조회용)
+- [x] **[MUST]** `card_progress` 테이블 설계 (user_id, card_id, box_level, next_review_at, correct_streak, wrong_count, last_reviewed_at, version)
+- [x] **[MUST]** `V7__add_card_progress.sql` (V5/V6은 quiz/typing 세션에 사용됨)
+- [x] **[MUST]** `(user_id, card_id)` unique 제약
+- [x] **[MUST]** `(user_id, next_review_at)` 복합 인덱스 (due 카드 조회용)
 - [ ] **[MUST]** `CardProgress` 엔티티 + Repository
 - [ ] **[MUST]** 사용자가 카드를 처음 만나면 자동 생성 (box=1, next_review_at=now)
 
