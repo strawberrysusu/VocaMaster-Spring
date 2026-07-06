@@ -502,7 +502,7 @@
 - [x] **[MUST]** `V7__add_card_progress.sql` (V5/V6은 quiz/typing 세션에 사용됨)
 - [x] **[MUST]** `(user_id, card_id)` unique 제약
 - [x] **[MUST]** `(user_id, next_review_at)` 복합 인덱스 (due 카드 조회용)
-- [ ] **[MUST]** `CardProgress` 엔티티 + Repository
+- [x] **[MUST]** `CardProgress` 엔티티 + Repository
 - [ ] **[MUST]** 사용자가 카드를 처음 만나면 자동 생성 (box=1, next_review_at=now)
 
 ### 🧠 Leitner Box 로직
