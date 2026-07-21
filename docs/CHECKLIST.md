@@ -1,7 +1,7 @@
 # VocaMaster 진행 체크리스트
 
 > 시작일: 2026-05-04 · 목표 완료: 2027-01-04 (8개월 / ~34주)
-> 마지막 업데이트: 2026-05-29
+> 마지막 업데이트: 2026-07-22
 
 ---
 
@@ -10,11 +10,11 @@
 | 항목 | 값 |
 |---|---|
 | **진행 중인 Phase** | **Phase 3 진행 중 🔵** (2026-07-06 시작 — ADR-029 커밋 + V7 card_progress 테이블 완료) |
-| **이번 주 집중** | Phase 3 (Leitner Box) — `CardProgress` 엔티티/Repository → `ReviewService` 박스증감 로직 |
+| **이번 주 집중** | Phase 3 (Leitner Box) — due 조회 API + `docs/review-algorithm.md` (`recordAnswer` ✅) |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **V7 테이블 완료 (2026-07-06, 전체 테스트 그린)** — 다음: `CardProgress` 엔티티 + Repository (`com.vocamaster.review` 패키지) → `ReviewService.recordAnswer` 박스증감. ⚠️ Docker 업데이트로 Testcontainers 깨졌었음 → 알려진 함정 참조 |
+| **▶ 다음 액션 (resume)** | **`recordAnswer` + 테스트 6종 완료 (2026-07-22, 전체 그린)** — 다음: `GET /api/reviews/due` 조회 API (`ReviewController` 신설) + `docs/review-algorithm.md` 문서 (코드가 문서를 추월함). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -86,6 +86,7 @@
 
 - **`application.yml`(main)에 새 키 추가 시 → `src/test/resources/application.yml`에도 *반드시* 같은 키 추가.** 두 파일이 따로 관리됨. 안 하면 PropertyPlaceholderHelper IllegalArgumentException 발생 (이미 두 번 당함)
 - **Docker Desktop 업데이트 후 Testcontainers 전멸 (`Could not find a valid Docker environment` + 400)** → 엔진이 구식 API를 거부하는 것. Testcontainers 1.21.3은 API v1.32로 요청하는데 Docker 29.x 엔진의 최소 지원은 1.40. **해결: `~/.docker-java.properties`에 `api.version=1.44` 한 줄** (2026-07-06 당함. env `DOCKER_API_VERSION`이나 `.testcontainers.properties`의 `api.version`은 안 먹힘 — 반드시 `.docker-java.properties`)
+- **터미널에서 `gradlew` 실행 시 Lombok 크래시 (`ExceptionInInitializerError` at `LombokProcessor.init`)** → 시스템 JAVA_HOME이 JDK 25를 가리키는데 Lombok이 JDK 25 미지원. IntelliJ Gradle 창은 temurin-17을 써서 멀쩡하니 "IDE는 되는데 터미널만 죽는" 형태로 나타남. **해결: `~/.gradle/gradle.properties`에 `org.gradle.java.home=C:/Users/qjwkr/.jdks/temurin-17.0.19` 한 줄** (2026-07-20 당함)
 
 ### 📜 ADR (Architecture Decision Record) 정책
 
@@ -503,15 +504,15 @@
 - [x] **[MUST]** `(user_id, card_id)` unique 제약
 - [x] **[MUST]** `(user_id, next_review_at)` 복합 인덱스 (due 카드 조회용)
 - [x] **[MUST]** `CardProgress` 엔티티 + Repository
-- [ ] **[MUST]** 사용자가 카드를 처음 만나면 자동 생성 (box=1, next_review_at=now)
+- [x] **[MUST]** 사용자가 카드를 처음 만나면 자동 생성 (box=1, next_review_at=now) — `recordAnswer`의 `orElseGet(newProgress)`
 
 ### 🧠 Leitner Box 로직
 - [ ] **[MUST]** 박스별 간격 정의 (`docs/review-algorithm.md`)
   - box 1: 10분 / box 2: 1일 / box 3: 3일 / box 4: 7일 / box 5: 14일 / box 6: 30일
-- [ ] **[MUST]** `ReviewService.recordAnswer(cardId, correct)` — 박스 증감 + nextReviewAt 계산
-- [ ] **[MUST]** 맞힘: box+1, 간격 증가
-- [ ] **[MUST]** 틀림: box=1로 리셋, 짧은 간격
-- [ ] **[MUST]** `@Version` 낙관적 락 적용 (동시 답변 충돌 방지)
+- [x] **[MUST]** `ReviewService.recordAnswer(cardId, correct)` — 박스 증감 + nextReviewAt 계산 (2026-07-22)
+- [x] **[MUST]** 맞힘: box+1, 간격 증가 (`Math.min` 천장 6)
+- [x] **[MUST]** 틀림: box=1로 리셋, 짧은 간격 (풀 리셋 — ADR-029)
+- [x] **[MUST]** `@Version` 낙관적 락 적용 (엔티티에 적용됨 — 충돌 시 409/재시도 처리는 아래 SHOULD)
 - [ ] **[SHOULD]** OptimisticLockException 발생 시 409 응답 또는 1회 재시도
 - [ ] **[STRETCH]** `Clock` 주입 (시간 의존 테스트 안정화)
 
@@ -527,9 +528,9 @@
 - [ ] **[SHOULD]** streak 계산 로직 (어제 학습 → 오늘 학습 = streak+1)
 
 ### 🧪 테스트
-- [ ] **[MUST]** 처음 카드 → progress 생성 확인
-- [ ] **[MUST]** 맞힘 → box_level 증가, nextReviewAt 미래로
-- [ ] **[MUST]** 틀림 → box_level=1, nextReviewAt 가까움
+- [x] **[MUST]** 처음 카드 → progress 생성 확인 (flush/clear 후 DB 재조회로 save 증발까지 검증)
+- [x] **[MUST]** 맞힘 → box_level 증가, nextReviewAt이 *새 박스 간격* 범위(±호출시각+3일)인지 검증
+- [x] **[MUST]** 틀림 → box_level=1, nextReviewAt 10분 범위 검증 (+ box 6 천장 / IDOR 403 / 404 보너스 테스트)
 - [ ] **[MUST]** due cards만 조회되는지
 - [ ] **[MUST]** 다른 사용자 progress와 분리되는지
 - [ ] **[MUST]** 동시 답변 시 OptimisticLock 동작 확인
