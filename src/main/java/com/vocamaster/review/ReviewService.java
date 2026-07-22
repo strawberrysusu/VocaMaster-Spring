@@ -5,6 +5,7 @@ import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.DeckService;
+import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -66,6 +68,18 @@ public class ReviewService {
 
         // ⑥ 저장 — 처음 만난 카드는 INSERT, 기존 카드는 더티체킹으로도 저장되지만 패턴 통일
         return ReviewAnswerResponse.from(cardProgressRepository.save(progress));
+    }
+
+    // 복습 대상 목록 — deckId null이면 전체 덱 (새 카드는 A 결정에 따라 미포함)
+    @Transactional(readOnly = true)
+    public List<DueCardResponse> getDueCards(Long userId, Long deckId) {
+        if (deckId != null) {
+            deckService.verifyOwner(deckId, userId);    // 남의 덱 필터 요청 차단
+        }
+        return cardProgressRepository.findDueCards(userId, deckId, LocalDateTime.now())
+                .stream()
+                .map(DueCardResponse::from)
+                .toList();
     }
 
     // 처음 만난 카드의 성적표 생성 (box 1, 즉시 복습 대상)

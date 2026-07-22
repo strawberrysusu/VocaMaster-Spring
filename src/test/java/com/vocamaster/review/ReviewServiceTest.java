@@ -7,6 +7,7 @@ import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
+import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -147,5 +149,62 @@ class ReviewServiceTest extends AbstractIntegrationTest {
     void recordAnswer_missingCard_notFound() {
         assertThrows(NotFoundException.class,
                 () -> reviewService.recordAnswer(user.getId(), 999_999L, true));
+    }
+
+    @Test
+    @DisplayName("due 조회 — 시간 지난 내 카드만, 오래 기다린 순 (새 카드/미래 카드 제외)")
+    void getDueCards_returnsOnlyDueOnes() {
+        Card banana = cardRepository.save(Card.builder().front("banana").back("바나나").deck(deck).build());
+        Card kiwi = cardRepository.save(Card.builder().front("kiwi").back("키위").deck(deck).build());
+        cardRepository.save(Card.builder().front("melon").back("멜론").deck(deck).build());   // progress 없음 = 새 카드
+
+        saveProgress(user, card, 2, LocalDateTime.now().minusDays(1));      // apple — 어제부터 due
+        saveProgress(user, banana, 3, LocalDateTime.now().plusDays(1));     // 내일 예정 — 제외
+        saveProgress(user, kiwi, 1, LocalDateTime.now().minusDays(2));      // 그저께부터 due — 제일 급함
+
+        List<DueCardResponse> due = reviewService.getDueCards(user.getId(), deck.getId());
+
+        assertEquals(2, due.size(), "새 카드(melon)와 미래 카드(banana)는 제외");
+        assertEquals(kiwi.getId(), due.get(0).getCardId(), "가장 오래 기다린 카드부터");
+        assertEquals(card.getId(), due.get(1).getCardId());
+    }
+
+    @Test
+    @DisplayName("due 조회 — 다른 사용자의 progress는 안 섞임")
+    void getDueCards_isolatedPerUser() {
+        User other = userRepository.save(User.builder()
+                .email("other@test.com").password("encoded").nickname("other").build());
+        Deck otherDeck = deckRepository.save(Deck.builder().title("Other Deck").user(other).build());
+        Card otherCard = cardRepository.save(Card.builder().front("grape").back("포도").deck(otherDeck).build());
+        saveProgress(other, otherCard, 2, LocalDateTime.now().minusDays(1));    // 남의 due 카드
+
+        saveProgress(user, card, 2, LocalDateTime.now().minusDays(1));          // 내 due 카드
+
+        List<DueCardResponse> due = reviewService.getDueCards(user.getId(), null);  // 전체 덱 조회
+
+        assertEquals(1, due.size());
+        assertEquals(card.getId(), due.get(0).getCardId(), "내 progress만 나와야 함");
+    }
+
+    @Test
+    @DisplayName("남의 덱 deckId로 due 필터 요청 → Forbidden")
+    void getDueCards_othersDeckFilter_forbidden() {
+        User other = userRepository.save(User.builder()
+                .email("other2@test.com").password("encoded").nickname("other2").build());
+        Deck otherDeck = deckRepository.save(Deck.builder().title("Other Deck 2").user(other).build());
+
+        assertThrows(ForbiddenException.class,
+                () -> reviewService.getDueCards(user.getId(), otherDeck.getId()));
+    }
+
+    private void saveProgress(User owner, Card target, int box, LocalDateTime nextReviewAt) {
+        cardProgressRepository.save(CardProgress.builder()
+                .user(owner)
+                .card(target)
+                .boxLevel(box)
+                .correctStreak(0)
+                .wrongCount(0)
+                .nextReviewAt(nextReviewAt)
+                .build());
     }
 }
