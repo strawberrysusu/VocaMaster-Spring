@@ -87,6 +87,7 @@
 - **`application.yml`(main)에 새 키 추가 시 → `src/test/resources/application.yml`에도 *반드시* 같은 키 추가.** 두 파일이 따로 관리됨. 안 하면 PropertyPlaceholderHelper IllegalArgumentException 발생 (이미 두 번 당함)
 - **Docker Desktop 업데이트 후 Testcontainers 전멸 (`Could not find a valid Docker environment` + 400)** → 엔진이 구식 API를 거부하는 것. Testcontainers 1.21.3은 API v1.32로 요청하는데 Docker 29.x 엔진의 최소 지원은 1.40. **해결: `~/.docker-java.properties`에 `api.version=1.44` 한 줄** (2026-07-06 당함. env `DOCKER_API_VERSION`이나 `.testcontainers.properties`의 `api.version`은 안 먹힘 — 반드시 `.docker-java.properties`)
 - **터미널에서 `gradlew` 실행 시 Lombok 크래시 (`ExceptionInInitializerError` at `LombokProcessor.init`)** → 시스템 JAVA_HOME이 JDK 25를 가리키는데 Lombok이 JDK 25 미지원. IntelliJ Gradle 창은 temurin-17을 써서 멀쩡하니 "IDE는 되는데 터미널만 죽는" 형태로 나타남. **해결: `~/.gradle/gradle.properties`에 `org.gradle.java.home=C:/Users/qjwkr/.jdks/temurin-17.0.19` 한 줄** (2026-07-20 당함)
+  - **같은 지뢰의 IntelliJ 버전**: Gradle Sync 실패 — `Incompatible Gradle JVM` / `Unsupported class file major version 69` / "incompatible Java 25.0.3 and Gradle 8.7". IntelliJ의 Gradle JVM 드롭다운이 JAVA_HOME(JDK 25)을 가리켜서 발생. **해결: Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JVM = temurin-17 선택 → 재싱크.** Gradle 9.3 업그레이드 제안은 무시 (Phase 중간에 빌드 도구 업그레이드 금지) (2026-07-22 당함)
 
 ### 📜 ADR (Architecture Decision Record) 정책
 
