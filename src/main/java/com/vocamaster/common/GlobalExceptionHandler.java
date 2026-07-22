@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ErrorResponse.of(409, "CONFLICT", "다른 요청과 동시에 처리되어 충돌했습니다. 잠시 후 다시 시도해주세요"));
+                .body(ErrorResponse.of(409, "CONFLICT", "다른 요청이 먼저 처리되었습니다. 최신 상태를 다시 조회해주세요"));
     }
 
     // 본문 자체가 안 읽힘 (깨진 JSON, 잘못된 인코딩 등) = 클라이언트 잘못 → 400.
