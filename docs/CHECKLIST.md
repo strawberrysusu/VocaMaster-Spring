@@ -14,7 +14,7 @@
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **due API + ReviewController + 문서 완료 (2026-07-22, 테스트 9종 전체 그린)** — Phase 3 MUST 잔여: 동시 답변 OptimisticLock 테스트 1개. 그다음 SHOULD(409/재시도, streak, today-summary). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **🎉 Phase 3 MUST 전부 완료 (2026-07-22, 테스트 10종 + Swagger 시연 그린)** — 남은 것: SHOULD(OptimisticLock 409/재시도 → streak `daily_user_stats` → today-summary) + 폐쇄훈련 #3(월말) + 완료 기준 구두 점검 5개. ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -533,7 +533,7 @@
 - [x] **[MUST]** 틀림 → box_level=1, nextReviewAt 10분 범위 검증 (+ box 6 천장 / IDOR 403 / 404 보너스 테스트)
 - [x] **[MUST]** due cards만 조회되는지 (새 카드/미래 카드 제외 + 오래 기다린 순 정렬까지)
 - [x] **[MUST]** 다른 사용자 progress와 분리되는지 (+ 남의 덱 필터 403 보너스)
-- [ ] **[MUST]** 동시 답변 시 OptimisticLock 동작 확인
+- [x] **[MUST]** 동시 답변 시 OptimisticLock 동작 확인 (`ReviewServiceConcurrencyTest` — 트랜잭션 인터리브로 결정적 재현, 2026-07-22)
 - [ ] **[SHOULD]** streak — 연속/비연속 케이스
 
 ### 📓 학습 노트
