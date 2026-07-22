@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -51,6 +52,13 @@ public class GlobalExceptionHandler {
                 .orElse("유효성 검증 실패");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of(400, "BAD_REQUEST", message));
+    }
+
+    // 동시 요청 충돌 (@Version 낙관적 락) — 낡은 버전의 쓰기 거부. 클라이언트는 재조회 후 재시도 (ADR-029)
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(409, "CONFLICT", "다른 요청과 동시에 처리되어 충돌했습니다. 잠시 후 다시 시도해주세요"));
     }
 
     // 본문 자체가 안 읽힘 (깨진 JSON, 잘못된 인코딩 등) = 클라이언트 잘못 → 400.

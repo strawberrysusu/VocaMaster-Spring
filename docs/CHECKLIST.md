@@ -14,7 +14,7 @@
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🎉 Phase 3 MUST 전부 완료 (2026-07-22, 테스트 10종 + Swagger 시연 그린)** — 남은 것: SHOULD(OptimisticLock 409/재시도 → streak `daily_user_stats` → today-summary) + 폐쇄훈련 #3(월말) + 완료 기준 구두 점검 5개. ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **🎉 Phase 3 MUST 완료 + 409 핸들러까지 (2026-07-22)** — 다음: 🔥 Streak `daily_user_stats` + `V8__add_daily_stats.sql` → today-summary → 폐쇄훈련 #3(월말) + 완료 기준 구두 점검 5개. ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -513,7 +513,7 @@
 - [x] **[MUST]** 맞힘: box+1, 간격 증가 (`Math.min` 천장 6)
 - [x] **[MUST]** 틀림: box=1로 리셋, 짧은 간격 (풀 리셋 — ADR-029)
 - [x] **[MUST]** `@Version` 낙관적 락 적용 (엔티티에 적용됨 — 충돌 시 409/재시도 처리는 아래 SHOULD)
-- [ ] **[SHOULD]** OptimisticLockException 발생 시 409 응답 또는 1회 재시도
+- [x] **[SHOULD]** OptimisticLockException 발생 시 **409 응답**으로 결정 (재시도는 더블클릭 중복 반영 위험으로 배제 — 2026-07-22)
 - [ ] **[STRETCH]** `Clock` 주입 (시간 의존 테스트 안정화)
 
 ### 🌐 API
@@ -523,7 +523,7 @@
 
 ### 🔥 연속 학습일 (Streak)
 - [ ] **[SHOULD]** `daily_user_stats` 테이블
-- [ ] **[SHOULD]** `V6__add_daily_stats.sql`
+- [ ] **[SHOULD]** `V8__add_daily_stats.sql` *(V6은 typing 세션에 이미 사용됨 — 번호 갱신 2026-07-22)*
 - [ ] **[SHOULD]** 학습 기록 시 오늘 날짜 stat 업데이트
 - [ ] **[SHOULD]** streak 계산 로직 (어제 학습 → 오늘 학습 = streak+1)
 
