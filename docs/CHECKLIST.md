@@ -14,7 +14,7 @@
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **`recordAnswer` + 테스트 6종 완료 (2026-07-22, 전체 그린)** — 다음: `GET /api/reviews/due` 조회 API (`ReviewController` 신설) + `docs/review-algorithm.md` 문서 (코드가 문서를 추월함). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **due API + ReviewController + 문서 완료 (2026-07-22, 테스트 9종 전체 그린)** — Phase 3 MUST 잔여: 동시 답변 OptimisticLock 테스트 1개. 그다음 SHOULD(409/재시도, streak, today-summary). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -507,7 +507,7 @@
 - [x] **[MUST]** 사용자가 카드를 처음 만나면 자동 생성 (box=1, next_review_at=now) — `recordAnswer`의 `orElseGet(newProgress)`
 
 ### 🧠 Leitner Box 로직
-- [ ] **[MUST]** 박스별 간격 정의 (`docs/review-algorithm.md`)
+- [x] **[MUST]** 박스별 간격 정의 (`docs/review-algorithm.md`) — 2026-07-22 작성 (간격표 + due 정의 포함)
   - box 1: 10분 / box 2: 1일 / box 3: 3일 / box 4: 7일 / box 5: 14일 / box 6: 30일
 - [x] **[MUST]** `ReviewService.recordAnswer(cardId, correct)` — 박스 증감 + nextReviewAt 계산 (2026-07-22)
 - [x] **[MUST]** 맞힘: box+1, 간격 증가 (`Math.min` 천장 6)
@@ -517,9 +517,9 @@
 - [ ] **[STRETCH]** `Clock` 주입 (시간 의존 테스트 안정화)
 
 ### 🌐 API
-- [ ] **[MUST]** `GET /api/reviews/due?deckId=` — 복습 대상 카드 목록
-- [ ] **[MUST]** `POST /api/reviews/cards/{cardId}/answer` — 정답/오답 기록
-- [ ] **[SHOULD]** `GET /api/reviews/today-summary` — 오늘 복습 카드 수 / 완료 수 / streak
+- [x] **[MUST]** `GET /reviews/due?deckId=` — 복습 대상 카드 목록 (JPQL `join fetch`로 N+1 방지, deckId 없으면 전체 덱 — 2026-07-22)
+- [x] **[MUST]** `POST /reviews/cards/{cardId}/answer` — 정답/오답 기록 (자기평가, `@NotNull Boolean` + `@Valid`로 빈 JSON 차단)
+- [ ] **[SHOULD]** `GET /reviews/today-summary` — 오늘 복습 카드 수 / 완료 수 / streak
 
 ### 🔥 연속 학습일 (Streak)
 - [ ] **[SHOULD]** `daily_user_stats` 테이블
@@ -531,8 +531,8 @@
 - [x] **[MUST]** 처음 카드 → progress 생성 확인 (flush/clear 후 DB 재조회로 save 증발까지 검증)
 - [x] **[MUST]** 맞힘 → box_level 증가, nextReviewAt이 *새 박스 간격* 범위(±호출시각+3일)인지 검증
 - [x] **[MUST]** 틀림 → box_level=1, nextReviewAt 10분 범위 검증 (+ box 6 천장 / IDOR 403 / 404 보너스 테스트)
-- [ ] **[MUST]** due cards만 조회되는지
-- [ ] **[MUST]** 다른 사용자 progress와 분리되는지
+- [x] **[MUST]** due cards만 조회되는지 (새 카드/미래 카드 제외 + 오래 기다린 순 정렬까지)
+- [x] **[MUST]** 다른 사용자 progress와 분리되는지 (+ 남의 덱 필터 403 보너스)
 - [ ] **[MUST]** 동시 답변 시 OptimisticLock 동작 확인
 - [ ] **[SHOULD]** streak — 연속/비연속 케이스
 
