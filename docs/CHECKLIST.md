@@ -14,7 +14,7 @@
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🔴 폐쇄훈련 #3 완주 (2026-07-26 새벽, `drill/LeitnerDrill.java` — 로직 전부 자력, 실행 2·3·1 확인)** — 다음 세션: week note(재료: 폐쇄훈련 빈칸 목록) + 백준 1문제 → 그다음 🔥 Streak (`daily_user_stats` + V8) 설계부터. ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **🔴 폐쇄훈련 #3 1회차 완주 (2026-07-26, 골격 자력 + 후반 참조 — 2회차 다음 주말)** — 다음: 🔥 Streak (`daily_user_stats` + V8) 설계부터. 이번 주말 내 week note + 백준 1문제. ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -539,7 +539,7 @@
 
 ### 📓 학습 노트
 - [ ] **[SHOULD]** week-10 ~ week-13 학습 노트
-- [x] **[SHOULD]** **닫고 다시 짜기 #3**: Leitner 박스 증감 로직 90분 재구현 — 2026-07-26 완주 (`drill/LeitnerDrill.java`). 로직 전원 자력, 막힌 건 스코프(변수 위치) 2회뿐
+- [x] **[SHOULD]** **닫고 다시 짜기 #3**: Leitner 박스 증감 로직 재구현 — 2026-07-26 1회차 완주 (`drill/LeitnerDrill.java`, 실행 2·3·1 확인). **정직 기록**: 구조·분기 골격·증가 방향은 자력 / 후반(타입·배열·천장·리셋·날짜 위치)은 참조 후 적용. **2회차(참조 없이) 다음 주말 재도전 예약**
 - [ ] **[MUST]** `docs/review-algorithm.md` — 면접 답변용 정리 (왜 Leitner? SM-2/FSRS와 차이?)
 
 ### ✅ Phase 3 완료 기준
