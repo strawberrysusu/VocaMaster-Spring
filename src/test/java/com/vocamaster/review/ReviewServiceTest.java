@@ -9,6 +9,7 @@ import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
 import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
+import com.vocamaster.stats.DailyUserStatRepository;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -18,7 +19,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,6 +30,7 @@ class ReviewServiceTest extends AbstractIntegrationTest {
 
     @Autowired private ReviewService reviewService;
     @Autowired private CardProgressRepository cardProgressRepository;
+    @Autowired private DailyUserStatRepository dailyUserStatRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private DeckRepository deckRepository;
     @Autowired private CardRepository cardRepository;
@@ -142,6 +146,16 @@ class ReviewServiceTest extends AbstractIntegrationTest {
 
         assertTrue(cardProgressRepository.findByUserIdAndCardId(attacker.getId(), card.getId()).isEmpty(),
                 "검문소에서 막혔으니 남의 카드에 성적표가 생기면 안 됨");
+    }
+
+    @Test
+    @DisplayName("답변하면 출석 도장도 같이 찍힘 (Streak 배선 확인)")
+    void recordAnswer_alsoRecordsDailyStat() {
+        reviewService.recordAnswer(user.getId(), card.getId(), true);
+
+        assertTrue(dailyUserStatRepository.findByUserIdAndStatDate(
+                        user.getId(), LocalDate.now(ZoneId.of("Asia/Seoul"))).isPresent(),
+                "recordAnswer가 statsService.recordStudy를 호출해야 함");
     }
 
     @Test

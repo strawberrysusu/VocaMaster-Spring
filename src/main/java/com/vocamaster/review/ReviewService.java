@@ -7,6 +7,7 @@ import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.DeckService;
 import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
+import com.vocamaster.stats.StatsService;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class ReviewService {
     private final CardRepository cardRepository;
     private final DeckService deckService;
     private final UserRepository userRepository;
+    private final StatsService statsService;
 
     public ReviewAnswerResponse recordAnswer(Long userId, Long cardId, boolean correct) {
         // ① 카드 실존 확인
@@ -65,6 +67,9 @@ public class ReviewService {
         LocalDateTime now = LocalDateTime.now();
         progress.setLastReviewedAt(now);
         progress.setNextReviewAt(now.plus(BOX_INTERVALS[progress.getBoxLevel() - 1]));
+
+        // 출석 도장 — 모든 학습 모드 공통 (연속 학습일). 같은 트랜잭션이라 답변과 함께 성공/롤백
+        statsService.recordStudy(userId);
 
         // ⑥ 저장 — 처음 만난 카드는 INSERT, 기존 카드는 더티체킹으로도 저장되지만 패턴 통일
         return ReviewAnswerResponse.from(cardProgressRepository.save(progress));

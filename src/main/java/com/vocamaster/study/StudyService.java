@@ -1,5 +1,7 @@
 package com.vocamaster.study;
 
+import com.vocamaster.stats.StatsService;
+
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.card.dto.CardResponse;
@@ -49,6 +51,7 @@ public class StudyService {
     private final DeckService deckService;
     private final UserRepository userRepository;
     private final QuizAttemptRepository quizAttemptRepository;
+    private final StatsService statsService;
 
     // 학습 세션 시작
     public StudySessionResponse startSession(Long deckId, Long userId, StartStudyRequest req) {
@@ -109,6 +112,7 @@ public class StudyService {
                 .build();
 
         recordRepository.save(record);
+        statsService.recordStudy(userId);   // 출석 도장 (연속 학습일)
         return StudyRecordResponse.from(record);
     }
 

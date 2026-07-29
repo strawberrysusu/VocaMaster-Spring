@@ -3,6 +3,7 @@ package com.vocamaster.review;
 import com.vocamaster.AbstractIntegrationTest;
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
+import com.vocamaster.stats.DailyUserStatRepository;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
 import com.vocamaster.user.User;
@@ -18,6 +19,9 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,6 +42,7 @@ class ReviewServiceConcurrencyTest extends AbstractIntegrationTest {
 
     @Autowired private ReviewService reviewService;
     @Autowired private CardProgressRepository cardProgressRepository;
+    @Autowired private DailyUserStatRepository dailyUserStatRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private DeckRepository deckRepository;
     @Autowired private CardRepository cardRepository;
@@ -62,6 +67,9 @@ class ReviewServiceConcurrencyTest extends AbstractIntegrationTest {
     void cleanUp() {
         cardProgressRepository.findByUserIdAndCardId(user.getId(), card.getId())
                 .ifPresent(cardProgressRepository::delete);
+        // recordAnswer가 출석(daily_user_stats)도 남기므로 FK 역순 청소에 포함
+        dailyUserStatRepository.findByUserIdAndStatDate(user.getId(), LocalDate.now(ZoneId.of("Asia/Seoul")))
+                .ifPresent(dailyUserStatRepository::delete);
         cardRepository.delete(card);
         deckRepository.delete(deck);
         userRepository.delete(user);

@@ -1,5 +1,7 @@
 package com.vocamaster.typing;
 
+import com.vocamaster.stats.StatsService;
+
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.common.Direction;
@@ -30,6 +32,7 @@ public class TypingService {
     private final CardRepository cardRepository;
     private final DeckService deckService;
     private final UserRepository userRepository;
+    private final StatsService statsService;
 
     /**
      * 세션 시작 — N문제 미리 생성 (ADR-026, Quiz Eager 패턴 재사용 + 선택지 없음).
@@ -151,6 +154,8 @@ public class TypingService {
         if (sessionEnded) {
             session.setEndedAt(LocalDateTime.now());
         }
+
+        statsService.recordStudy(userId);   // 출석 도장 (연속 학습일)
 
         return SubmitTypedAnswerResponse.builder()
                 .correct(isCorrect)

@@ -1,5 +1,7 @@
 package com.vocamaster.quiz;
 
+import com.vocamaster.stats.StatsService;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,6 +39,7 @@ public class QuizService {
     private final DeckService deckService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final StatsService statsService;
 
     // 5지선다 퀴즈 문제 생성 (정답은 서버만 알고 있음)
     public QuizQuestionResponse generateQuiz(Long deckId, Long userId, GenerateQuizRequest req) {
@@ -118,6 +121,7 @@ public class QuizService {
                 .build();
 
         quizAttemptRepository.save(attempt);
+        statsService.recordStudy(userId);   // 출석 도장 (연속 학습일)
 
         return QuizResultResponse.builder()
                 .id(attempt.getId())
@@ -337,6 +341,8 @@ public class QuizService {
         if (sessionEnded) {
             session.setEndedAt(LocalDateTime.now());
         }
+
+        statsService.recordStudy(userId);   // 출석 도장 (연속 학습일)
 
         return SubmitToSessionResponse.builder()
                 .correct(isCorrect)

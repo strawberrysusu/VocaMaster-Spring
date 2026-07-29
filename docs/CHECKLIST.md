@@ -14,7 +14,7 @@
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🔴 폐쇄훈련 #3 1회차 완주 (2026-07-26, 골격 자력 + 후반 참조 — 2회차 다음 주말)** — 다음: 🔥 Streak (`daily_user_stats` + V8) 설계부터. 이번 주말 내 week note + 백준 1문제. ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **🔥 Streak 완료 (2026-07-27, `stats` 패키지 + V8 + 5개 지점 배선 + 테스트 그린)** — 다음: `GET /reviews/today-summary` (Phase 3 마지막 SHOULD) → Phase 3 완료 기준 구두 점검 5개. 밀린 것: week note + 백준 1문제 + 폐쇄훈련 #3 2회차(주말). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -523,10 +523,10 @@
 - [ ] **[SHOULD]** `GET /reviews/today-summary` — 오늘 복습 카드 수 / 완료 수 / streak
 
 ### 🔥 연속 학습일 (Streak)
-- [ ] **[SHOULD]** `daily_user_stats` 테이블
-- [ ] **[SHOULD]** `V8__add_daily_stats.sql` *(V6은 typing 세션에 이미 사용됨 — 번호 갱신 2026-07-22)*
-- [ ] **[SHOULD]** 학습 기록 시 오늘 날짜 stat 업데이트
-- [ ] **[SHOULD]** streak 계산 로직 (어제 학습 → 오늘 학습 = streak+1)
+- [x] **[SHOULD]** `daily_user_stats` 테이블 — "하루 한 줄 출석부", `UNIQUE(user_id, stat_date)` (2026-07-27)
+- [x] **[SHOULD]** `V8__add_daily_stats.sql` *(V6은 typing 세션에 이미 사용됨 — 번호 갱신 2026-07-22)*
+- [x] **[SHOULD]** 학습 기록 시 오늘 날짜 stat 업데이트 — **5개 학습 지점 전부 배선** (Review/Study/Typing/Quiz구형/Quiz세션 — "뭘 하든 공부면 출석" 사용자 결정). studyCount는 원자적 UPDATE로 증가 (lost update 방지, @Version 대신 — 통계 충돌로 본 답변까지 409 되는 것 회피)
+- [x] **[SHOULD]** streak 계산 로직 — 오늘 첫 학습 때 어제 행 보고 +1 or 1. KST 명시(`ZoneId.of("Asia/Seoul")`) — 배포 서버가 UTC여도 동일 (Codex 리뷰 반영)
 
 ### 🧪 테스트
 - [x] **[MUST]** 처음 카드 → progress 생성 확인 (flush/clear 후 DB 재조회로 save 증발까지 검증)
@@ -535,7 +535,7 @@
 - [x] **[MUST]** due cards만 조회되는지 (새 카드/미래 카드 제외 + 오래 기다린 순 정렬까지)
 - [x] **[MUST]** 다른 사용자 progress와 분리되는지 (+ 남의 덱 필터 403 보너스)
 - [x] **[MUST]** 동시 답변 시 OptimisticLock 동작 확인 (`ReviewServiceConcurrencyTest` — 트랜잭션 인터리브로 결정적 재현, 2026-07-22)
-- [ ] **[SHOULD]** streak — 연속/비연속 케이스
+- [x] **[SHOULD]** streak — 연속/비연속 케이스 (`StatsServiceTest` 4종: 최초/연속/끊김/같은날 + `ReviewServiceTest` 배선 확인)
 
 ### 📓 학습 노트
 - [ ] **[SHOULD]** week-10 ~ week-13 학습 노트
