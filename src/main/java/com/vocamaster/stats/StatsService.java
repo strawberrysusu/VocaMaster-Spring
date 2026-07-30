@@ -1,8 +1,5 @@
 package com.vocamaster.stats;
 
-import com.vocamaster.common.exception.NotFoundException;
-import com.vocamaster.user.User;
-import com.vocamaster.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +16,6 @@ public class StatsService {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final DailyUserStatRepository dailyUserStatRepository;
-    private final UserRepository userRepository;
 
     /**
      * 학습 활동 1회 = 출석 도장. 모든 학습 모드(Review/Quiz/Typing/Study)가 호출.
@@ -39,16 +35,7 @@ public class StatsService {
                 .map(yesterday -> yesterday.getStreak() + 1)    // 어제도 공부함 → 연속 +1
                 .orElse(1);                                     // 끊김 → 1부터 다시
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다"));
-
-        // 알려진 한계: "오늘 첫 학습"이 정확히 동시에 2번 오면 UNIQUE 제약이 한쪽을 거부함 (희귀).
-        // 데이터 오염은 제약이 막아주므로 지금은 단순한 코드를 유지 (개선 여지: 충돌 시 increment 재시도)
-        dailyUserStatRepository.save(DailyUserStat.builder()
-                .user(user)
-                .statDate(today)
-                .studyCount(1)
-                .streak(streak)
-                .build());
+        // upsert — "첫 학습이 정확히 동시에 2건" 와도 한쪽은 INSERT, 한쪽은 +1로 흡수 (500 구멍 제거)
+        dailyUserStatRepository.upsertTodayRow(userId, today, streak);
     }
 }

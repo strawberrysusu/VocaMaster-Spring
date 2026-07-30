@@ -525,7 +525,7 @@
 ### 🔥 연속 학습일 (Streak)
 - [x] **[SHOULD]** `daily_user_stats` 테이블 — "하루 한 줄 출석부", `UNIQUE(user_id, stat_date)` (2026-07-27)
 - [x] **[SHOULD]** `V8__add_daily_stats.sql` *(V6은 typing 세션에 이미 사용됨 — 번호 갱신 2026-07-22)*
-- [x] **[SHOULD]** 학습 기록 시 오늘 날짜 stat 업데이트 — **5개 학습 지점 전부 배선** (Review/Study/Typing/Quiz구형/Quiz세션 — "뭘 하든 공부면 출석" 사용자 결정). studyCount는 원자적 UPDATE로 증가 (lost update 방지, @Version 대신 — 통계 충돌로 본 답변까지 409 되는 것 회피)
+- [x] **[SHOULD]** 학습 기록 시 오늘 날짜 stat 업데이트 — **5개 학습 지점 전부 배선** (Review/Study/Typing/Quiz구형/Quiz세션 — "뭘 하든 공부면 출석" 사용자 결정). studyCount는 원자적 UPDATE로 증가 (lost update 방지, @Version 대신 — 통계 충돌로 본 답변까지 409 되는 것 회피). **Codex 검산 반영 2건**: 첫 학습 동시 생성은 MySQL upsert(`ON DUPLICATE KEY UPDATE`)로 500 구멍 제거 / Study·구형 Quiz 답변 메서드에 빠져 있던 `@Transactional` 추가 (답변+출석 원자성)
 - [x] **[SHOULD]** streak 계산 로직 — 오늘 첫 학습 때 어제 행 보고 +1 or 1. KST 명시(`ZoneId.of("Asia/Seoul")`) — 배포 서버가 UTC여도 동일 (Codex 리뷰 반영)
 
 ### 🧪 테스트

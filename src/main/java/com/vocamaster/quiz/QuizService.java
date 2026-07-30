@@ -93,6 +93,7 @@ public class QuizService {
     }
 
     // 퀴즈 답안 제출 — 서버에서 정답 판정
+    @Transactional  // 답변 저장 + 출석 도장이 같이 성공하거나 같이 롤백 (2026-07-27, Codex 검산 반영)
     public QuizResultResponse submitAnswer(Long deckId, Long userId, SubmitQuizRequest req) {
         deckService.verifyOwner(deckId, userId);
 

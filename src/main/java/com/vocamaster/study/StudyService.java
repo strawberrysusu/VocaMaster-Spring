@@ -1,6 +1,7 @@
 package com.vocamaster.study;
 
 import com.vocamaster.stats.StatsService;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
@@ -89,6 +90,7 @@ public class StudyService {
     }
 
     // 카드별 안다/모른다 기록
+    @Transactional  // 답변 저장 + 출석 도장이 같이 성공하거나 같이 롤백 (2026-07-27, Codex 검산 반영)
     public StudyRecordResponse recordAnswer(Long sessionId, Long userId, RecordStudyRequest req) {
         StudySession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("학습 세션을 찾을 수 없습니다"));
