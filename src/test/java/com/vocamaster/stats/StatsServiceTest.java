@@ -81,6 +81,19 @@ class StatsServiceTest extends AbstractIntegrationTest {
         assertEquals(4, todayStat.getStreak(), "streak은 하루에 한 번만 정해짐");
     }
 
+    @Test
+    @DisplayName("upsert 연속 2번 — 줄은 하나만, 두 번째 INSERT는 +1로 흡수 (동시 최초 생성 회귀)")
+    void upsertTodayRow_twice_singleRowCountTwo() {
+        // "첫 학습 동시 2건이 둘 다 UPDATE 0행을 본" 상황의 후속 동작을 결정적으로 재현
+        dailyUserStatRepository.upsertTodayRow(user.getId(), TODAY, 1);
+        dailyUserStatRepository.upsertTodayRow(user.getId(), TODAY, 1);
+
+        DailyUserStat stat = dailyUserStatRepository
+                .findByUserIdAndStatDate(user.getId(), TODAY).orElseThrow();
+        assertEquals(2, stat.getStudyCount(), "두 번째는 INSERT가 아니라 +1로 전환");
+        assertEquals(1, stat.getStreak(), "streak은 첫 INSERT 값 유지");
+    }
+
     private void saveStat(LocalDate date, int count, int streak) {
         dailyUserStatRepository.save(DailyUserStat.builder()
                 .user(user)
