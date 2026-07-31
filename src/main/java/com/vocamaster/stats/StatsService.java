@@ -38,4 +38,24 @@ public class StatsService {
         // upsert — "첫 학습이 정확히 동시에 2건" 와도 한쪽은 INSERT, 한쪽은 +1로 흡수 (500 구멍 제거)
         dailyUserStatRepository.upsertTodayRow(userId, today, streak);
     }
+
+    // 오늘 학습 답변 수 — 출석부 오늘 줄이 없으면 0 (아직 오늘 공부 전)
+    @Transactional(readOnly = true)
+    public int getTodayStudyCount(Long userId) {
+        return dailyUserStatRepository.findByUserIdAndStatDate(userId, LocalDate.now(KST))
+                .map(DailyUserStat::getStudyCount)
+                .orElse(0);
+    }
+
+    // 표시용 streak (A 정책): 오늘 줄 있으면 오늘 값, 없으면 "어제까지의 연속"을 오늘 하루 유예로 보여줌.
+    // 어제 줄도 없으면 끊김 확정 → 0
+    @Transactional(readOnly = true)
+    public int getDisplayStreak(Long userId) {
+        LocalDate today = LocalDate.now(KST);
+        return dailyUserStatRepository.findByUserIdAndStatDate(userId, today)
+                .map(DailyUserStat::getStreak)
+                .orElseGet(() -> dailyUserStatRepository.findByUserIdAndStatDate(userId, today.minusDays(1))
+                        .map(DailyUserStat::getStreak)
+                        .orElse(0));
+    }
 }

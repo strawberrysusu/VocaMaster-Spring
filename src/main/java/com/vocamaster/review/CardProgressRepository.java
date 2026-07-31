@@ -25,4 +25,19 @@ public interface CardProgressRepository extends JpaRepository<CardProgress, Long
     List<CardProgress> findDueCards(@Param("userId") Long userId,
                                     @Param("deckId") Long deckId,
                                     @Param("now") LocalDateTime now);
+
+    // dueCount — 카운트는 카드 내용을 안 만지므로 N+1 걱정이 없어 파생 메서드로 충분 (목록 조회와의 차이)
+    long countByUserIdAndNextReviewAtLessThanEqual(Long userId, LocalDateTime now);
+
+    // reviewedTodayCount — 오늘 복습 답변한 '서로 다른 카드' 수.
+    // 반열림 구간 [오늘 00:00, 내일 00:00): 시작 포함, 끝 제외 — 내일 0시 정각은 내일 몫
+    @Query("""
+            select count(p) from CardProgress p
+            where p.user.id = :userId
+              and p.lastReviewedAt >= :start
+              and p.lastReviewedAt < :end
+            """)
+    long countReviewedBetween(@Param("userId") Long userId,
+                              @Param("start") LocalDateTime start,
+                              @Param("end") LocalDateTime end);
 }

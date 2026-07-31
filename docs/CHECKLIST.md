@@ -14,7 +14,7 @@
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🔥 Streak 완료 (2026-07-27, `stats` 패키지 + V8 + 5개 지점 배선 + 테스트 그린)** — 다음: `GET /reviews/today-summary` (Phase 3 마지막 SHOULD) → Phase 3 완료 기준 구두 점검 5개. 밀린 것: week note + 백준 1문제 + 폐쇄훈련 #3 2회차(주말). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **🏁 Phase 3 체크박스 전부 완료 (2026-07-27, today-summary까지 — 테스트 그린)** — 다음: **Phase 3 졸업 시험** = 완료 기준 구두 점검 5개 (데모 시연✅는 이미, 나머지: 동시성 시나리오/due 인덱스/면접 질문 5) → 통과하면 Phase 4 (공개 단어장). 밀린 것: week note + 백준 1문제 + 폐쇄훈련 #3 2회차(주말). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -520,7 +520,7 @@
 ### 🌐 API
 - [x] **[MUST]** `GET /reviews/due?deckId=` — 복습 대상 카드 목록 (JPQL `join fetch`로 N+1 방지, deckId 없으면 전체 덱 — 2026-07-22)
 - [x] **[MUST]** `POST /reviews/cards/{cardId}/answer` — 정답/오답 기록 (자기평가, `@NotNull Boolean` + `@Valid`로 빈 JSON 차단)
-- [ ] **[SHOULD]** `GET /reviews/today-summary` — 오늘 복습 카드 수 / 완료 수 / streak
+- [x] **[SHOULD]** `GET /reviews/today-summary` — 숫자 4개: dueCount(남은 숙제) / reviewedTodayCount(오늘 복습한 **장수** — "due 완료 수" 아님) / studyCount(전 모드 답변 **횟수**) / streak(A 정책: 오늘 전엔 어제 값 유지, 어제도 없으면 0). Review 시간 계산 전체 KST 통일 (2026-07-27)
 
 ### 🔥 연속 학습일 (Streak)
 - [x] **[SHOULD]** `daily_user_stats` 테이블 — "하루 한 줄 출석부", `UNIQUE(user_id, stat_date)` (2026-07-27)

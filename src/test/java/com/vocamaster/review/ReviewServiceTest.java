@@ -9,6 +9,8 @@ import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
 import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
+import com.vocamaster.review.dto.TodaySummaryResponse;
+import com.vocamaster.stats.DailyUserStat;
 import com.vocamaster.stats.DailyUserStatRepository;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
@@ -146,6 +148,34 @@ class ReviewServiceTest extends AbstractIntegrationTest {
 
         assertTrue(cardProgressRepository.findByUserIdAndCardId(attacker.getId(), card.getId()).isEmpty(),
                 "검문소에서 막혔으니 남의 카드에 성적표가 생기면 안 됨");
+    }
+
+    @Test
+    @DisplayName("today-summary — 숫자 4개가 각자 다른 것을 센다")
+    void getTodaySummary_countsFourNumbers() {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+
+        // 어제까지 4일 연속이었다고 세팅
+        dailyUserStatRepository.save(DailyUserStat.builder()
+                .user(user)
+                .statDate(now.toLocalDate().minusDays(1))
+                .studyCount(3)
+                .streak(4)
+                .build());
+
+        Card dueCard = cardRepository.save(Card.builder().front("due").back("숙제").deck(deck).build());
+        Card futureCard = cardRepository.save(Card.builder().front("future").back("미래").deck(deck).build());
+        saveProgress(user, dueCard, 2, now.minusDays(1));       // 복습 시간 지난 카드 (숙제)
+        saveProgress(user, futureCard, 3, now.plusDays(1));     // 아직 때 안 된 카드
+
+        reviewService.recordAnswer(user.getId(), card.getId(), true);   // 오늘 apple 1장 복습
+
+        TodaySummaryResponse summary = reviewService.getTodaySummary(user.getId());
+
+        assertEquals(1, summary.getDueCount(), "숙제는 dueCard 1장 (답한 apple은 미래로 밀림)");
+        assertEquals(1, summary.getReviewedTodayCount(), "오늘 복습한 카드는 apple 1장");
+        assertEquals(1, summary.getStudyCount(), "오늘 답변 1번");
+        assertEquals(5, summary.getStreak(), "어제 4일 + 오늘 학습 = 5");
     }
 
     @Test

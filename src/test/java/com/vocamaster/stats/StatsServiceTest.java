@@ -82,6 +82,23 @@ class StatsServiceTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("표시 streak (A 정책) — 오늘 학습 전이면 어제까지의 연속을 유지해서 보여줌")
+    void getDisplayStreak_todayNotYet_keepsYesterday() {
+        saveStat(TODAY.minusDays(1), 3, 5);     // 어제까지 5일 연속, 오늘은 아직
+
+        assertEquals(5, statsService.getDisplayStreak(user.getId()), "오늘 하루는 유예 — 어제 값 유지");
+        assertEquals(0, statsService.getTodayStudyCount(user.getId()), "오늘 공부 전이니 활동 수는 0");
+    }
+
+    @Test
+    @DisplayName("표시 streak — 어제도 안 했으면 끊김 확정 → 0")
+    void getDisplayStreak_brokenChain_zero() {
+        saveStat(TODAY.minusDays(2), 3, 5);     // 그제까지만 기록, 어제 쉼
+
+        assertEquals(0, statsService.getDisplayStreak(user.getId()));
+    }
+
+    @Test
     @DisplayName("upsert 연속 2번 — 줄은 하나만, 두 번째 INSERT는 +1로 흡수 (동시 최초 생성 회귀)")
     void upsertTodayRow_twice_singleRowCountTwo() {
         // "첫 학습 동시 2건이 둘 다 UPDATE 0행을 본" 상황의 후속 동작을 결정적으로 재현

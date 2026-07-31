@@ -4,6 +4,7 @@ import com.vocamaster.common.CurrentUser;
 import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerRequest;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
+import com.vocamaster.review.dto.TodaySummaryResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,6 +25,12 @@ public class ReviewController {
     @Operation(summary = "복습 대상 카드 목록 — nextReviewAt이 지난 카드, 오래 기다린 순 (deckId 없으면 전체 덱)")
     public List<DueCardResponse> getDueCards(@RequestParam(required = false) Long deckId) {
         return reviewService.getDueCards(CurrentUser.getId(), deckId);
+    }
+
+    @GetMapping("/today-summary")
+    @Operation(summary = "오늘 학습 현황판 — 남은 복습 수 / 오늘 복습한 카드 수 / 오늘 전체 답변 수 / 연속 학습일 (오늘 학습 전엔 어제 streak 유지)")
+    public TodaySummaryResponse getTodaySummary() {
+        return reviewService.getTodaySummary(CurrentUser.getId());
     }
 
     @PostMapping("/cards/{cardId}/answer")

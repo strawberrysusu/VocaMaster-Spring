@@ -7,6 +7,7 @@ import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.DeckService;
 import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
+import com.vocamaster.review.dto.TodaySummaryResponse;
 import com.vocamaster.stats.StatsService;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Service
@@ -24,6 +26,10 @@ import java.util.List;
 public class ReviewService {
 
     private static final int MAX_BOX = 6;
+
+    // Review의 모든 시간 계산은 KST 기준 (출석부와 동일 — 서버가 UTC여도 '오늘'이 어긋나지 않게).
+    // 궁극 해법은 Clock 주입(STRETCH)이나, 지금은 상수 통일로 충분
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     // 박스별 복습 간격 (ADR-029 확정값). boxLevel N → BOX_INTERVALS[N - 1]
     private static final Duration[] BOX_INTERVALS = {
@@ -64,7 +70,7 @@ public class ReviewService {
         }
 
         // ⑤ 새 박스의 간격만큼 뒤로 다음 복습 시각 도장
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(KST);
         progress.setLastReviewedAt(now);
         progress.setNextReviewAt(now.plus(BOX_INTERVALS[progress.getBoxLevel() - 1]));
 
@@ -81,10 +87,25 @@ public class ReviewService {
         if (deckId != null) {
             deckService.verifyOwner(deckId, userId);    // 남의 덱 필터 요청 차단
         }
-        return cardProgressRepository.findDueCards(userId, deckId, LocalDateTime.now())
+        return cardProgressRepository.findDueCards(userId, deckId, LocalDateTime.now(KST))
                 .stream()
                 .map(DueCardResponse::from)
                 .toList();
+    }
+
+    // 오늘 현황판 — 숫자 4개 (남은 복습 / 오늘 복습한 카드 장수 / 오늘 전체 답변 횟수 / 연속 학습일)
+    @Transactional(readOnly = true)
+    public TodaySummaryResponse getTodaySummary(Long userId) {
+        LocalDateTime now = LocalDateTime.now(KST);
+        LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
+        LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
+
+        return TodaySummaryResponse.builder()
+                .dueCount(cardProgressRepository.countByUserIdAndNextReviewAtLessThanEqual(userId, now))
+                .reviewedTodayCount(cardProgressRepository.countReviewedBetween(userId, startOfToday, startOfTomorrow))
+                .studyCount(statsService.getTodayStudyCount(userId))
+                .streak(statsService.getDisplayStreak(userId))
+                .build();
     }
 
     // 처음 만난 카드의 성적표 생성 (box 1, 즉시 복습 대상)
@@ -97,7 +118,7 @@ public class ReviewService {
                 .boxLevel(1)
                 .correctStreak(0)
                 .wrongCount(0)
-                .nextReviewAt(LocalDateTime.now())
+                .nextReviewAt(LocalDateTime.now(KST))
                 .build();
     }
 }
