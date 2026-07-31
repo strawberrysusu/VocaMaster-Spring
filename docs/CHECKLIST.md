@@ -14,7 +14,7 @@
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🏁 Phase 3 졸업 시험 1교시 끝 (2026-07-27 — 데모·동시성·MUST 전부 ✅)** — 2교시 남음: ① due 복합 인덱스 자기 말 재설명 (오늘 첫 수업 들음) ② 면접 질문 5 리콜 (`review-algorithm.md` 읽고 → 안 보고). 통과 시 **Phase 4 (공개 단어장) 진입**. 밀린 것: week-N note + 백준 1문제 + 폐쇄훈련 #3 2회차(주말). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **🏁 Phase 3 졸업 시험 1교시 끝 (2026-07-27 — 데모·동시성·MUST 전부 ✅)** — 2교시 남음: ① due 복합 인덱스 자기 말 재설명 (오늘 첫 수업 들음) ② 면접 질문 5 리콜 (`review-algorithm.md` 읽고 → 안 보고). 통과 시 **Phase 4 (공개 단어장) 진입**. 밀린 것: week-N note + **프로그래머스** 1문제(백준은 2026-04-28 서비스 종료 — 재개 준비 중) + 폐쇄훈련 #3 2회차(주말). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
