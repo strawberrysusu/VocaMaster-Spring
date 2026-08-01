@@ -14,7 +14,7 @@
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 🔵 진행 중 / Phase 4~8 대기 |
 | **다음 마일스톤** | Phase 3 — Leitner Box 간격 반복 (면접 메인 무기) |
 | **신규 ADR** | ADR-016~029 — … / 통합오답노트(Aggregator) / **Leitner Box (SM-2/FSRS 대신)** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🏁 Phase 3 졸업 시험 1교시 끝 (2026-07-27 — 데모·동시성·MUST 전부 ✅)** — 2교시 남음: ① due 복합 인덱스 자기 말 재설명 (오늘 첫 수업 들음) ② 면접 질문 5 리콜 (`review-algorithm.md` 읽고 → 안 보고). 통과 시 **Phase 4 (공개 단어장) 진입**. 그 전에 **미니 정비 3건** (`docs/audit-2026-07.md` 바구니 1 — reuse-detection 롤백 수리(REQUIRES_NEW 복습), Import @Transactional, 화면 로그아웃). 밀린 것: week-N note + **프로그래머스** 1문제(백준은 2026-04-28 서비스 종료 — 재개 준비 중) + 폐쇄훈련 #3 2회차(주말). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **🏁 Phase 3 졸업 시험 1교시 끝 (2026-07-31 — 데모·동시성·MUST 전부 ✅)** — 2교시 남음: ① due 복합 인덱스 자기 말 재설명 (오늘 첫 수업 들음) ② 면접 질문 5 리콜 (`review-algorithm.md` 읽고 → 안 보고). 통과 시 **Phase 4 (공개 단어장) 진입**. 그 전에 **미니 정비 3건** (`docs/audit-2026-07.md` 바구니 1 — reuse-detection 롤백 수리(REQUIRES_NEW 복습), Import @Transactional, 화면 로그아웃). 밀린 것: week-N note + **프로그래머스** 1문제(백준은 2026-04-28 서비스 종료 — 재개 준비 중) + 폐쇄훈련 #3 2회차(주말). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -520,10 +520,10 @@
 ### 🌐 API
 - [x] **[MUST]** `GET /reviews/due?deckId=` — 복습 대상 카드 목록 (JPQL `join fetch`로 N+1 방지, deckId 없으면 전체 덱 — 2026-07-22)
 - [x] **[MUST]** `POST /reviews/cards/{cardId}/answer` — 정답/오답 기록 (자기평가, `@NotNull Boolean` + `@Valid`로 빈 JSON 차단)
-- [x] **[SHOULD]** `GET /reviews/today-summary` — 숫자 4개: dueCount(남은 숙제) / reviewedTodayCount(오늘 복습한 **장수** — "due 완료 수" 아님) / studyCount(전 모드 답변 **횟수**) / streak(A 정책: 오늘 전엔 어제 값 유지, 어제도 없으면 0). Review 시간 계산 전체 KST 통일 (2026-07-27)
+- [x] **[SHOULD]** `GET /reviews/today-summary` — 숫자 4개: dueCount(남은 숙제) / reviewedTodayCount(오늘 복습한 **장수** — "due 완료 수" 아님) / studyCount(전 모드 답변 **횟수**) / streak(A 정책: 오늘 전엔 어제 값 유지, 어제도 없으면 0). Review 시간 계산 전체 KST 통일 (2026-07-31)
 
 ### 🔥 연속 학습일 (Streak)
-- [x] **[SHOULD]** `daily_user_stats` 테이블 — "하루 한 줄 출석부", `UNIQUE(user_id, stat_date)` (2026-07-27)
+- [x] **[SHOULD]** `daily_user_stats` 테이블 — "하루 한 줄 출석부", `UNIQUE(user_id, stat_date)` (2026-07-29)
 - [x] **[SHOULD]** `V8__add_daily_stats.sql` *(V6은 typing 세션에 이미 사용됨 — 번호 갱신 2026-07-22)*
 - [x] **[SHOULD]** 학습 기록 시 오늘 날짜 stat 업데이트 — **5개 학습 지점 전부 배선** (Review/Study/Typing/Quiz구형/Quiz세션 — "뭘 하든 공부면 출석" 사용자 결정). studyCount는 원자적 UPDATE로 증가 (lost update 방지, @Version 대신 — 통계 충돌로 본 답변까지 409 되는 것 회피). **Codex 검산 반영 2건**: 첫 학습 동시 생성은 MySQL upsert(`ON DUPLICATE KEY UPDATE`)로 500 구멍 제거 / Study·구형 Quiz 답변 메서드에 빠져 있던 `@Transactional` 추가 (답변+출석 원자성)
 - [x] **[SHOULD]** streak 계산 로직 — 오늘 첫 학습 때 어제 행 보고 +1 or 1. KST 명시(`ZoneId.of("Asia/Seoul")`) — 배포 서버가 UTC여도 동일 (Codex 리뷰 반영)
@@ -540,13 +540,13 @@
 ### 📓 학습 노트
 - [ ] **[SHOULD]** week-10 ~ week-13 학습 노트
 - [x] **[SHOULD]** **닫고 다시 짜기 #3**: Leitner 박스 증감 로직 재구현 — 2026-07-26 1회차 완주 (`drill/LeitnerDrill.java`, 실행 2·3·1 확인). **정직 기록**: 구조·분기 골격·증가 방향은 자력 / 후반(타입·배열·천장·리셋·날짜 위치)은 참조 후 적용. **2회차(참조 없이) 다음 주말 재도전 예약**
-- [x] **[MUST]** `docs/review-algorithm.md` — 면접 답변용 정리 (왜 Leitner? SM-2/FSRS와 차이?) — 2026-07-22 작성 완료 (30초 버전 + 면접 질문 5 포함). *체크 누락을 Codex가 발견, 2026-07-27 정정*
+- [x] **[MUST]** `docs/review-algorithm.md` — 면접 답변용 정리 (왜 Leitner? SM-2/FSRS와 차이?) — 2026-07-22 작성 완료 (30초 버전 + 면접 질문 5 포함). *체크 누락을 Codex가 발견, 2026-07-31 정정*
 
 ### ✅ Phase 3 완료 기준
-- [x] 모든 MUST 항목 완료 (2026-07-27 — 문서 체크 누락분까지 정정)
+- [x] 모든 MUST 항목 완료 (2026-07-31 — 문서 체크 누락분까지 정정)
 - [x] 데모: 카드 답변 → 박스 변화 → 다음 복습 시점 변화 시연 가능 (2026-07-22 Swagger/curl 실연 — 2→3→1 + due 등장까지 확인)
-- [x] 동시성 시나리오 1개 설명 가능 (2026-07-27 구두 통과 — "동시 답변 시 먼저 커밋 성공한 쪽이 이기고 낡은 버전은 409")
-- [ ] due 쿼리 인덱스 설명 가능 (왜 복합 인덱스? 카디널리티?) — *2026-07-27 첫 수업, 다음 세션 재설명으로 확인*
+- [x] 동시성 시나리오 1개 설명 가능 (2026-07-31 구두 통과 — "동시 답변 시 먼저 커밋 성공한 쪽이 이기고 낡은 버전은 409")
+- [ ] due 쿼리 인덱스 설명 가능 (왜 복합 인덱스? 카디널리티?) — *2026-07-31 첫 수업, 다음 세션 재설명으로 확인*
 - [ ] 면접 질문 5개 답변 가능 — *다음 세션: review-algorithm.md 읽기 → 안 보고 리콜*
 
 ### 🆕 추가 아이디어
