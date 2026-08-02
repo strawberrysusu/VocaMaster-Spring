@@ -118,20 +118,20 @@ class AuthServiceTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Refresh Token Reuse Detection - 폐기된 토큰 재사용 시 401 + 모든 세션 무효화")
+    @DisplayName("Refresh Token Reuse Detection - 폐기된 토큰 재사용 시 401")
     void refresh_reuseDetection() {
         TokenPair initial = authService.register(registerRequest(), UA, IP);
 
         // 1차 회전 — 정상
-        TokenPair rotated = authService.refresh(initial.refreshToken(), UA, IP);
+        authService.refresh(initial.refreshToken(), UA, IP);
 
-        // 폐기된 옛 refresh로 다시 시도 → 401 + 모든 토큰 폐기
+        // 폐기된 옛 refresh로 다시 시도 → 401
         assertThrows(UnauthorizedException.class, () ->
                 authService.refresh(initial.refreshToken(), UA, IP));
 
-        // 회전된 새 토큰조차 사용 불가 (mass logout)
-        assertThrows(UnauthorizedException.class, () ->
-                authService.refresh(rotated.refreshToken(), UA, IP));
+        // "새 토큰까지 전부 무효화(mass logout)" 검증은 AuthServiceReuseCommitTest로 이동 —
+        // mass logout이 REQUIRES_NEW(별도 커밋)로 동작해서, 자동 롤백 테스트의 미커밋 데이터로는
+        // 검증 불가 (옆방 트랜잭션은 커밋된 데이터만 봄). 실제 커밋 경계 검증은 그쪽이 담당 (P1-1)
     }
 
     @Test

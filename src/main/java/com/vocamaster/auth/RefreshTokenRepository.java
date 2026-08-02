@@ -6,9 +6,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
+
+    // 사용자의 전체 토큰 조회 — 커밋 경계 테스트의 수동 청소 + 향후 만료 토큰 cleanup(STRETCH)용
+    List<RefreshToken> findAllByUserId(Long userId);
 
     /**
      * 해시로 토큰 row 조회 (폐기 여부 무관).

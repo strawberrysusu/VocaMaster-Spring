@@ -11,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -31,6 +33,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+    private final PlatformTransactionManager txManager;
 
     @Transactional
     public TokenPair register(RegisterRequest req, String userAgent, String ip) {
@@ -63,17 +66,20 @@ public class AuthService {
     }
 
     /**
-     * Refresh Token Rotation + Reuse Detection.
+     * Refresh Token Rotation + Reuse Detection (P1-1 수리 반영).
      *
-     * 흐름:
-     * 1) JWT 자체 검증 (서명 + 만료) + type=refresh 검증
-     * 2) atomic UPDATE 시도 (CAS): WHERE token_hash=? AND revoked_at IS NULL
-     * 3) affected=1 → 회전 성공, 새 access+refresh 발급
-     * 4) affected=0 → 추가 SELECT
-     *    - row 있고 revoked → REUSE → 그 사용자 모든 refresh 폐기 (mass logout) → 401
-     *    - row 없음 / 만료 → 평범한 401
+     * 구조 — "감지"와 "제재"의 시간 분리:
+     * 1) JWT 자체 검증 (서명 + 만료 + type=refresh) — 트랜잭션 불필요
+     * 2) [감지+회전 트랜잭션] atomic UPDATE(CAS) 시도
+     *    - affected=1 → 회전 성공, 새 쌍 발급 (커밋)
+     *    - affected=0 + row가 revoked → ReuseDetectedException으로 탈출 (롤백 = 락 해제)
+     *    - 그 외 → 평범한 401
+     * 3) [제재 — 트랜잭션 종료 후] 모든 refresh 폐기를 별도 커밋 → 401 유지
+     *
+     * 왜 이렇게: 제재를 감지 트랜잭션 안에서 하면 401 롤백에 제재까지 증발하고(버그 원형),
+     * REQUIRES_NEW 옆방으로 빼면 감지 트랜잭션이 잡은 행 락과 충돌해 부모-자식 데드락.
+     * → 감지 트랜잭션을 먼저 끝내(락 해제) 놓고 제재하는 게 유일하게 안전한 순서.
      */
-    @Transactional
     public TokenPair refresh(String refreshToken, String userAgent, String ip) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new UnauthorizedException("유효하지 않은 토큰입니다");
@@ -87,24 +93,37 @@ public class AuthService {
 
         String hash = sha256(refreshToken);
         LocalDateTime now = LocalDateTime.now();
-        int affected = refreshTokenRepository.revokeIfActive(hash, now, ip);
 
-        if (affected == 0) {
-            // reuse detection 분기
-            Optional<RefreshToken> row = refreshTokenRepository.findByTokenHash(hash);
-            if (row.isPresent() && row.get().isRevoked()) {
+        try {
+            // 감지+회전 트랜잭션 — 프로그래매틱 경계(TransactionTemplate)라 self-invocation 함정 없음
+            return new TransactionTemplate(txManager).execute(status -> {
+                int affected = refreshTokenRepository.revokeIfActive(hash, now, ip);
+
+                if (affected == 0) {
+                    Optional<RefreshToken> row = refreshTokenRepository.findByTokenHash(hash);
+                    if (row.isPresent() && row.get().isRevoked()) {
+                        // 제재는 여기서 하지 않는다 — 사실만 알리고 탈출 (이 트랜잭션의 락과 충돌하므로)
+                        throw new ReuseDetectedException(jwtProvider.getUserId(refreshToken));
+                    }
+                    throw new UnauthorizedException("유효하지 않은 토큰입니다");
+                }
+
                 Long userId = jwtProvider.getUserId(refreshToken);
-                refreshTokenRepository.revokeAllByUserId(userId, now);
-                log.warn("Refresh token reuse detected — mass logout for userId={}", userId);
-            }
-            throw new UnauthorizedException("유효하지 않은 토큰입니다");
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new UnauthorizedException("유효하지 않은 토큰입니다"));
+                return issueTokens(user, userAgent, ip);
+            });
+        } catch (ReuseDetectedException e) {
+            // 제재 트랜잭션 — 감지 방은 이미 롤백·락 해제된 뒤라 충돌 없음.
+            // (@Modifying 쿼리는 스스로 트랜잭션을 열지 않으므로 명시적으로 방을 만들어야 함)
+            // 여기서 커밋되므로 아래 401 rethrow와 무관하게 제재가 생존 (P1-1)
+            new TransactionTemplate(txManager).execute(status -> {
+                refreshTokenRepository.revokeAllByUserId(e.getUserId(), now);
+                return null;
+            });
+            log.warn("Refresh token reuse detected — mass logout for userId={}", e.getUserId());
+            throw e;
         }
-
-        // rotation 성공 → 새 쌍 발급
-        Long userId = jwtProvider.getUserId(refreshToken);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UnauthorizedException("유효하지 않은 토큰입니다"));
-        return issueTokens(user, userAgent, ip);
     }
 
     /**
