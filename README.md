@@ -2,79 +2,73 @@
 
 > 망각곡선 기반 반복 학습으로 단어를 장기 기억에 안착시키는 무료 단어장 학습 서비스
 
-영어 · 일본어 단어를 직접 등록하거나 다른 사용자가 만든 공개 단어장을 가져와,
-플래시카드 · 5지선다 퀴즈 · 타이핑 모드로 학습하고, 박스 단계별 복습 알고리즘으로 다시 만나게 합니다.
+영어 · 일본어 단어를 직접 등록해 플래시카드 · 5지선다 퀴즈 · 타이핑 모드로 학습하고,
+**Leitner Box 복습 알고리즘**이 "모르는 단어일수록 자주, 아는 단어일수록 가끔" 다시 보여줍니다.
 
-> **상태:** 🚧 개발 중 (Phase 0 / 8) · **시작:** 2026-05 · **목표 마감:** 2027-01
-> 진행도 상세는 [`docs/CHECKLIST.md`](docs/CHECKLIST.md), 8개월 로드맵은 [`docs/ROADMAP.md`](docs/ROADMAP.md) 참고.
+> **상태:** 🔵 개발 중 — **Phase 3까지 완료 (4/8)** · **시작:** 2026-05 · **목표 마감:** 2027-01
+> 진행도와 의사결정 기록: [`docs/CHECKLIST.md`](docs/CHECKLIST.md) · [`docs/decisions.md`](docs/decisions.md) (ADR 29+)
 
 ---
 
 ## 🎯 만드는 이유
 
-기존 단어 학습 서비스(Quizlet 등)가 유료화되면서 학습자들이 진입장벽을 겪는 문제를 해결하려 합니다.
-"내가 직접 만들어서 무료로 쓰고, 같은 처지의 학습자에게 공유한다"가 기획의 출발점입니다.
+기존 단어 학습 서비스(Quizlet 등)의 유료화로 생긴 진입장벽을 해결합니다.
+"내가 직접 만들어 무료로 쓰고, 같은 처지의 학습자에게 공유한다"가 출발점입니다.
 
-기술적으로는 다음을 깊게 학습/구현하는 것을 목표로 합니다.
-
-- **반복 학습 알고리즘** — Leitner Box 기반 망각곡선 복습
-- **퀴즈 검증 무결성** — 정답을 항상 서버가 판정 (프론트 조작 불가)
-- **공개 단어장 공유** — 검색 · 복사 · 좋아요 · 인기 랭킹
-- **캐싱 / 비동기 / 부하 테스트** — 운영 가능한 백엔드 형태
+기술적으로는 **혼자서도 운영·설명·수리할 수 있는 백엔드**를 목표로, 모든 설계 결정을
+ADR로 남기고(29건+), 전수 감사로 찾은 결함을 재현 테스트와 함께 수리하며 진행합니다.
 
 ---
 
-## 📍 현재 진행 상태
-
-### ✅ 구현 완료 (MVP 베이스)
+## ✅ 구현된 기능 (Phase 0~3)
 
 | 영역 | 기능 |
 |---|---|
-| 인증 | 회원가입 / 로그인 (JWT) |
-| 단어장 | Deck CRUD + 소유권 검증 |
-| 카드 | Card CRUD · 별표 · 페이지네이션 조회 |
-| 일괄 등록 | 텍스트 파싱으로 여러 카드 한 번에 등록 (preview 제공) |
-| 퀴즈 | 5지선다 자동 생성 · 서버 측 정답 검증 · 시도 이력 저장 |
-| 학습 | 학습 세션 · 안다/모른다 기록 · 덱별 통계 |
-| UI | Mustache 기반 데모 페이지 (검증 및 시연 용도) |
-| 문서 | Swagger UI (`/api-docs`) |
-| 테스트 | Auth · Card · Import · Quiz · Study 서비스 단위 테스트 |
+| 인증 | JWT Access + **Refresh Rotation / Reuse Detection**(재사용 감지 시 전체 세션 무효화) · httpOnly 쿠키 · 회원 관리(닉네임/비밀번호/탈퇴) |
+| 단어장/카드 | CRUD · 소유권 검증 · 검색/정렬(별표·위치·생성일) · 페이지네이션 |
+| 일괄 등록 | 구분자 자동 감지 · 중복 skip · 1000줄 상한 · 전체 원자성(중간 실패 시 전량 취소) |
+| 학습 3모드 | 플래시카드(안다/모른다) · 5지선다 퀴즈 세션(서버 채점·정답 마스킹) · 타이핑(복수 정답 허용) |
+| 오답노트 | 3개 모드 오답 통합 조회 (중복 제거) |
+| **복습 (핵심)** | **Leitner Box 6단계** — 답변마다 박스 승급/리셋, due 카드 조회, 오늘 현황판(남은 복습/오늘 복습/활동량/연속 학습일) |
+| 출석/통계 | 모든 학습 모드가 출석부(`daily_user_stats`)에 집계 — 연속 학습일(streak) 계산 |
+| 오류 계약 | 400/401/403/404/**409**(동시성 충돌) 통일 JSON 응답 |
 
-### 🚧 진행 중 (Phase 0 — 부트스트랩)
+## 🔍 기술 하이라이트
 
-운영 가능한 형태로 뼈대를 정비하는 단계입니다.
+- **동시성 처리 3종** — 데이터 성격에 따라 다른 도구:
+  카드 진행 상태는 `@Version` 낙관적 락(충돌 시 409), 학습 카운터는 원자적 UPDATE(증가 분실 방지),
+  출석부 최초 생성 경쟁은 MySQL upsert(`ON DUPLICATE KEY UPDATE`)로 흡수
+- **보안 트랜잭션 경계 설계** — Refresh 재사용 감지 시의 전체 세션 무효화가 401 롤백에
+  증발하던 결함을 재현 테스트(실제 커밋 경계)로 실증 후, "감지 트랜잭션 종료(락 해제) →
+  별도 트랜잭션에서 제재 커밋 → 401" 구조로 수리 ([커밋 d49dc62](../../commit/d49dc62))
+- **테스트** — Testcontainers **실제 MySQL 8** + Flyway 마이그레이션 검증, 70+ 테스트.
+  트랜잭션 경계가 관심사인 테스트는 자동 롤백을 끄고 운영과 동일한 커밋 경계로 검증
+- **정직한 감사 문화** — 전수 코드 감사 결과를 [`docs/audit-2026-07.md`](docs/audit-2026-07.md)로
+  분류·추적 (수리 완료/예정/백로그)
 
-- 환경별 설정 분리 (`application-{dev,test,prod}.yml`)
-- 비밀 정보 환경변수화 (`.env.example` 제공)
-- Flyway 도입 + `ddl-auto: validate`
-- 공통 예외 응답 (`ErrorResponse`) 통일
-- `BaseTimeEntity` 도입
+## 📋 로드맵
 
-### 📋 예정
-
-| Phase | 주제 |
-|---|---|
-| 1 | Refresh Token Rotation · Reuse Detection · 회원 관리 |
-| 2 | Card 필드 확장 · 검색/정렬 · Typing 모드 · 오답노트 |
-| 3 | **Leitner Box 반복 학습 알고리즘** · 연속 학습일 |
-| 4 | 공개 단어장 검색 · 복사 · 좋아요 · 태그 |
-| 5 | Redis (인기 랭킹 · Rate Limit · 캐시) |
-| 6 | 비동기 이벤트 (Spring Event → Kafka 선택) |
-| 7 | Docker · Nginx · HTTPS · GitHub Actions · k6 부하 테스트 |
-| 8 | 마감 · 면접 준비 |
+| Phase | 주제 | 상태 |
+|---|---|---|
+| 0 | 부트스트랩 (설정 분리 · Flyway · 예외 통일) | ✅ |
+| 1 | Refresh Rotation · Reuse Detection · 회원 관리 | ✅ |
+| 2 | 검색/정렬 · 일괄 등록 · 퀴즈 세션 · 타이핑 · 오답노트 | ✅ |
+| 3 | **Leitner Box 반복 학습** · 연속 학습일 · 동시성 | ✅ 2026-08 |
+| 4 | 공개 단어장 검색 · 복사 · 좋아요 | 🔵 다음 |
+| 5 | Redis (인기 랭킹 · Rate Limit · 캐시) | 예정 |
+| 6 | 비동기 이벤트 (Spring Event → Kafka 검토) | 예정 |
+| 7 | Docker · CI/CD · k6 부하 테스트 | 예정 |
+| 8 | 마감 · 문서/면접 준비 | 예정 |
 
 ---
 
 ## 🛠 기술 스택
 
 **Backend** Java 17 · Spring Boot 3.3 · Spring Security · Spring Data JPA · Validation
-**Auth** JWT (jjwt 0.12.5)
-**Database** MySQL 8 (운영) · H2 (테스트)
-**View** Mustache (데모 UI)
-**Docs** springdoc-openapi (Swagger UI)
-**Build/Test** Gradle · JUnit 5 · Spring Security Test
-
-> Redis · Docker · CI/CD · 부하 테스트 등은 Phase 5 이후 단계적으로 도입 예정입니다.
+**Auth** JWT (jjwt) — Access(단기) + Refresh(14일, rotation)
+**Database** MySQL 8 · Flyway (V1~V8)
+**Test** JUnit 5 · **Testcontainers (MySQL 8)** — H2 미사용, 운영과 동일 DB로 검증
+**View** Mustache (데모 UI) · **Docs** springdoc-openapi (Swagger)
 
 ---
 
@@ -82,23 +76,11 @@
 
 ### 사전 준비
 
-- JDK 17
-- MySQL 8 (로컬에 `vocamaster` 데이터베이스 생성)
+- JDK 17 (Temurin 권장)
+- MySQL 8 — 로컬에 `vocamaster` 데이터베이스 생성
+- (테스트 실행 시) **Docker Desktop** — Testcontainers가 MySQL 컨테이너를 띄웁니다
 
-### 1. 환경변수 설정
-
-`.env.example`을 참고하여 `.env` 파일을 만들거나, 다음 환경변수를 직접 설정합니다.
-
-```bash
-DB_URL=jdbc:mysql://localhost:3306/vocamaster?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-DB_USERNAME=root
-DB_PASSWORD=your-password
-JWT_SECRET=your-secret-key-minimum-32-characters-long
-```
-
-> ⚠️ Phase 0 작업이 끝나기 전에는 `application.yml`의 기본값으로 동작합니다. 환경변수 분리 후 이 안내가 반영됩니다.
-
-### 2. 실행
+### 실행
 
 ```bash
 # Windows
@@ -108,17 +90,21 @@ gradlew.bat bootRun
 ./gradlew bootRun
 ```
 
-### 3. 접속
+기본 프로필(dev)은 `localhost:3306/vocamaster`(root)로 접속합니다 — 필요 시
+`src/main/resources/application-dev.yml`을 수정하세요. 운영(prod) 프로필은
+`DB_URL` / `DB_USERNAME` / `DB_PASSWORD` / `JWT_SECRET` 환경변수를 요구합니다.
+
+### 접속
 
 | 경로 | 설명 |
 |---|---|
-| `http://localhost:8080` | Mustache 데모 페이지 |
-| `http://localhost:8080/api-docs` | Swagger UI (API 명세) |
+| `http://localhost:8080/pages/login` | Mustache 데모 (회원가입 → 덱 → 학습) |
+| `http://localhost:8080/api-docs` | Swagger UI (전체 API 명세) |
 
-### 테스트 실행
+### 테스트
 
 ```bash
-gradlew.bat test
+gradlew.bat test   # Docker Desktop 실행 상태에서
 ```
 
 ---
@@ -127,15 +113,19 @@ gradlew.bat test
 
 ```
 src/main/java/com/vocamaster
-├── auth/         # 인증 (회원가입/로그인/JWT)
-├── user/         # User 엔티티
-├── deck/         # 단어장 도메인
-├── card/         # 카드 도메인
+├── auth/         # 인증 — JWT · Refresh Rotation · Reuse Detection
+├── user/         # 회원 관리
+├── deck/         # 단어장
+├── card/         # 카드 (검색/정렬/별표)
 ├── cardimport/   # 텍스트 일괄 등록
-├── quiz/         # 5지선다 퀴즈
-├── study/        # 학습 세션 / 기록 / 통계
-├── page/         # Mustache 페이지 컨트롤러
-├── common/       # 공통 (CurrentUser, GlobalExceptionHandler 등)
+├── study/        # 플래시카드 학습 세션
+├── quiz/         # 5지선다 퀴즈 (세션 기반)
+├── typing/       # 타이핑 모드
+├── wrongnote/    # 통합 오답노트
+├── review/       # ★ Leitner Box 복습 (핵심 도메인)
+├── stats/        # 출석부 · 연속 학습일
+├── page/         # Mustache 페이지
+├── common/       # 예외 계약 · 공통 유틸
 └── config/       # Security / Swagger / Jackson
 ```
 
@@ -145,12 +135,12 @@ src/main/java/com/vocamaster
 
 | 문서 | 내용 |
 |---|---|
-| [`docs/CHECKLIST.md`](docs/CHECKLIST.md) | Phase 0 ~ 8 상세 체크리스트 (현재 진행도) |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | 8개월 로드맵 + 단계별 의도 |
-| [`docs/ERD.md`](docs/ERD.md) | 데이터베이스 ERD |
+| [`docs/CHECKLIST.md`](docs/CHECKLIST.md) | Phase 0~8 상세 체크리스트 (진행의 단일 원장) |
+| [`docs/decisions.md`](docs/decisions.md) | ADR 29+ — 모든 설계 결정의 대안·근거·트레이드오프 |
+| [`docs/review-algorithm.md`](docs/review-algorithm.md) | Leitner Box 알고리즘 — 규칙 · 왜 SM-2/FSRS가 아닌가 |
+| [`docs/audit-2026-07.md`](docs/audit-2026-07.md) | 전수 감사 결과 분류와 수리 추적 |
+| [`docs/auth-design.md`](docs/auth-design.md) | 인증 설계 (토큰 흐름 · 쿠키 정책) |
 | [`docs/notes/`](docs/notes/) | 주차별 학습 노트 |
-
-> 위 문서들은 Phase 0 작업과 함께 채워집니다.
 
 ---
 
