@@ -8,6 +8,7 @@ import com.vocamaster.cardimport.dto.PreviewResponse;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -40,6 +41,8 @@ public class ImportService {
     }
 
     // 텍스트 파싱 → 실제 import
+    // 전체가 한 트랜잭션 — 중간에 DB 오류가 나면 앞서 저장된 카드까지 전부 취소 (부분 커밋 방지, P1-6)
+    @Transactional
     public ImportResponse importCards(Long deckId, Long userId, ImportRequest req) {
         Deck deck = deckService.verifyOwner(deckId, userId);
         var parsed = parse(req.getText(), req.getSeparator());
