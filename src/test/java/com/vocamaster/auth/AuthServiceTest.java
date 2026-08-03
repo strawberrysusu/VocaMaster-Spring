@@ -130,8 +130,8 @@ class AuthServiceTest extends AbstractIntegrationTest {
                 authService.refresh(initial.refreshToken(), UA, IP));
 
         // "새 토큰까지 전부 무효화(mass logout)" 검증은 AuthServiceReuseCommitTest로 이동 —
-        // mass logout이 REQUIRES_NEW(별도 커밋)로 동작해서, 자동 롤백 테스트의 미커밋 데이터로는
-        // 검증 불가 (옆방 트랜잭션은 커밋된 데이터만 봄). 실제 커밋 경계 검증은 그쪽이 담당 (P1-1)
+        // 제재는 감지 트랜잭션 종료(락 해제) 후 "별도 트랜잭션"에서 커밋되는 구조(시간 분리)라
+        // 실제 커밋 경계가 있어야만 검증 가능. 자동 롤백 테스트에서는 경계가 안 생김 (P1-1)
     }
 
     @Test

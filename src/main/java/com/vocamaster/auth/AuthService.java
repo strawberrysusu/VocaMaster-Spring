@@ -79,6 +79,11 @@ public class AuthService {
      * 왜 이렇게: 제재를 감지 트랜잭션 안에서 하면 401 롤백에 제재까지 증발하고(버그 원형),
      * REQUIRES_NEW 옆방으로 빼면 감지 트랜잭션이 잡은 행 락과 충돌해 부모-자식 데드락.
      * → 감지 트랜잭션을 먼저 끝내(락 해제) 놓고 제재하는 게 유일하게 안전한 순서.
+     *
+     * ⚠️ 계약: 이 메서드는 활성 트랜잭션 "없이" 호출되어야 한다 (컨트롤러 직행 전용).
+     * 두 방은 전파 기본값(REQUIRED)이라, 바깥 트랜잭션 안에서 부르면 거기에 합류해
+     * 감지/제재 경계가 사라지고 원버그가 부활한다. (전파를 REQUIRES_NEW로 강제하지 않는
+     * 이유: 바깥이 락을 쥔 채 부르는 순간 위의 데드락이 재발 — 계약+커밋 경계 테스트로 고정)
      */
     public TokenPair refresh(String refreshToken, String userAgent, String ip) {
         if (refreshToken == null || refreshToken.isBlank()) {
