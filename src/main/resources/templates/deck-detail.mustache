@@ -165,7 +165,13 @@ async function deleteCard(cardId) {
 }
 
 function goQuiz() { window.location.href = '/pages/decks/'+deckId+'/quiz'; }
-function logout() { localStorage.removeItem('token'); localStorage.removeItem('email'); window.location.href='/pages/login'; }
+async function logout() {
+    // 서버 로그아웃 먼저 — refresh cookie/DB 토큰 폐기 (P1-3). 실패해도 로컬 정리는 진행
+    try { await fetch('/auth/logout', { method: 'POST' }); } catch (e) {}
+    localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    window.location.href = '/pages/login';
+}
 function escHtml(s) { var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 document.getElementById('card-front').addEventListener('keydown', function(e) {

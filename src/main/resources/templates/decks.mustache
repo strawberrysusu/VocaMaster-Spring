@@ -88,7 +88,9 @@ async function deleteDeck(id, title) {
     loadDecks();
 }
 
-function logout() {
+async function logout() {
+    // 서버 로그아웃 먼저 — refresh cookie/DB 토큰 폐기 (P1-3). 실패해도 로컬 정리는 진행
+    try { await fetch('/auth/logout', { method: 'POST' }); } catch (e) {}
     localStorage.removeItem('token');
     localStorage.removeItem('email');
     window.location.href = '/pages/login';
