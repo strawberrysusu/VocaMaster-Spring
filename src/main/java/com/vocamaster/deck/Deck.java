@@ -30,6 +30,11 @@ public class Deck {
 
     private String description;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private DeckVisibility visibility = DeckVisibility.PRIVATE;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore

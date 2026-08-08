@@ -1154,6 +1154,36 @@ Phase 3 핵심이자 VocaMaster의 *면접 메인 무기*. 망각곡선(에빙�
 
 ---
 
+## ADR-030: Deck 공개 범위 — `visibility` enum 3값 (boolean/공유 토큰 대신)
+
+**상태:** 채택 (2026-08-05)
+**범위:** `DeckVisibility` enum, `Deck.visibility` 필드, `V9__add_deck_visibility.sql`, `PATCH /decks/{id}/visibility` — Phase 4 첫 결정
+
+### 컨텍스트
+Phase 4 = 공개 단어장/공유. 덱마다 "누가 볼 수 있는가" 상태 저장이 필요한데, 요구 상태가 2개가 아니라 **3개**: 나만(PRIVATE) / 검색 노출(PUBLIC) / 검색 비노출·링크로만 접근(UNLISTED — 유튜브 '일부 공개'). 이걸 어떻게 모델링할 것인가?
+
+### 고려한 대안
+- **A. ❌ `is_public` boolean** — 제일 단순하지만 칸이 2개뿐. UNLISTED 표현 불가. 나중에 확장하려면 4단계 공사 (새 컬럼 추가 → 데이터 이관 → 코드 전면 교체 → 구 컬럼 제거)
+- **B. ✅ `visibility` enum 3값** — `PRIVATE`/`PUBLIC`/`UNLISTED`, `@Enumerated(EnumType.STRING)` 문자열 저장
+- **C. ❌ 공유 토큰 테이블 분리** — `share_links(token, expires_at)`로 UNLISTED 구현. 링크 만료/회수 가능(구글 드라이브식)이지만 테이블 + 발급/검증/회수 API가 통째로 추가 — Phase 4 본체(검색→복사→좋아요) 앞에서 과설계
+
+### 결정
+**B. enum 3값 + `EnumType.STRING`.**
+- DB: `VARCHAR(20) NOT NULL DEFAULT 'PRIVATE'` — 기존 행 전부 PRIVATE으로 채움
+- **ORDINAL(숫자 저장) 금지** — enum 선언 순서가 바뀌는 순간 기존 데이터가 통째로 다른 의미로 읽히는 무소음 오염 사고 (에러도 안 남)
+
+### 근거
+- 상태 3개를 표현하는 **최소 설계**. String 컬럼 대비 오타를 컴파일 타임에 차단
+- 기본값 PRIVATE = "의심스러우면 잠근다" — 업데이트 한 번에 기존 비공개 덱이 공개되는 사고 방지
+- C(토큰)는 B와 배타적이지 않음 — 필요해지면 나중에 **추가**로 확장 가능. 지금 결정이 미래를 안 막음
+
+### 트레이드오프 / 한계
+- UNLISTED 링크는 회수 불가 (URL이 곧 접근권 — 퍼지면 PRIVATE 전환 외엔 수단 없음). 토큰 방식(C)이면 가능 — 필요 시 확장 항목
+- 문자열 저장이 숫자보다 공간 큼 (무시 가능 수준)
+- 값 추가는 자유롭지만 값 *이름 변경*은 데이터 이관 필요 (STRING 저장의 대가)
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)
