@@ -10,11 +10,11 @@
 | 항목 | 값 |
 |---|---|
 | **진행 중인 Phase** | **Phase 4 — 공개 단어장 / 공유 (2026-08-05 시작)** |
-| **이번 주 집중** | Phase 4 — Visibility ✅(모델) → PATCH API → 공개 검색 → 복사 (MUST 순서대로) |
+| **이번 주 집중** | Phase 4 — Visibility ✅ → 공개 검색 → 복사 (MUST 순서대로) |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 ✅ / Phase 4 🔵 진행 중 / Phase 5~8 대기 |
 | **다음 마일스톤** | Phase 4 MUST 절반 — 개강(8/27) 전 (3주 플랜 주2~3) |
 | **신규 ADR** | ADR-016~030 — … / **Leitner Box (SM-2/FSRS 대신)** / **Deck visibility enum 3값** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🟢 Phase 4 진입 (2026-08-05)** — Visibility 모델 완료 (ADR-030 + `DeckVisibility` enum + V9, 기본값 PRIVATE). 다음: ① `PATCH /decks/{id}/visibility` ② 공개 검색 API (비공개 404 정책) ③ 복사(🔵 동시성). 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **🟢 Phase 4 — Visibility 섹션 3 MUST 완료 (2026-08-08)** — 모델(ADR-030+V9) + PATCH 전용 API + DeckServiceTest 4개 (Codex 검산: DeckResponse 매핑 누락 잡음). 다음: ① 공개 검색 API (`GET /api/public/decks`, **비공개 404 정책 — 403 vs 404 논쟁 예정**) ② 복사(🔵 동시성). 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -570,7 +570,7 @@
 ### 🔓 Visibility
 - [x] **[MUST]** Deck에 `visibility` 컬럼 추가 (`PRIVATE`/`PUBLIC`/`UNLISTED`) — `@Enumerated(STRING)`, ADR-030
 - [x] **[MUST]** `V9__add_deck_visibility.sql` *(계획 당시 V7 예약 → Phase 3가 V7·V8을 씀. 번호 정정)*
-- [ ] **[MUST]** `PATCH /api/decks/{deckId}/visibility`
+- [x] **[MUST]** `PATCH /api/decks/{deckId}/visibility` — 전용 엔드포인트(일반 수정과 분리) + 서비스 테스트 4개
 
 ### 🔎 공개 단어장 검색 🟢
 - [ ] **[MUST]** `GET /api/public/decks?keyword=&page=&size=` — 제목/설명 LIKE
@@ -622,7 +622,7 @@
 - [ ] 면접 질문 3개 답변 가능 (왜 404? 왜 원자적 update? UNLISTED 의미?)
 
 ### 🆕 추가 아이디어
-*(공란)*
+- [ ] MockMvc 컨트롤러 슬라이스 테스트 도입 — 400 계약(빈 visibility / 오타 enum) 자동 검증. 지금은 Jackson+`@Valid` 프레임워크 보증에 의존 (프로젝트에 MockMvc 전례 없음 — 도입 자체가 별도 결정)
 
 ---
 

@@ -57,6 +57,13 @@ public class DeckService {
         return DeckResponse.listOf(deck, cardRepository.countByDeckId(id));
     }
 
+    public DeckResponse updateVisibility(Long id, Long userId, DeckVisibility visibility) {
+        Deck deck = verifyOwner(id, userId);
+        deck.setVisibility(visibility);
+        deckRepository.save(deck);
+        return DeckResponse.listOf(deck, cardRepository.countByDeckId(id));
+    }
+
     public void remove(Long id, Long userId) {
         verifyOwner(id, userId);
         deckRepository.deleteById(id);

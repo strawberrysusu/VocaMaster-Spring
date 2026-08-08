@@ -1,6 +1,7 @@
 package com.vocamaster.deck.dto;
 
 import com.vocamaster.deck.Deck;
+import com.vocamaster.deck.DeckVisibility;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -13,6 +14,7 @@ public class DeckResponse {
     private Long id;
     private String title;
     private String description;
+    private DeckVisibility visibility;
     private long cardCount;
     private long starredCount;
     private LocalDateTime createdAt;
@@ -23,6 +25,7 @@ public class DeckResponse {
                 .id(deck.getId())
                 .title(deck.getTitle())
                 .description(deck.getDescription() != null ? deck.getDescription() : "")
+                .visibility(deck.getVisibility())
                 .cardCount(cardCount)
                 .starredCount(starredCount)
                 .createdAt(deck.getCreatedAt())
@@ -36,6 +39,7 @@ public class DeckResponse {
                 .id(deck.getId())
                 .title(deck.getTitle())
                 .description(deck.getDescription() != null ? deck.getDescription() : "")
+                .visibility(deck.getVisibility())
                 .cardCount(cardCount)
                 .createdAt(deck.getCreatedAt())
                 .updatedAt(deck.getUpdatedAt())

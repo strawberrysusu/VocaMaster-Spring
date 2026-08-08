@@ -4,6 +4,7 @@ import com.vocamaster.common.CurrentUser;
 import com.vocamaster.deck.dto.CreateDeckRequest;
 import com.vocamaster.deck.dto.DeckResponse;
 import com.vocamaster.deck.dto.UpdateDeckRequest;
+import com.vocamaster.deck.dto.UpdateVisibilityRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -43,6 +44,13 @@ public class DeckController {
     @Operation(summary = "단어장 수정")
     public DeckResponse update(@PathVariable Long id, @RequestBody UpdateDeckRequest req) {
         return deckService.update(id, CurrentUser.getId(), req);
+    }
+
+    @PatchMapping("/{id}/visibility")
+    @Operation(summary = "단어장 공개 범위 변경")
+    public DeckResponse updateVisibility(@PathVariable Long id,
+                                         @Valid @RequestBody UpdateVisibilityRequest req) {
+        return deckService.updateVisibility(id, CurrentUser.getId(), req.getVisibility());
     }
 
     @DeleteMapping("/{id}")
