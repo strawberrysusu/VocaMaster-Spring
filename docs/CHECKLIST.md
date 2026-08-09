@@ -14,7 +14,7 @@
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 ✅ / Phase 4 🔵 진행 중 / Phase 5~8 대기 |
 | **다음 마일스톤** | Phase 4 MUST 절반 — 개강(8/27) 전 (3주 플랜 주2~3) |
 | **신규 ADR** | ADR-016~030 — … / **Leitner Box (SM-2/FSRS 대신)** / **Deck visibility enum 3값** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🟢 Phase 4 — Visibility 섹션 3 MUST 완료 (2026-08-08)** — 모델(ADR-030+V9) + PATCH 전용 API + DeckServiceTest 4개 (Codex 검산: DeckResponse 매핑 누락 잡음). 다음: ① 공개 검색 API (`GET /api/public/decks`, **비공개 404 정책 — 403 vs 404 논쟁 예정**) ② 복사(🔵 동시성). 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **▶ 다음 액션 (resume)** | **🟢 Phase 4 — Visibility + 공개 검색 완료 (2026-08-09, MUST 6/6)** — PATCH API + `GET /public/decks` 검색/상세 + 404 존재숨김(메시지 동일) + PublicDeckHttpTest(익명 permitAll 실검증, 무토큰 보호 API 실측 403). 다음: **복사 API (🔵 B 모드 — 동시성·copy_count 원자적 update)** → 좋아요. 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -573,9 +573,9 @@
 - [x] **[MUST]** `PATCH /api/decks/{deckId}/visibility` — 전용 엔드포인트(일반 수정과 분리) + 서비스 테스트 4개
 
 ### 🔎 공개 단어장 검색 🟢
-- [ ] **[MUST]** `GET /api/public/decks?keyword=&page=&size=` — 제목/설명 LIKE
-- [ ] **[MUST]** `GET /api/public/decks/{deckId}` — 공개 덱 상세 조회
-- [ ] **[MUST]** 비공개 덱 접근 시 **404** 처리 (403 X — 존재 노출 방지)
+- [x] **[MUST]** `GET /public/decks?keyword=&page=&size=` — 제목/설명 LIKE (JPQL 괄호 명시 — And/Or 누출 방지, size 100 캡)
+- [x] **[MUST]** `GET /public/decks/{deckId}` — PUBLIC/UNLISTED 조회 (UNLISTED = 검색 비노출·링크 접근, 비밀링크 보안 아님)
+- [x] **[MUST]** 비공개 덱 접근 시 **404** 처리 (403 X — 존재 노출 방지. 메시지까지 동일, HTTP 테스트로 박제)
 
 ### 📎 단어장 복사 🔵
 - [ ] **[MUST]** `POST /api/decks/{deckId}/copy` — 공개 덱을 내 덱으로 복사
@@ -623,6 +623,7 @@
 
 ### 🆕 추가 아이디어
 - [ ] MockMvc 컨트롤러 슬라이스 테스트 도입 — 400 계약(빈 visibility / 오타 enum) 자동 검증. 지금은 Jackson+`@Valid` 프레임워크 보증에 의존 (프로젝트에 MockMvc 전례 없음 — 도입 자체가 별도 결정)
+- [ ] 익명 요청 거부를 401로 통일 — SecurityConfig에 authenticationEntryPoint 미설정이라 현재 실측 403 (PublicDeckHttpTest가 박제). 프론트가 "로그인 필요"와 "권한 없음"을 구별하려면 401 + ErrorResponse JSON이 맞음
 
 ---
 

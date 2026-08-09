@@ -18,7 +18,8 @@ import java.util.List;
  *
  * - DB 조회 X (JWT 자체 검증 + JWT의 claim만 사용) — 성능 ↑
  * - type=access 만 통과 (refresh token으로 일반 API 호출 차단 — 이중 방어)
- * - 검증 실패 시 SecurityContext 안 박음 → 다운스트림에서 Spring Security가 401 처리
+ * - 검증 실패 시 SecurityContext 안 박음 → 다운스트림에서 Spring Security가 차단
+ *   (entry point 미설정이라 실측 응답은 403 — PublicDeckHttpTest로 박제. 401 통일은 추가 아이디어 항목)
  */
 @Component
 @RequiredArgsConstructor
