@@ -38,6 +38,9 @@ public class Deck {
     @Column(nullable = false)
     private long copyCount;
 
+    @Column(nullable = false)
+    private long likeCount;
+
     // 복사 출처 추적 — 자기참조 FK, 원본 삭제 시 DB가 SET NULL (ADR-031)
     @Column(name = "original_deck_id")
     private Long originalDeckId;

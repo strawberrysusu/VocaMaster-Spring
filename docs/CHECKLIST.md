@@ -10,11 +10,11 @@
 | 항목 | 값 |
 |---|---|
 | **진행 중인 Phase** | **Phase 4 — 공개 단어장 / 공유 (2026-08-05 시작)** |
-| **이번 주 집중** | Phase 4 — Visibility ✅ → 공개 검색 ✅ → 복사 ✅ → 좋아요 |
+| **이번 주 집중** | Phase 4 — Visibility ✅ 검색 ✅ 복사 ✅ 좋아요 ✅ → 인기/최신 정렬(SHOULD) → 완료 기준 |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 ✅ / Phase 4 🔵 진행 중 / Phase 5~8 대기 |
 | **다음 마일스톤** | Phase 4 MUST 절반 — 개강(8/27) 전 (3주 플랜 주2~3) |
-| **신규 ADR** | ADR-016~031 — … / **Deck visibility enum 3값** / **복사: 원자적 UPDATE + 접근·카운트 정책** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🟢 Phase 4 — 복사까지 완료 (2026-08-10, MUST 11/11 + SHOULD 2)** — `POST /decks/{id}/copy` (ADR-031: 원자적 UPDATE, 자기 복사 허용+카운트 제외, memo=공유 콘텐츠). **FK 유발 데드락을 동시성 테스트가 실제로 잡음 → 잠금 획득 순서 통일(카운트 X락 먼저)로 해결** — 면접 스토리 1급 재료. 다음: **좋아요 (V11 deck_likes 복합 unique, idempotent)** → 인기/최신 정렬(SHOULD) → Phase 4 완료 기준 점검. 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **신규 ADR** | ADR-016~032 — … / **복사: 원자적 UPDATE + 정책** / **좋아요: unique 제약 멱등 + 자기 좋아요 허용** — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | **🟢 Phase 4 — 기능 MUST 전부 완료! (2026-08-10)** — Visibility·검색·복사·좋아요 4섹션 + 테스트 MUST 전부 ✅. 좋아요(ADR-032): unique 제약 멱등 + 자기 좋아요 허용(1회 캡) + permitAll GET 한정 + 데드락 예방 순서 재적용(동시성 회귀 테스트 2종). 다음: ① **인기/최신 정렬 SHOULD 2개** (`sort=popular` — like×5+copy×3+study×1, 완료 기준 데모에 필요) ② 완료 기준 점검(데모 시연 + 면접 질문 3개: 왜 404/왜 원자적 update/UNLISTED 의미) ③ 남은 SHOULD: week note. FK 데드락 스토리(ADR-031)는 면접 1급 재료. 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -588,11 +588,11 @@
 - [x] **[SHOULD]** 복사 중 원본 비공개 전환 → **첫 visibility 읽기 시점 기준** (REPEATABLE READ 일관 읽기 스냅샷, ADR-031 문서화)
 
 ### ❤️ 좋아요
-- [ ] **[MUST]** `deck_likes` 테이블 (user_id, deck_id, created_at) — 복합 unique
-- [ ] **[MUST]** `V11__add_deck_likes.sql` *(번호 재정정 — V10은 복사 추적이 사용)*
-- [ ] **[MUST]** `POST /api/public/decks/{deckId}/like` (idempotent)
-- [ ] **[MUST]** `DELETE /api/public/decks/{deckId}/like`
-- [ ] **[MUST]** Deck.like_count 동기화 (원자적 update)
+- [x] **[MUST]** `deck_likes` 테이블 — 복합 unique = 멱등성의 물리적 보증 (ADR-032)
+- [x] **[MUST]** `V11__add_deck_likes.sql` (+ decks.like_count)
+- [x] **[MUST]** `POST /public/decks/{deckId}/like` — 멱등 (레이스 시 unique 위반 → 전체 롤백 → 컨트롤러가 현재 상태 응답). ⚠️ permitAll을 `GET /public/**`로 축소 (쓰기는 인증)
+- [x] **[MUST]** `DELETE /public/decks/{deckId}/like` — 지운 행 수>0일 때만 감소 (자연 멱등, 음수 불가)
+- [x] **[MUST]** Deck.like_count 동기화 — 원자적 update + **X락 먼저** (복사 데드락 교훈 재적용, 동시성 회귀 테스트)
 - [ ] **[STRETCH]** like_count와 deck_likes 실제 개수 불일치 복구 스케줄러
 
 ### 📈 인기/최신 정렬
@@ -608,8 +608,8 @@
 ### 🧪 테스트
 - [x] **[MUST]** 복사 — 카드 개수 일치 / owner 변경 / copy_count 증가 (+동시 복사 2건 lost update 없음 검증)
 - [x] **[MUST]** 비공개 덱 복사 시 404 (자기 덱은 예외 — 카운트 불변 검증 포함)
-- [ ] **[MUST]** 좋아요 중복 시 idempotent
-- [ ] **[SHOULD]** 자기 덱 좋아요 정책 (허용/거부 결정 + 테스트)
+- [x] **[MUST]** 좋아요 중복 시 idempotent (3연타 후 카운트 1 + 취소 멱등 + 동시 좋아요 2건 정확)
+- [x] **[SHOULD]** 자기 덱 좋아요 → **허용** (타 서비스 관례 + unique 제약이 1회 상한이라 조작 캡, 테스트 포함)
 
 ### 📓 학습 노트
 - [ ] **[SHOULD]** week-14 ~ week-17 학습 노트

@@ -38,4 +38,14 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update Deck d set d.copyCount = d.copyCount + 1 where d.id = :id")
     int incrementCopyCount(@Param("id") Long id);
+
+    // 좋아요 카운터 (ADR-032) — 복사와 동일하게 원자적, 호출 순서도 동일 (X락 먼저)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Deck d set d.likeCount = d.likeCount + 1 where d.id = :id")
+    int incrementLikeCount(@Param("id") Long id);
+
+    // likeCount > 0 조건은 이론상 불필요(지운 행이 있을 때만 호출)하나 음수 방어 겸 명시
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Deck d set d.likeCount = d.likeCount - 1 where d.id = :id and d.likeCount > 0")
+    int decrementLikeCount(@Param("id") Long id);
 }

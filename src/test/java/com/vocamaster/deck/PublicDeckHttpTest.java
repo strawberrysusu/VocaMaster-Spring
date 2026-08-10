@@ -102,6 +102,14 @@ class PublicDeckHttpTest {
     }
 
     @Test
+    @DisplayName("익명 좋아요(POST /public/**)는 차단 — permitAll이 GET에만 열려있음 (ADR-032)")
+    void anonymousLike_blocked() {
+        ResponseEntity<String> res = rest.postForEntity(
+                "/public/decks/" + pub.getId() + "/like", null, String.class);
+        assertEquals(HttpStatus.FORBIDDEN, res.getStatusCode());
+    }
+
+    @Test
     @DisplayName("UNLISTED는 링크(직접 URL)로 200")
     void unlistedDetail_visible() {
         ResponseEntity<String> res = rest.getForEntity("/public/decks/" + unlisted.getId(), String.class);

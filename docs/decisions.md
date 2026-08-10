@@ -1219,6 +1219,33 @@ Phase 4 = 공개 단어장/공유. 덱마다 "누가 볼 수 있는가" 상태 �
 
 ---
 
+## ADR-032: 좋아요 — 멱등성은 복합 unique 제약이 보증, 자기 좋아요 허용
+
+**상태:** 채택 (2026-08-10)
+**범위:** `deck_likes` 테이블(`V11`), `POST/DELETE /public/decks/{id}/like`, `Deck.like_count` 동기화, SecurityConfig permitAll을 `GET /public/**`로 축소
+
+### 컨텍스트
+좋아요는 더블탭·재시도·중복 클릭이 일상인 API — 같은 요청이 몇 번 와도 결과가 같아야(멱등) 하고, like_count는 인기 점수(가중치 ×5) 재료라 정확해야 함. 또한 체크리스트 경로가 `/public/**` 하위인데 기존 permitAll이 전체 메서드를 열고 있어 익명 쓰기가 뚫리는 충돌 발견.
+
+### 고려한 대안 — 멱등성 보증
+- **A. ❌ 애플리케이션 exists 체크만** — check와 INSERT *사이*에 끼어드는 레이스에 항상 뚫림
+- **B. ✅ exists 빠른 경로 + INSERT + (user_id, deck_id) 복합 unique** — 위반 시 "이미 좋아요"로 멱등 응답. 물리적 보증은 DB 제약, 코드 체크는 흔한 경우의 빠른 반환
+- **C. ❌ `INSERT IGNORE` / `ON DUPLICATE KEY`** — 동작하나 MySQL 방언 + JPA 이탈, 지금 이득 없음
+
+### 결정
+- **카운트는 원자적 UPDATE + X락 먼저** — deck_likes INSERT의 FK S락 + 카운트 X락은 ADR-031 복사 데드락과 동일 교착 구조. 같은 예방책(잠금 획득 순서 통일) 적용
+- 레이스로 unique 위반 시 **트랜잭션 전체 롤백(선행 증가 포함)** → 컨트롤러가 현재 상태를 재조회해 멱등 응답 (트랜잭션 *안*에서 catch하면 rollback-only 마킹과 충돌하는 함정 — catch는 프록시 밖에서)
+- unlike: `deleteBy...`가 반환한 **지운 행 수 > 0일 때만 감소** — 자연 멱등, 카운트 음수 경로 없음
+- **자기 좋아요 허용** (2026-08-10 사용자 결정, 타 서비스 관례): 자기 복사(무한 반복 가능 → 카운트 제외)와 달리, **unique 제약이 1인 1회 상한을 물리적으로 강제** → 자기 좋아요의 조작 여지는 +1로 캡. 카운트 포함해도 무해
+- 접근 규칙은 복사와 동일: 남의 PRIVATE = 404 존재 숨김, 자기 덱은 visibility 무관
+- SecurityConfig: `/public/**` permitAll을 **GET 한정**으로 축소 — 쓰기(좋아요)는 인증 필수
+
+### 트레이드오프 / 한계
+- 같은 유저의 like·unlike 동시 레이스가 만들 수 있는 이론적 교착은 MySQL 감지(한쪽 강제 롤백)에 맡김 — 클라이언트 재시도로 수렴
+- like_count와 deck_likes 실제 수의 드리프트 복구는 STRETCH 스케줄러 항목으로 미룸
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)
