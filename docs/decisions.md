@@ -1243,6 +1243,11 @@ Phase 4 = 공개 단어장/공유. 덱마다 "누가 볼 수 있는가" 상태 �
 ### 트레이드오프 / 한계
 - 같은 유저의 like·unlike 동시 레이스가 만들 수 있는 이론적 교착은 MySQL 감지(한쪽 강제 롤백)에 맡김 — 클라이언트 재시도로 수렴
 - like_count와 deck_likes 실제 수의 드리프트 복구는 STRETCH 스케줄러 항목으로 미룸
+- 복합 unique는 "한 계정 1회"까지만 — 다계정 어뷰징은 범위 밖 (ADR-031과 동일)
+
+### 보강 (2026-08-10, Codex 검산)
+- **V12: deck FK에 `ON DELETE CASCADE`** — 좋아요 달린 덱 삭제가 FK 위반 500 나던 구멍 수리. deck_likes는 Deck에 역방향 컬렉션을 안 만든 설계라 JPA cascade가 못 지움 → DB에 위임. 회귀 테스트 포함
+- **user FK는 RESTRICT 유지** — 유저 CASCADE는 좋아요 행만 지우고 덱들의 like_count를 안 줄여 무소음 드리프트 유발. 유저는 소프트 삭제(deleted_at) 정책이라 하드 삭제 경로 없음
 
 ---
 

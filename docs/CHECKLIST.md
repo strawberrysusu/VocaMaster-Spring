@@ -593,6 +593,7 @@
 - [x] **[MUST]** `POST /public/decks/{deckId}/like` — 멱등 (레이스 시 unique 위반 → 전체 롤백 → 컨트롤러가 현재 상태 응답). ⚠️ permitAll을 `GET /public/**`로 축소 (쓰기는 인증)
 - [x] **[MUST]** `DELETE /public/decks/{deckId}/like` — 지운 행 수>0일 때만 감소 (자연 멱등, 음수 불가)
 - [x] **[MUST]** Deck.like_count 동기화 — 원자적 update + **X락 먼저** (복사 데드락 교훈 재적용, 동시성 회귀 테스트)
+- [x] **[MUST]** `V12__deck_likes_cascade.sql` — 좋아요 달린 덱 삭제 FK 500 수리 (Codex 검산 발견). deck FK만 CASCADE, user FK는 RESTRICT(드리프트 방지) + 삭제 회귀·동일유저 더블탭 테스트
 - [ ] **[STRETCH]** like_count와 deck_likes 실제 개수 불일치 복구 스케줄러
 
 ### 📈 인기/최신 정렬
@@ -601,7 +602,7 @@
 
 ### 🏷️ 태그
 - [ ] **[STRETCH]** `deck_tags` 테이블 (deck_id, tag_name)
-- [ ] **[STRETCH]** `V12__add_deck_tags.sql` *(번호 재정정)*
+- [ ] **[STRETCH]** `V13__add_deck_tags.sql` *(번호 재정정 — V12는 좋아요 CASCADE 수리가 사용)*
 - [ ] **[STRETCH]** 덱 생성/수정 시 태그 등록
 - [ ] **[STRETCH]** `GET /api/public/decks?tag=toeic`
 

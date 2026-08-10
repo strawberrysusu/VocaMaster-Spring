@@ -63,6 +63,43 @@ class DeckLikeConcurrencyTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("같은 유저 동시 더블탭 — unique 위반 경로 포함, 최종은 행 1개·카운트 1 (멱등)")
+    void concurrentDoubleTap_sameUser_stillOne() throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        // 컨트롤러의 레이스 변환(catch → currentState)을 그대로 재현.
+        // 타이밍에 따라 (a) 늦은 쪽이 빠른 경로를 타거나 (b) unique 위반→롤백→재조회 —
+        // 어느 경로든 결과는 같아야 한다는 것이 멱등의 정의
+        Callable<LikeResponse> tap = () -> {
+            ready.countDown();
+            start.await();
+            try {
+                return deckLikeService.like(deck.getId(), likerA.getId());
+            } catch (org.springframework.dao.DataIntegrityViolationException race) {
+                return deckLikeService.currentState(deck.getId(), likerA.getId());
+            }
+        };
+
+        Future<LikeResponse> first = pool.submit(tap);
+        Future<LikeResponse> second = pool.submit(tap);
+        ready.await();
+        start.countDown();
+
+        LikeResponse r1 = first.get(30, TimeUnit.SECONDS);
+        LikeResponse r2 = second.get(30, TimeUnit.SECONDS);
+        pool.shutdown();
+
+        assertTrue(r1.isLiked());
+        assertTrue(r2.isLiked());
+        assertEquals(1, deckRepository.findById(deck.getId()).orElseThrow().getLikeCount(),
+                "unique 위반 롤백이 선행 증가까지 되돌리지 못하면 여기가 2가 된다");
+        assertEquals(1, deckLikeRepository.findAll().stream()
+                .filter(l -> l.getDeck().getId().equals(deck.getId())).count());
+    }
+
+    @Test
     @DisplayName("두 유저 동시 좋아요 — 데드락 없이 카운트 정확히 2")
     void concurrentLike_bothCounted() throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(2);

@@ -16,6 +16,7 @@ class DeckLikeServiceTest extends AbstractIntegrationTest {
 
     @Autowired private DeckLikeService deckLikeService;
     @Autowired private DeckLikeRepository deckLikeRepository;
+    @Autowired private DeckService deckService;
     @Autowired private DeckRepository deckRepository;
     @Autowired private UserRepository userRepository;
 
@@ -108,5 +109,20 @@ class DeckLikeServiceTest extends AbstractIntegrationTest {
                 .title("링크덱").visibility(DeckVisibility.UNLISTED).user(owner).build());
 
         assertEquals(1, deckLikeService.like(linked.getId(), liker.getId()).getLikeCount());
+    }
+
+    @Test
+    @DisplayName("좋아요 달린 덱 삭제 성공 — DB CASCADE가 좋아요 행도 제거 (V12 회귀)")
+    void removeDeck_withLikes_cascades() {
+        deckLikeService.like(publicDeck.getId(), liker.getId());
+
+        // V12 이전엔 여기서 FK 위반 500 (deck_likes가 덱을 참조 중이라 부모 삭제 거부)
+        deckService.remove(publicDeck.getId(), owner.getId());
+        // DELETE를 지금 DB로 보냄 — 아래 exists 쿼리는 deck_likes만 봐서(decks와 query space 불일치)
+        // 하이버네이트가 auto-flush를 건너뜀. 운영에선 커밋 시점 flush라 문제없는 테스트 전용 조치
+        deckRepository.flush();
+
+        assertFalse(deckRepository.findById(publicDeck.getId()).isPresent());
+        assertFalse(deckLikeRepository.existsByUserIdAndDeckId(liker.getId(), publicDeck.getId()));
     }
 }
