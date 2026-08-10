@@ -59,17 +59,19 @@ class PublicDeckHttpTest {
     private Deck pub;
     private Deck unlisted;
     private Deck priv;
+    private String tag;   // 재사용 컨테이너의 잔여 데이터에 면역이 되도록 고유 태그
 
     @BeforeEach
     void setUp() {
+        tag = "h" + System.nanoTime();
         user = userRepository.save(User.builder()
-                .email("http@test.com").password("encoded").nickname("httper").build());
+                .email(tag + "@test.com").password("encoded").nickname("httper").build());
         pub = deckRepository.save(Deck.builder()
-                .title("공개덱").visibility(DeckVisibility.PUBLIC).user(user).build());
+                .title(tag + " 공개덱").visibility(DeckVisibility.PUBLIC).user(user).build());
         unlisted = deckRepository.save(Deck.builder()
-                .title("링크덱").visibility(DeckVisibility.UNLISTED).user(user).build());
+                .title(tag + " 링크덱").visibility(DeckVisibility.UNLISTED).user(user).build());
         priv = deckRepository.save(Deck.builder()
-                .title("비밀덱").visibility(DeckVisibility.PRIVATE).user(user).build());
+                .title(tag + " 비밀덱").visibility(DeckVisibility.PRIVATE).user(user).build());
     }
 
     @AfterEach
@@ -83,12 +85,12 @@ class PublicDeckHttpTest {
     @Test
     @DisplayName("익명(무토큰) 검색 요청이 200 — permitAll 실검증")
     void anonymousSearch_ok() throws Exception {
-        ResponseEntity<String> res = rest.getForEntity("/public/decks", String.class);
+        ResponseEntity<String> res = rest.getForEntity("/public/decks?keyword=" + tag, String.class);
 
         assertEquals(HttpStatus.OK, res.getStatusCode());
         JsonNode body = objectMapper.readTree(res.getBody());
-        assertEquals(1, body.get("totalElements").asInt());   // PUBLIC 1개만
-        assertEquals("공개덱", body.get("content").get(0).get("title").asText());
+        assertEquals(1, body.get("totalElements").asInt());   // tag 스코프 안에선 PUBLIC 1개만
+        assertEquals(tag + " 공개덱", body.get("content").get(0).get("title").asText());
     }
 
     @Test

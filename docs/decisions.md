@@ -1185,6 +1185,40 @@ Phase 4 = 공개 단어장/공유. 덱마다 "누가 볼 수 있는가" 상태 �
 
 ---
 
+## ADR-031: 덱 복사 — copy_count 원자적 UPDATE + 접근/카운트 정책
+
+**상태:** 채택 (2026-08-10)
+**범위:** `POST /decks/{deckId}/copy`, `V10__add_deck_copy_tracking.sql` (copy_count, original_deck_id), `DeckService.copy`, `DeckRepository.incrementCopyCount`
+
+### 컨텍스트
+공개 덱을 내 덱으로 복사하는 Phase 4 핵심 기능. 두 갈래 결정이 필요: ① 인기 덱에 동시 복사가 몰릴 때 copy_count를 어떻게 정확히 올리나 ② 누가 무엇을 복사할 수 있고, 어떤 복사가 카운트에 반영되나.
+
+### 고려한 대안 — 카운터
+- **A. ❌ read-modify-write** — 자바에서 읽고 +1 후 저장. 동시 2건이 둘 다 5를 읽고 둘 다 6을 저장 → 증가 1개 증발(lost update). 에러 없이 조용히 틀리는 최악 유형
+- **B. ❌ `@Version` 낙관적 락** — 리뷰(ADR-029)에서 쓴 도구. 거기선 충돌이 *드문 이상 상황*이라 "낡은 쪽 409 거부"가 정답이었지만, 카운터는 **충돌이 정상 상황**이고 양쪽 다 반영돼야 함. 인기 덱일수록 재시도 폭풍
+- **C. ✅ DB 원자적 UPDATE** — `set copyCount = copyCount + 1`. 더하기를 DB 안에서 수행, 같은 행 갱신은 행 잠금이 줄 세움 → 5→6→7 둘 다 생존
+- **D. ❌(지금은) 비동기 이벤트 집계** — 초대규모용. Phase 6(이벤트)에서 재론
+
+### 결정 — 정책 (2026-08-10 사용자 확정, Codex가 모순 지적)
+- 남의 덱: PUBLIC/UNLISTED 복사 가능, **PRIVATE은 404** (공개 조회와 동일한 존재 숨김)
+- **자기 덱: visibility 무관 복사 가능** — "PRIVATE 404" 규칙과의 모순(내 PRIVATE 덱 템플릿 복사 불가)을 Codex가 지적 → `isOwner` 분기로 해소 (남에게만 404)
+- **자기 복사는 copy_count 증가 제외** — copy_count는 이후 인기 점수 재료. 자기 복사 반복으로 순위 조작 가능하므로 카운트에서 배제 ("조작하면 의미가 없다" — 사용자 결정)
+- 복사본: 무조건 PRIVATE, `original_deck_id`로 출처 추적 (자기참조 FK + `ON DELETE SET NULL` — 원본 삭제돼도 복사본 생존)
+- 카드: **콘텐츠 복사**(front/back/exampleSentence/memo/position — memo는 개인 메모가 아니라 공유 설명 성향이므로 콘텐츠로 분류, 사용자 결정) / **학습 상태 리셋**(starred=false, CardProgress 미복사)
+- 카드 0개 덱: 복사 허용 (빈 덱도 정상 상태)
+- 복사 중 원본이 PRIVATE 전환: **복사 트랜잭션이 원본 visibility를 처음 읽은 시점 기준** (MySQL REPEATABLE READ의 일관 읽기 스냅샷은 첫 조회 때 생성)
+
+### 근거
+- 데이터 성격에 맞는 동시성 도구 선택이 핵심: 학습 상태(한쪽 거부가 정답) → `@Version`, 카운터(양쪽 반영이 정답) → 원자적 UPDATE
+- 전체를 하나의 `@Transactional`로 — 카드 500장 중 300장째 실패 시 "완전한 복사본 또는 아무것도 없음" (Import P1-6과 동일 원리)
+
+### 트레이드오프 / 한계
+- `@Modifying` 벌크 UPDATE는 1차 캐시를 우회 → `flushAutomatically/clearAutomatically` 필수 (알려진 함정 목록)
+- 자기 복사 카운트 제외는 단순 분기 — 다계정 조작까지는 못 막음 (레이트리밋/어뷰징 방어는 범위 밖)
+- copy_count와 실제 복사본 수의 불일치 복구는 좋아요 섹션의 STRETCH 스케줄러와 동일 계열로 미룸
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

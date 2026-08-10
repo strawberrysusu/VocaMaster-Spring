@@ -1,5 +1,6 @@
 package com.vocamaster.deck;
 
+import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.deck.dto.CreateDeckRequest;
@@ -9,6 +10,7 @@ import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.vocamaster.common.exception.NotFoundException;
 
 import java.util.List;
@@ -67,6 +69,51 @@ public class DeckService {
     public void remove(Long id, Long userId) {
         verifyOwner(id, userId);
         deckRepository.deleteById(id);
+    }
+
+    // 복사 (ADR-031): 완전한 복사본 또는 아무것도 없음 — 전체가 한 트랜잭션
+    @Transactional
+    public DeckResponse copy(Long deckId, Long userId) {
+        Deck original = deckRepository.findById(deckId)
+                .orElseThrow(() -> new NotFoundException(PublicDeckService.DECK_NOT_FOUND));
+
+        boolean isOwner = original.getUser().getId().equals(userId);
+        if (!isOwner && original.getVisibility() == DeckVisibility.PRIVATE) {
+            // 남의 비공개 = 없는 덱과 동일 응답 (존재 숨김). 자기 덱은 visibility 무관 복사 가능
+            throw new NotFoundException(PublicDeckService.DECK_NOT_FOUND);
+        }
+
+        // ★ 잠금 순서: 원본 행의 X 잠금(카운트 UPDATE)을 복사본 INSERT보다 먼저.
+        //   복사본 INSERT는 original_deck_id FK 검사로 원본 행에 S 잠금을 걸어서,
+        //   S(A)+S(B) 뒤에 서로 X로 승급하려는 순간 교착 — 동시성 테스트가 실제로 잡아낸 데드락 (ADR-031)
+        //   실패 시에도 같은 트랜잭션이라 카운트만 오르는 일 없음 (전체 롤백)
+        if (!isOwner) {
+            deckRepository.incrementCopyCount(deckId);      // 원자적 +1. 자기 복사는 카운트 제외 — 인기 조작 방지
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을수없습니다."));
+
+        Deck copy = deckRepository.save(Deck.builder()
+                .title(original.getTitle())
+                .description(original.getDescription())
+                .user(user)
+                .originalDeckId(original.getId())
+                .build());                                  // visibility는 @Builder.Default → PRIVATE
+
+        List<Card> copiedCards = cardRepository.findByDeckId(deckId).stream()
+                .map(c -> Card.builder()
+                        .front(c.getFront())
+                        .back(c.getBack())
+                        .exampleSentence(c.getExampleSentence())
+                        .memo(c.getMemo())                  // memo는 공유 콘텐츠로 분류 (ADR-031)
+                        .position(c.getPosition())
+                        .deck(copy)                         // starred는 @Builder.Default → false (학습 상태 리셋)
+                        .build())
+                .toList();
+        cardRepository.saveAll(copiedCards);
+
+        return DeckResponse.listOf(copy, copiedCards.size());
     }
 
     // 소유권 확인 — 다른 서비스에서도 사용

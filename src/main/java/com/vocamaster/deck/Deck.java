@@ -35,6 +35,13 @@ public class Deck {
     @Builder.Default
     private DeckVisibility visibility = DeckVisibility.PRIVATE;
 
+    @Column(nullable = false)
+    private long copyCount;
+
+    // 복사 출처 추적 — 자기참조 FK, 원본 삭제 시 DB가 SET NULL (ADR-031)
+    @Column(name = "original_deck_id")
+    private Long originalDeckId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore

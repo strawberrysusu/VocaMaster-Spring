@@ -3,6 +3,7 @@ package com.vocamaster.deck;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -31,4 +32,10 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
     Page<Deck> searchByVisibility(@Param("visibility") DeckVisibility visibility,
                                   @Param("keyword") String keyword,
                                   Pageable pageable);
+
+    // 복사 카운터 — read-modify-write의 lost update 방지, 더하기를 DB가 직접 수행 (ADR-031)
+    // flush: UPDATE 전에 밀린 INSERT를 먼저 반영 / clear: 벌크 UPDATE가 우회한 1차 캐시를 비움 (알려진 함정)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Deck d set d.copyCount = d.copyCount + 1 where d.id = :id")
+    int incrementCopyCount(@Param("id") Long id);
 }

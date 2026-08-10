@@ -10,11 +10,11 @@
 | 항목 | 값 |
 |---|---|
 | **진행 중인 Phase** | **Phase 4 — 공개 단어장 / 공유 (2026-08-05 시작)** |
-| **이번 주 집중** | Phase 4 — Visibility ✅ → 공개 검색 → 복사 (MUST 순서대로) |
+| **이번 주 집중** | Phase 4 — Visibility ✅ → 공개 검색 ✅ → 복사 ✅ → 좋아요 |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 ✅ / Phase 4 🔵 진행 중 / Phase 5~8 대기 |
 | **다음 마일스톤** | Phase 4 MUST 절반 — 개강(8/27) 전 (3주 플랜 주2~3) |
-| **신규 ADR** | ADR-016~030 — … / **Leitner Box (SM-2/FSRS 대신)** / **Deck visibility enum 3값** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🟢 Phase 4 — Visibility + 공개 검색 완료 (2026-08-09, MUST 6/6)** — PATCH API + `GET /public/decks` 검색/상세 + 404 존재숨김(메시지 동일) + PublicDeckHttpTest(익명 permitAll 실검증, 무토큰 보호 API 실측 403). 다음: **복사 API (🔵 B 모드 — 동시성·copy_count 원자적 update)** → 좋아요. 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **신규 ADR** | ADR-016~031 — … / **Deck visibility enum 3값** / **복사: 원자적 UPDATE + 접근·카운트 정책** — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | **🟢 Phase 4 — 복사까지 완료 (2026-08-10, MUST 11/11 + SHOULD 2)** — `POST /decks/{id}/copy` (ADR-031: 원자적 UPDATE, 자기 복사 허용+카운트 제외, memo=공유 콘텐츠). **FK 유발 데드락을 동시성 테스트가 실제로 잡음 → 잠금 획득 순서 통일(카운트 X락 먼저)로 해결** — 면접 스토리 1급 재료. 다음: **좋아요 (V11 deck_likes 복합 unique, idempotent)** → 인기/최신 정렬(SHOULD) → Phase 4 완료 기준 점검. 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -578,17 +578,18 @@
 - [x] **[MUST]** 비공개 덱 접근 시 **404** 처리 (403 X — 존재 노출 방지. 메시지까지 동일, HTTP 테스트로 박제)
 
 ### 📎 단어장 복사 🔵
-- [ ] **[MUST]** `POST /api/decks/{deckId}/copy` — 공개 덱을 내 덱으로 복사
-- [ ] **[MUST]** 복사본은 PRIVATE으로 생성
-- [ ] **[MUST]** 카드 전체 복제 (position 유지)
-- [ ] **[MUST]** 원본 `copy_count` 증가 — DB **원자적 update** 사용 (race condition 방지)
-- [ ] **[MUST]** `original_deck_id` 추적
-- [ ] **[SHOULD]** 카드 0개인 공개 덱 복사 시 정책 결정 (허용/거부)
-- [ ] **[SHOULD]** 복사 중 원본이 비공개로 전환된 경우 처리 (트랜잭션 격리)
+- [x] **[MUST]** `POST /decks/{deckId}/copy` — 공개/UNLISTED 덱을 내 덱으로. 자기 덱은 PRIVATE이어도 가능, 남의 PRIVATE은 404 (ADR-031)
+- [x] **[MUST]** `V10__add_deck_copy_tracking.sql` *(체크리스트에 누락돼 있던 마이그레이션 — 구현 시 발견·신설)*
+- [x] **[MUST]** 복사본은 PRIVATE으로 생성
+- [x] **[MUST]** 카드 전체 복제 (position 유지, starred·CardProgress는 리셋 — 콘텐츠/학습상태 구분)
+- [x] **[MUST]** 원본 `copy_count` 증가 — DB **원자적 update** (자기 복사는 카운트 제외 — 인기 조작 방지). ⚠️ FK(original_deck_id) S락 + 카운트 X락 조합의 **실제 데드락을 동시성 테스트가 잡음** → 잠금 획득 순서 통일(카운트 먼저)로 해결
+- [x] **[MUST]** `original_deck_id` 추적 (자기참조 FK, ON DELETE SET NULL)
+- [x] **[SHOULD]** 카드 0개 덱 복사 → **허용** (빈 덱도 정상 상태, 테스트 포함)
+- [x] **[SHOULD]** 복사 중 원본 비공개 전환 → **첫 visibility 읽기 시점 기준** (REPEATABLE READ 일관 읽기 스냅샷, ADR-031 문서화)
 
 ### ❤️ 좋아요
 - [ ] **[MUST]** `deck_likes` 테이블 (user_id, deck_id, created_at) — 복합 unique
-- [ ] **[MUST]** `V10__add_deck_likes.sql` *(V8→V10 번호 정정)*
+- [ ] **[MUST]** `V11__add_deck_likes.sql` *(번호 재정정 — V10은 복사 추적이 사용)*
 - [ ] **[MUST]** `POST /api/public/decks/{deckId}/like` (idempotent)
 - [ ] **[MUST]** `DELETE /api/public/decks/{deckId}/like`
 - [ ] **[MUST]** Deck.like_count 동기화 (원자적 update)
@@ -600,13 +601,13 @@
 
 ### 🏷️ 태그
 - [ ] **[STRETCH]** `deck_tags` 테이블 (deck_id, tag_name)
-- [ ] **[STRETCH]** `V11__add_deck_tags.sql` *(V9→V11 번호 정정)*
+- [ ] **[STRETCH]** `V12__add_deck_tags.sql` *(번호 재정정)*
 - [ ] **[STRETCH]** 덱 생성/수정 시 태그 등록
 - [ ] **[STRETCH]** `GET /api/public/decks?tag=toeic`
 
 ### 🧪 테스트
-- [ ] **[MUST]** 복사 — 카드 개수 일치 / owner 변경 / copy_count 증가
-- [ ] **[MUST]** 비공개 덱 복사 시 404
+- [x] **[MUST]** 복사 — 카드 개수 일치 / owner 변경 / copy_count 증가 (+동시 복사 2건 lost update 없음 검증)
+- [x] **[MUST]** 비공개 덱 복사 시 404 (자기 덱은 예외 — 카운트 불변 검증 포함)
 - [ ] **[MUST]** 좋아요 중복 시 idempotent
 - [ ] **[SHOULD]** 자기 덱 좋아요 정책 (허용/거부 결정 + 테스트)
 

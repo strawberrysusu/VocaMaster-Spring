@@ -53,6 +53,12 @@ public class DeckController {
         return deckService.updateVisibility(id, CurrentUser.getId(), req.getVisibility());
     }
 
+    @PostMapping("/{id}/copy")
+    @Operation(summary = "단어장 복사 — 공개/링크 덱을 내 PRIVATE 덱으로")
+    public DeckResponse copy(@PathVariable Long id) {
+        return deckService.copy(id, CurrentUser.getId());
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "단어장 삭제 (카드도 함께 삭제)")
     public Map<String, String> remove(@PathVariable Long id) {

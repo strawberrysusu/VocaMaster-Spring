@@ -16,7 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PublicDeckService {
 
     // '없는 덱'과 '비공개 덱'은 메시지까지 동일해야 함 — 다르면 그 차이로 존재가 샘 (ADR-030)
-    private static final String DECK_NOT_FOUND = "단어장을 찾을 수 없습니다";
+    // package-private: DeckService.copy의 404도 같은 메시지를 써야 함 (드리프트 방지)
+    static final String DECK_NOT_FOUND = "단어장을 찾을 수 없습니다";
 
     private final DeckRepository deckRepository;
     private final CardRepository cardRepository;
