@@ -20,7 +20,7 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
               and (:keyword is null
                    or lower(d.title) like lower(concat('%', :keyword, '%'))
                    or lower(d.description) like lower(concat('%', :keyword, '%')))
-            order by d.createdAt desc
+            order by d.createdAt desc, d.id desc
             """,
            countQuery = """
             select count(d) from Deck d
@@ -41,7 +41,7 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
               and (:keyword is null
                    or lower(d.title) like lower(concat('%', :keyword, '%'))
                    or lower(d.description) like lower(concat('%', :keyword, '%')))
-            order by (d.likeCount * 5 + d.copyCount * 3) desc, d.createdAt desc
+            order by (d.likeCount * 5 + d.copyCount * 3) desc, d.createdAt desc, d.id desc
             """,
            countQuery = """
             select count(d) from Deck d
