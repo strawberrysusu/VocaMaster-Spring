@@ -1251,6 +1251,30 @@ Phase 4 = 공개 단어장/공유. 덱마다 "누가 볼 수 있는가" 상태 �
 
 ---
 
+## ADR-033: 인기 정렬 — DB 계산식 정렬, 공식에서 study 항 제외
+
+**상태:** 채택 (2026-08-11)
+**범위:** `GET /public/decks?sort=popular|recent`, `DeckRepository.searchByVisibilityPopular`, `PublicDeckResponse`에 likeCount/copyCount 노출
+
+### 컨텍스트
+Phase 4 완료 기준 데모("인기 목록 반영 시연")에 필요한 마지막 조각. 체크리스트 원안 공식은 `like×5 + copy×3 + study×1`이었으나, 구현 직전 검산(Codex)에서 study 항의 의미 결함 발견: 다른 유저는 공개 덱을 **복사한 자기 덱으로** 학습하므로, 원본의 study_count는 사실상 "원작자가 자기 덱을 연 횟수"가 됨. 세션 시작은 무한 반복 가능 → 자기 좋아요(1회 캡)와 달리 무제한 조작 통로.
+
+### 고려한 대안
+- **A. ❌ 원안 유지 (study 포함)** — 3모드(Flashcard/Quiz/Typing) 백필 + 증가 3곳 + StudyService `@Transactional` 추가 필요. 정의를 문서화해도 "커뮤니티 인기"라는 이름과 "원작자 자기 활동"이라는 실데이터가 어긋남
+- **B. ❌ 원본 귀속 설계** — 복사본 학습 시 `original_deck_id` 따라 원본 카운트 증가. 의미는 가장 정확하나 인기 덱 행에 락 집중 + 설계·테스트가 현 범위 초과
+- **C. ✅ study 항 제외** — `like×5 + copy×3`. 잘못 정의된 숫자를 만들지 않음. study는 **Phase 6 이벤트 설계에서 원본 귀속과 함께** 재도입 (사용자 결정 2026-08-11, Codex 동일 추천)
+
+### 결정
+- popular: `order by (like_count*5 + copy_count*3) desc, created_at desc` (동점은 최신순) — JPQL 계산식 정렬
+- recent: 기존 `created_at desc` 유지 (기본값). 그 외 sort 값은 400
+- 조작 방지 계열 정리: 자기 복사=카운트 제외(무한 반복 가능) / 자기 좋아요=허용(unique 1회 캡) / **자기 학습=공식 진입 자체를 보류(무한 반복 + 귀속 왜곡)**
+
+### 트레이드오프 / 한계
+- 계산식 정렬은 인덱스를 못 탐 → 후보 전체 filesort. 현 규모 무해, 덱 수만 개부터 병목 — **Phase 5 Redis 랭킹(ZSET) 전환의 근거** (면접: "지금 왜 충분한가 + 언제 무엇으로 바꾸나")
+- 가중치 5:3은 경험칙 — 운영 데이터로 조정 여지 (Leitner 간격과 같은 성격)
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

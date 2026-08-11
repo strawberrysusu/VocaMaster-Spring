@@ -10,11 +10,11 @@
 | 항목 | 값 |
 |---|---|
 | **진행 중인 Phase** | **Phase 4 — 공개 단어장 / 공유 (2026-08-05 시작)** |
-| **이번 주 집중** | Phase 4 — Visibility ✅ 검색 ✅ 복사 ✅ 좋아요 ✅ → 인기/최신 정렬(SHOULD) → 완료 기준 |
+| **이번 주 집중** | Phase 4 — 기능 전부 ✅ (정렬까지) → **완료 기준: 데모 시연 + 면접 질문 3개** → week note |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 ✅ / Phase 4 🔵 진행 중 / Phase 5~8 대기 |
 | **다음 마일스톤** | Phase 4 MUST 절반 — 개강(8/27) 전 (3주 플랜 주2~3) |
-| **신규 ADR** | ADR-016~032 — … / **복사: 원자적 UPDATE + 정책** / **좋아요: unique 제약 멱등 + 자기 좋아요 허용** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🟢 Phase 4 — 기능 MUST 전부 완료! (2026-08-10)** — Visibility·검색·복사·좋아요 4섹션 + 테스트 MUST 전부 ✅. 좋아요(ADR-032): unique 제약 멱등 + 자기 좋아요 허용(1회 캡) + permitAll GET 한정 + 데드락 예방 순서 재적용(동시성 회귀 테스트 2종). 다음: ① **인기/최신 정렬 SHOULD 2개** (`sort=popular` — like×5+copy×3+study×1, 완료 기준 데모에 필요) ② 완료 기준 점검(데모 시연 + 면접 질문 3개: 왜 404/왜 원자적 update/UNLISTED 의미) ③ 남은 SHOULD: week note. FK 데드락 스토리(ADR-031)는 면접 1급 재료. 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
+| **신규 ADR** | ADR-016~033 — … / **좋아요: unique 멱등** / **인기 정렬: like×5+copy×3, study 항 제외** — `docs/decisions.md` |
+| **▶ 다음 액션 (resume)** | **🟢 Phase 4 — 기능 전부 완료 (2026-08-11, 인기/최신 정렬까지)** — sort=popular는 like×5+copy×3 (study 항 제외 결정, ADR-033 — 사용자·Codex 합의). 남은 것: ① **완료 기준 점검** — 데모 시연(검색→복사→좋아요→인기 반영) + **면접 질문 3개 리콜** (왜 404? / 왜 원자적 update? / UNLISTED 의미? — 전부 이미 본인 입으로 답했던 것) ② week note (Phase 4 학습 노트 — 데드락 스토리 필수 포함) ③ 주말 폐쇄훈련 #3 3회차(빈칸). 면접 1급 재료: FK 데드락(ADR-031) + 잠금 순서 3회 반복 학습 완료. 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
 
@@ -597,8 +597,8 @@
 - [ ] **[STRETCH]** like_count와 deck_likes 실제 개수 불일치 복구 스케줄러
 
 ### 📈 인기/최신 정렬
-- [ ] **[SHOULD]** `GET /api/public/decks?sort=popular` — `like*5 + copy*3 + study*1` 점수
-- [ ] **[SHOULD]** `GET /api/public/decks?sort=recent`
+- [x] **[SHOULD]** `GET /public/decks?sort=popular` — **like×5 + copy×3, 동점 최신순** (study 항 제외 — ADR-033: 현 구조에선 남들이 복사본으로 학습해서 '원작자 자기 활동' 수치가 됨 + 무한 조작 통로. Phase 6 이벤트에서 원본 귀속과 함께 재도입)
+- [x] **[SHOULD]** `GET /public/decks?sort=recent` — 기본값. 그 외 sort 값은 400. 응답에 likeCount/copyCount 노출(순위 근거)
 
 ### 🏷️ 태그
 - [ ] **[STRETCH]** `deck_tags` 테이블 (deck_id, tag_name)
@@ -625,6 +625,7 @@
 
 ### 🆕 추가 아이디어
 - [ ] MockMvc 컨트롤러 슬라이스 테스트 도입 — 400 계약(빈 visibility / 오타 enum) 자동 검증. 지금은 Jackson+`@Valid` 프레임워크 보증에 의존 (프로젝트에 MockMvc 전례 없음 — 도입 자체가 별도 결정)
+  - 도입 시 함께: 동일 유저 더블탭의 UNIQUE 충돌 → 실제 컨트롤러 catch → currentState 복구 경로 **결정적** 검증 (현 테스트는 최종 상태 멱등만 보증, 충돌 경로 강제는 아님 — Codex 검산 2026-08-11)
 - [ ] 익명 요청 거부를 401로 통일 — SecurityConfig에 authenticationEntryPoint 미설정이라 현재 실측 403 (PublicDeckHttpTest가 박제). 프론트가 "로그인 필요"와 "권한 없음"을 구별하려면 401 + ErrorResponse JSON이 맞음
 
 ---
@@ -706,6 +707,7 @@ review:summary:{userId}:{date}  TTL 5분
 
 > **목표:** API 응답 책임과 통계/배지 책임 분리. Spring Event부터 안정화.
 > **모드:** 🟢 A (Spring Event) → ⚪ C (Kafka, 선택)
+> **Phase 4에서 이월 (ADR-033):** 인기 점수의 study 항 — 세션 시작 이벤트 발행 + **복사본 학습을 원본에 귀속**(original_deck_id 추적) 설계와 함께 재도입. 자기 학습 무한 반복 조작 방지 포함
 
 ### 🔔 Spring ApplicationEvent
 - [ ] **[MUST]** `CardAnsweredEvent`, `DeckCopiedEvent`, `DeckLikedEvent` 정의

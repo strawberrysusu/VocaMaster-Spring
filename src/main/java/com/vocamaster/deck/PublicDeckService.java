@@ -2,6 +2,7 @@ package com.vocamaster.deck;
 
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.common.PageableUtils;
+import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.dto.PublicDeckResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +23,18 @@ public class PublicDeckService {
     private final DeckRepository deckRepository;
     private final CardRepository cardRepository;
 
-    public Page<PublicDeckResponse> search(String keyword, int page, int size) {
+    public Page<PublicDeckResponse> search(String keyword, int page, int size, String sort) {
         String normalized = (keyword == null || keyword.isBlank()) ? null : keyword;
-        Page<Deck> decks = deckRepository.searchByVisibility(
-                DeckVisibility.PUBLIC, normalized,
-                PageableUtils.safe(page, size, Sort.unsorted()));   // 정렬은 JPQL order by가 담당
+        var pageable = PageableUtils.safe(page, size, Sort.unsorted());   // 정렬은 JPQL order by가 담당
+
+        Page<Deck> decks;
+        if (sort == null || sort.isBlank() || sort.equals("recent")) {
+            decks = deckRepository.searchByVisibility(DeckVisibility.PUBLIC, normalized, pageable);
+        } else if (sort.equals("popular")) {
+            decks = deckRepository.searchByVisibilityPopular(DeckVisibility.PUBLIC, normalized, pageable);
+        } else {
+            throw new BadRequestException("sort는 recent 또는 popular만 가능합니다");
+        }
         return decks.map(d -> PublicDeckResponse.from(d, cardRepository.countByDeckId(d.getId())));
     }
 

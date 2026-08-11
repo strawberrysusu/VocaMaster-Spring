@@ -20,11 +20,12 @@ public class PublicDeckController {
     private final DeckLikeService deckLikeService;
 
     @GetMapping
-    @Operation(summary = "공개 단어장 검색 — PUBLIC만, 제목/설명 LIKE")
+    @Operation(summary = "공개 단어장 검색 — PUBLIC만, 제목/설명 LIKE. sort=recent(기본)|popular")
     public Page<PublicDeckResponse> search(@RequestParam(required = false) String keyword,
                                            @RequestParam(defaultValue = "0") int page,
-                                           @RequestParam(defaultValue = "20") int size) {
-        return publicDeckService.search(keyword, page, size);
+                                           @RequestParam(defaultValue = "20") int size,
+                                           @RequestParam(defaultValue = "recent") String sort) {
+        return publicDeckService.search(keyword, page, size, sort);
     }
 
     @GetMapping("/{deckId}")

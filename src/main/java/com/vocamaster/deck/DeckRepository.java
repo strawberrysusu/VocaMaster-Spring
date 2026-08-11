@@ -33,6 +33,27 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
                                   @Param("keyword") String keyword,
                                   Pageable pageable);
 
+    // 인기 정렬 (ADR-033): like×5 + copy×3, 동점은 최신순. study 항은 Phase 6에서 재도입.
+    // 계산식 정렬은 인덱스를 못 타는 filesort — 현 규모 무해, 대규모엔 Redis ZSET 후보 (Phase 5)
+    @Query(value = """
+            select d from Deck d join fetch d.user
+            where d.visibility = :visibility
+              and (:keyword is null
+                   or lower(d.title) like lower(concat('%', :keyword, '%'))
+                   or lower(d.description) like lower(concat('%', :keyword, '%')))
+            order by (d.likeCount * 5 + d.copyCount * 3) desc, d.createdAt desc
+            """,
+           countQuery = """
+            select count(d) from Deck d
+            where d.visibility = :visibility
+              and (:keyword is null
+                   or lower(d.title) like lower(concat('%', :keyword, '%'))
+                   or lower(d.description) like lower(concat('%', :keyword, '%')))
+            """)
+    Page<Deck> searchByVisibilityPopular(@Param("visibility") DeckVisibility visibility,
+                                         @Param("keyword") String keyword,
+                                         Pageable pageable);
+
     // 복사 카운터 — read-modify-write의 lost update 방지, 더하기를 DB가 직접 수행 (ADR-031)
     // flush: UPDATE 전에 밀린 INSERT를 먼저 반영 / clear: 벌크 UPDATE가 우회한 1차 캐시를 비움 (알려진 함정)
     @Modifying(flushAutomatically = true, clearAutomatically = true)

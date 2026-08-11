@@ -20,6 +20,8 @@ public class PublicDeckResponse {
     private String description;
     private String authorNickname;
     private long cardCount;
+    private long likeCount;      // 인기 정렬 근거를 응답에서 확인 가능하게 (ADR-033)
+    private long copyCount;
     private LocalDateTime createdAt;
 
     public static PublicDeckResponse from(Deck deck, long cardCount) {
@@ -29,6 +31,8 @@ public class PublicDeckResponse {
                 .description(deck.getDescription() != null ? deck.getDescription() : "")
                 .authorNickname(deck.getUser().getNickname())
                 .cardCount(cardCount)
+                .likeCount(deck.getLikeCount())
+                .copyCount(deck.getCopyCount())
                 .createdAt(deck.getCreatedAt())
                 .build();
     }
