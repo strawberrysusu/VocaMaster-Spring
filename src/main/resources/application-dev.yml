@@ -28,3 +28,7 @@ spring:
 
 jwt:
   secret: vocamaster-dev-secret-key-minimum-32-characters-long
+
+ratelimit:
+  login:
+    enabled: true       # 긴급 시 끄는 킬 스위치 (Redis 장애는 코드가 fail-open으로 자동 처리)

@@ -21,6 +21,10 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
+ratelimit:
+  login:
+    enabled: true
+
 auth:
   cookie:
     secure: true

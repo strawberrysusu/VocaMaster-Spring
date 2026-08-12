@@ -34,3 +34,9 @@ auth:
   cookie:
     secure: false
     same-site: Lax
+
+# 기본 off — 로그인 실패를 반복하는 기존 테스트들이 공용 dev Redis에 잠금을 남기면
+# 다른 테스트/데모 계정이 잠긴다. rate limit 자체를 검증하는 테스트만 켠다 (@TestPropertySource)
+ratelimit:
+  login:
+    enabled: false

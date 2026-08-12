@@ -34,6 +34,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final PlatformTransactionManager txManager;
+    private final LoginAttemptService loginAttemptService;
 
     @Transactional
     public TokenPair register(RegisterRequest req, String userAgent, String ip) {
@@ -51,6 +52,23 @@ public class AuthService {
 
     @Transactional
     public TokenPair login(LoginRequest req, String userAgent, String ip) {
+        loginAttemptService.assertNotLocked(req.getEmail());    // 잠긴 계정은 DB 조회도 하지 않음
+
+        User user;
+        try {
+            user = authenticate(req);
+        } catch (UnauthorizedException e) {
+            // 실패 3경로(없는 계정/탈퇴/비번 불일치)를 한자리에서 집계 — 어느 하나만 빠져도 누설 구멍
+            loginAttemptService.recordFailure(req.getEmail());
+            throw e;
+        }
+
+        loginAttemptService.reset(req.getEmail());              // 오타 흔적 정리
+        return issueTokens(user, userAgent, ip);
+    }
+
+    // 세 실패 경로가 같은 메시지를 던지는 건 의도 — 계정 존재 여부를 노출하지 않기 위함
+    private User authenticate(LoginRequest req) {
         User user = userRepository.findByEmail(req.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다"));
 
@@ -60,9 +78,8 @@ public class AuthService {
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다");
-
         }
-        return issueTokens(user, userAgent, ip);
+        return user;
     }
 
     /**

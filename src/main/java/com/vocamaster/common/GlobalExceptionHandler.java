@@ -4,6 +4,7 @@ import com.vocamaster.common.ErrorResponse;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.common.exception.NotFoundException;
+import com.vocamaster.common.exception.TooManyRequestsException;
 import com.vocamaster.common.exception.UnauthorizedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex){
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of(400, "BAD_REQUEST", ex.getMessage()));
+    }
+
+    // 429 — Retry-After 헤더는 HTTP 표준 계약: "몇 초 뒤에 다시 오라"를 클라이언트가 기계적으로 읽음 (ADR-034)
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(TooManyRequestsException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(ErrorResponse.of(429, "TOO_MANY_REQUESTS", ex.getMessage()));
     }
 
     // ===Validation / 예상 못한 예외 ===
