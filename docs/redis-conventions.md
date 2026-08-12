@@ -23,6 +23,13 @@
 
 > 실제 키는 각 기능 구현 시 이 표에 추가한다. **표에 없는 키를 코드에서 만들지 않는다** — 유령 키가 쌓이면 운영에서 무엇을 지워도 되는지 아무도 모르게 된다.
 
+## JSON 캐시 값 규칙
+
+`RedisTemplate<String, Object>`(JSON)에 넣는 값은 **우리가 소유한 일반 클래스**(DTO, `ArrayList`, `HashMap`)만.
+
+- `List.of()` / `Map.of()` 결과물 금지 — JDK 내부 불변 클래스(final)라 `@class` 타입 정보가 직렬화에 실리지 않고, 되읽을 때 `Could not resolve type id ...` 로 깨진다 (RedisConnectivityTest가 실증)
+- 단순 문자열/카운터는 JSON 템플릿 말고 `StringRedisTemplate` 사용
+
 ## TTL 정책
 
 - **모든 키에 TTL을 건다.** TTL 없는 키는 리뷰에서 근거를 요구한다 (메모리는 유한하고, Redis는 가득 차면 무엇을 버릴지 우리 대신 결정한다)

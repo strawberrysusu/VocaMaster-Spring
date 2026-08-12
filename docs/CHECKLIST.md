@@ -667,8 +667,8 @@ review:summary:{userId}:{date}  TTL 5분
 - [ ] **[SHOULD]** 학습 기록 시 캐시 무효화
 
 ### 🧪 테스트 (Testcontainers 도입)
-- [ ] **[SHOULD]** `testImplementation 'org.testcontainers:junit-jupiter'`
-- [ ] **[SHOULD]** Redis Testcontainers 기반 통합 테스트 1개
+- [x] **[SHOULD]** `testImplementation 'org.testcontainers:junit-jupiter'` *(Phase 3 ADR-025 때 이미 도입돼 있었음)*
+- [x] **[SHOULD]** Redis Testcontainers 통합 테스트 — RedisConnectivityTest 3종 (연결+TTL / JSON 왕복 / 원자적 INCR). **JSON 왕복 테스트가 List.of 직렬화 함정을 실제로 잡음** → 컨벤션 규칙화
 - [ ] **[MUST]** Rate limit — 5회 실패 시 잠금
 - [ ] **[MUST]** Rate limit — 시간 경과 후 해제
 - [ ] **[MUST]** 인기 캐시 — 좋아요 시 점수 반영
