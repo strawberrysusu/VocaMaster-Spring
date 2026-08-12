@@ -46,3 +46,8 @@ ratelimit:
 ranking:
   popular:
     enabled: false
+
+# 기본 off — 켜져 있으면 리뷰/퀴즈 테스트의 recordStudy·getTodaySummary가 dev Redis를 건드린다
+cache:
+  review-summary:
+    enabled: false

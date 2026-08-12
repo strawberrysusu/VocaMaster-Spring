@@ -1,6 +1,8 @@
 package com.vocamaster.config;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
@@ -52,6 +54,8 @@ public class RedisConfig {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());                        // LocalDateTime 등
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);     // 숫자 대신 ISO 문자열
+        // 캐시 DTO는 세터 없이도 왕복돼야 함 — 필드 직접 접근으로 통일 (@Getter/@Builder만 있는 DTO 복원 가능)
+        mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         mapper.activateDefaultTyping(typeValidator,
                 ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
         return mapper;

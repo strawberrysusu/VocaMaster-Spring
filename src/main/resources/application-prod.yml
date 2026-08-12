@@ -29,6 +29,10 @@ ranking:
   popular:
     enabled: true
 
+cache:
+  review-summary:
+    enabled: true
+
 auth:
   cookie:
     secure: true

@@ -1341,6 +1341,31 @@ Phase 4 완료 기준 데모("인기 목록 반영 시연")에 필요한 마지�
 
 ---
 
+## ADR-036: 오늘 복습 요약 — cache-aside + 단일 관문 무효화
+
+**상태:** 채택 (2026-08-12)
+**범위:** `TodaySummaryCache`, `ReviewService.getTodaySummary` cache-aside 전환, `StatsService.recordStudy` 무효화 훅(+조기 return 구조 수리), `TodaySummaryResponse` 역직렬화 가능화, RedisConfig FIELD 접근 — Phase 5 세 번째(마지막) 사용처
+
+### 컨텍스트
+현황판(숫자 4개)이 조회마다 집계 쿼리 4방. 같은 사용자가 학습 화면을 오가며 반복 호출 — 개인별 데이터라 랭킹처럼 미리 만들 수 없어 **조회 시점에 채우는 cache-aside**가 정석.
+
+### 결정
+- 키 `review:summary:{userId}:{yyyyMMdd}` (KST) + **TTL 5분** — 날짜가 키에 있어 자정 넘으면 어제 캐시가 구조적으로 무효
+- **역할 분담이 이 ADR의 핵심**: 무효화(evict)는 사용자의 *행동*(학습)이 만든 변화를, **TTL은 행동 없이 시간만 흘러 변하는 dueCount**(nextReviewAt 경과 — 이벤트가 없는 변화)를 잡는다
+- 무효화는 **recordStudy 단일 관문** — 4개 학습 모드(Review/Quiz/Typing/Study) 전부가 이미 통과하는 자리. ⚠️ 기존 `updated==1` 조기 return을 구조 변경(`updated==0` 분기) — 그대로 끝에 붙였으면 오늘 두 번째 학습부터(최다 경로) 무효화가 실행되지 않는 조용한 버그 (Codex 검산)
+- evict는 **afterCommit** (ADR-035와 동일 근거 — 커밋 전 삭제는 낡은 값 재캐싱 레이스)
+- 무효화 = 갱신이 아니라 **삭제** — 재계산은 다음 조회가. 숫자 4개를 부분 수정하는 것보다 단순·안전
+- DTO 왕복: `@NoArgsConstructor(force) + @AllArgsConstructor + @Builder` 트리오 + 캐시 매퍼 FIELD 접근 — "캐시에 넣는 값은 왕복 가능해야 한다"(List.of 교훈)의 DTO판
+- 캐시 get의 catch는 **의도적으로 RuntimeException 광범위** — 연결 실패뿐 아니라 손상 값의 역직렬화 실패·타입 불일치까지 전부 '미스'로. 좁히면 손상 캐시가 500으로 샘 (손상 재현 테스트 포함)
+- 조회는 `now/today`를 한 번만 뽑아 캐시 get·계산·put이 같은 날짜 사용 — 자정 경계에서 23:59 계산 결과가 다음날 키에 저장되는 어긋남 방지 (Codex 검산)
+
+### 트레이드오프 / 한계
+- **stats→review 의존이 생김** (출석 담당이 요약 캐시를 앎) — 책임 섞임을 알고 수용. Phase 6에서 "학습했음" 이벤트 발행/구독으로 분리하는 것이 정답 (예고편)
+- afterCommit 극단 타이밍의 낡은 재캐싱은 최대 5분 허용 — 현황판은 잔액이 아님
+- 자정 경계 동작은 코드로 보장하나 테스트 불가 (Clock 미주입 — STRETCH 항목과 연동)
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

@@ -10,11 +10,11 @@
 | 항목 | 값 |
 |---|---|
 | **진행 중인 Phase** | **Phase 5 — Redis (2026-08-12 시작)** · Phase 4 졸업 🎓(08-11) |
-| **이번 주 집중** | Phase 5 — 인프라 ✅ rate limit ✅ **랭킹 ZSET ✅** → 남은 것: 복습 요약 캐시(SHOULD) → 완료 기준(다운 시뮬레이션·구두 5문). 밀린 것: week note, 폐쇄훈련 |
+| **이번 주 집중** | Phase 5 — **기능 전부 ✅** (인프라·rate limit·랭킹·요약 캐시). 남은 것: 완료 기준 구두 5문. 밀린 것: week note, 폐쇄훈련 |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 ✅ / **Phase 4 ✅** / Phase 5~8 대기 |
 | **다음 마일스톤** | Phase 5 — Redis (개강 전 계획 초과 달성: 목표는 Phase 4 '절반'이었음) |
 | **신규 ADR** | ADR-016~033 — … / **좋아요: unique 멱등** / **인기 정렬: like×5+copy×3, study 항 제외** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🔵 Phase 5 진행 중 (2026-08-12)** — 인프라 ✅ + rate limit ✅(ADR-034) + **인기 랭킹 ZSET ✅(ADR-035)**: 캐시는 id·순서만/권한은 DB, afterCommit 갱신+TTL 재구축(최종적 일관성), ready 표지 TTL 시차로 만료 레이스 차단, stale 자가치유+DB 폴백, 생성 컬럼 대안 명시("알고도 선택"). Redis MUST 남은 것 **0** — 다음: ① 복습 요약 캐시(SHOULD, 짧음) ② Phase 5 완료 기준(사용처 3개 "왜" 한 문장 + 다운 시뮬레이션 + 구두 5문) ③ week note·폐쇄훈련. 사용처 2개 확보: rate limit(휘발성+INCR+TTL), 랭킹(ZSET+무효화).
+| **▶ 다음 액션 (resume)** | **🔵 Phase 5 — 기능 전부 완료, 하루 만에 (2026-08-12)** — 인프라 + rate limit(ADR-034) + 랭킹 ZSET(ADR-035) + 요약 캐시(ADR-036). **"왜 Redis?" 사용처 3개 답 확보**: ① rate limit(Redis가 데이터의 주인 — 휘발성·TTL·INCR·공유 카운터) ② 랭킹(DB가 주인, ZSET은 순서 사본 — 무효화는 이벤트+TTL 조합) ③ 요약(cache-aside — 행동은 evict, 시간 변화는 TTL). 다운 시뮬레이션은 테스트 4종으로 상시 검증(로그인/랭킹/요약/손상값). 남은 것: **완료 기준 구두 5문**(Redis vs DB / 캐시 무효화 / TTL 정책 / 장애 fallback) → 이후 week note·폐쇄훈련·개강 행정(주3). 잔여 STRETCH·TTS·React는 별도 판단.
 > **🎓 Phase 4 완전 졸업 (2026-08-11)** — 실서버 HTTP 데모(검색→복사→좋아요→popular 1위 반영→400/403) + 구두 3문 통과. 1주 만에 Phase 통째 완료(계획은 '개강 전 절반'). ADR-030~033, 테스트 105+, 면접 1급 재료: FK 데드락 실화(ADR-031)·잠금 순서 3회 학습·조작 방지 3계열(복사 제외/좋아요 1회 캡/학습 보류). 다음: ① **week note 복구** (최고가 밀린 항목 — Phase 4 노트에 데드락 스토리) ② 주말 폐쇄훈련 #3 3회차 (빈칸 채우기, Codex 닫기 체크) ③ **Phase 5 Redis 진입** (사전 설명부터. 인기 정렬 filesort → ZSET 전환이 첫 동기). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 / 데모 서버 아직 켜져 있으면 gradle bootRun 태스크 종료 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
@@ -663,9 +663,9 @@ review:summary:{userId}:{date}  TTL 5분
 - [x] **[MUST]** DB fallback — Redis 예외·미가동·stale 불일치 전부 DB 경로로 (죽은 포트 재현 테스트). **캐시는 id·순서만, 권한·내용 최종 판단은 DB**
 - [x] **[SHOULD]** ~~자정 재계산 스케줄러~~ → TTL 재구축(65분)이 역할 흡수 — 필요성 소멸로 미구현 (cache-strategy.md에 기록)
 
-### ☀️ 오늘 복습 요약 캐시
-- [ ] **[SHOULD]** `review:summary:{userId}:{date}` — 5분 TTL
-- [ ] **[SHOULD]** 학습 기록 시 캐시 무효화
+### ☀️ 오늘 복습 요약 캐시 — 완료 (2026-08-12, ADR-036)
+- [x] **[SHOULD]** `review:summary:{userId}:{yyyyMMdd}` — cache-aside, TTL 5분. **TTL의 존재 이유 = dueCount** (행동 없이 시간만으로 변하는 값은 이벤트가 없어 TTL만이 잡음). DTO 왕복(롬복 트리오+FIELD 접근), 손상 값도 fail-open
+- [x] **[SHOULD]** 학습 기록 시 무효화 — **recordStudy 단일 관문**(4개 학습 모드 전부 통과) + afterCommit. ⚠️ 기존 조기 return이면 두 번째 학습부터 무효화 누락 — 구조 수리 (Codex 검산). stats→review 의존은 Phase 6 이벤트로 분리 예정
 
 ### 🧪 테스트 (Testcontainers 도입)
 - [x] **[SHOULD]** `testImplementation 'org.testcontainers:junit-jupiter'` *(Phase 3 ADR-025 때 이미 도입돼 있었음)*

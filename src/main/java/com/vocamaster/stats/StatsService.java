@@ -1,5 +1,6 @@
 package com.vocamaster.stats;
 
+import com.vocamaster.review.TodaySummaryCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,9 @@ public class StatsService {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final DailyUserStatRepository dailyUserStatRepository;
+    // 설계 냄새 승인분: 출석 담당이 복습 요약 캐시를 아는 건 책임이 섞인 상태.
+    // 모든 학습 모드의 단일 관문이라 지금은 여기서 무효화하고, Phase 6에서 이벤트로 분리 (ADR-036)
+    private final TodaySummaryCache summaryCache;
 
     /**
      * 학습 활동 1회 = 출석 도장. 모든 학습 모드(Review/Quiz/Typing/Study)가 호출.
@@ -24,19 +28,21 @@ public class StatsService {
     public void recordStudy(Long userId) {
         LocalDate today = LocalDate.now(KST);
 
-        // 오늘 줄이 이미 있으면 원자적 +1로 끝 (하루 중 두 번째부터 — 가장 흔한 경로, 쿼리 1번)
+        // 오늘 줄이 이미 있으면 원자적 +1 (하루 중 두 번째부터 — 가장 흔한 경로, 쿼리 1번)
         int updated = dailyUserStatRepository.incrementStudyCount(userId, today);
-        if (updated == 1) {
-            return;
+        if (updated == 0) {
+            // 오늘 첫 학습 — 어제 줄을 보고 연속 여부 결정
+            int streak = dailyUserStatRepository.findByUserIdAndStatDate(userId, today.minusDays(1))
+                    .map(yesterday -> yesterday.getStreak() + 1)    // 어제도 공부함 → 연속 +1
+                    .orElse(1);                                     // 끊김 → 1부터 다시
+
+            // upsert — "첫 학습이 정확히 동시에 2건" 와도 한쪽은 INSERT, 한쪽은 +1로 흡수 (500 구멍 제거)
+            dailyUserStatRepository.upsertTodayRow(userId, today, streak);
         }
 
-        // 오늘 첫 학습 — 어제 줄을 보고 연속 여부 결정
-        int streak = dailyUserStatRepository.findByUserIdAndStatDate(userId, today.minusDays(1))
-                .map(yesterday -> yesterday.getStreak() + 1)    // 어제도 공부함 → 연속 +1
-                .orElse(1);                                     // 끊김 → 1부터 다시
-
-        // upsert — "첫 학습이 정확히 동시에 2건" 와도 한쪽은 INSERT, 한쪽은 +1로 흡수 (500 구멍 제거)
-        dailyUserStatRepository.upsertTodayRow(userId, today, streak);
+        // 첫 학습이든 N번째든 반드시 도달 — 예전처럼 updated==1에서 조기 return하면
+        // 오늘 두 번째 학습부터(최다 경로) 캐시가 안 지워지는 조용한 버그 (Codex 검산)
+        summaryCache.evictAfterCommit(userId, today);
     }
 
     // 오늘 학습 답변 수 — 출석부 오늘 줄이 없으면 0 (아직 오늘 공부 전)

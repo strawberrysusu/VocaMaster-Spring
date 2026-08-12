@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -46,6 +47,7 @@ public class ReviewService {
     private final DeckService deckService;
     private final UserRepository userRepository;
     private final StatsService statsService;
+    private final TodaySummaryCache summaryCache;
 
     public ReviewAnswerResponse recordAnswer(Long userId, Long cardId, boolean correct) {
         // ① 카드 실존 확인
@@ -94,18 +96,30 @@ public class ReviewService {
     }
 
     // 오늘 현황판 — 숫자 4개 (남은 복습 / 오늘 복습한 카드 장수 / 오늘 전체 답변 횟수 / 연속 학습일)
+    // cache-aside: 히트면 집계 쿼리 4방 생략, 미스면 계산 후 5분 캐싱 (ADR-036)
     @Transactional(readOnly = true)
     public TodaySummaryResponse getTodaySummary(Long userId) {
+        // now/today를 '한 번만' 뽑아 캐시 조회·계산·저장이 같은 날짜를 쓰게 — 자정 경계에서
+        // 23:59 조회 결과가 다음날 키에 저장되는 어긋남 방지 (Codex 검산)
         LocalDateTime now = LocalDateTime.now(KST);
-        LocalDateTime startOfToday = now.toLocalDate().atStartOfDay();
+        LocalDate today = now.toLocalDate();
+
+        TodaySummaryResponse cached = summaryCache.get(userId, today);
+        if (cached != null) {
+            return cached;
+        }
+
+        LocalDateTime startOfToday = today.atStartOfDay();
         LocalDateTime startOfTomorrow = startOfToday.plusDays(1);
 
-        return TodaySummaryResponse.builder()
+        TodaySummaryResponse fresh = TodaySummaryResponse.builder()
                 .dueCount(cardProgressRepository.countByUserIdAndNextReviewAtLessThanEqual(userId, now))
                 .reviewedTodayCount(cardProgressRepository.countReviewedBetween(userId, startOfToday, startOfTomorrow))
                 .studyCount(statsService.getTodayStudyCount(userId))
                 .streak(statsService.getDisplayStreak(userId))
                 .build();
+        summaryCache.put(userId, today, fresh);
+        return fresh;
     }
 
     // 처음 만난 카드의 성적표 생성 (box 1, 즉시 복습 대상)
