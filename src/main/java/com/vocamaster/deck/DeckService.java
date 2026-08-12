@@ -22,6 +22,7 @@ public class DeckService {
     private final DeckRepository deckRepository;
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
+    private final DeckRankingService rankingService;
 
     public DeckResponse create(Long userId, CreateDeckRequest req) {
         User user = userRepository.findById(userId)
@@ -59,16 +60,27 @@ public class DeckService {
         return DeckResponse.listOf(deck, cardRepository.countByDeckId(id));
     }
 
+    // @Transactional: afterCommit 랭킹 훅의 등록 지점이 되려면 실제 트랜잭션 경계가 필요 (ADR-035)
+    @Transactional
     public DeckResponse updateVisibility(Long id, Long userId, DeckVisibility visibility) {
         Deck deck = verifyOwner(id, userId);
+        DeckVisibility before = deck.getVisibility();
         deck.setVisibility(visibility);
         deckRepository.save(deck);
+
+        if (before == DeckVisibility.PUBLIC && visibility != DeckVisibility.PUBLIC) {
+            rankingService.onLeftPublic(id);        // 노출은 DB 필터가 막지만, 순위표 품질 유지를 위해 즉시 제거
+        } else if (before != DeckVisibility.PUBLIC && visibility == DeckVisibility.PUBLIC) {
+            rankingService.onBecamePublic(id, deck.getLikeCount(), deck.getCopyCount());
+        }
         return DeckResponse.listOf(deck, cardRepository.countByDeckId(id));
     }
 
+    @Transactional
     public void remove(Long id, Long userId) {
         verifyOwner(id, userId);
         deckRepository.deleteById(id);
+        rankingService.onLeftPublic(id);            // 비공개 덱이었어도 없는 멤버 ZREM은 무해
     }
 
     // 복사 (ADR-031): 완전한 복사본 또는 아무것도 없음 — 전체가 한 트랜잭션
@@ -89,6 +101,7 @@ public class DeckService {
         //   실패 시에도 같은 트랜잭션이라 카운트만 오르는 일 없음 (전체 롤백)
         if (!isOwner) {
             deckRepository.incrementCopyCount(deckId);      // 원자적 +1. 자기 복사는 카운트 제외 — 인기 조작 방지
+            rankingService.onCopied(deckId);                // 커밋 확정 후 +3 (실패·롤백 시 실행 안 됨)
         }
 
         User user = userRepository.findById(userId)

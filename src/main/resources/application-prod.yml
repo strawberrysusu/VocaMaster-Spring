@@ -25,6 +25,10 @@ ratelimit:
   login:
     enabled: true
 
+ranking:
+  popular:
+    enabled: true
+
 auth:
   cookie:
     secure: true

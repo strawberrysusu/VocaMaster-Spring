@@ -10,11 +10,11 @@
 | 항목 | 값 |
 |---|---|
 | **진행 중인 Phase** | **Phase 5 — Redis (2026-08-12 시작)** · Phase 4 졸업 🎓(08-11) |
-| **이번 주 집중** | Phase 5 — 인프라 ✅ / rate limit ✅ → **인기 랭킹 ZSET** → 복습 요약 캐시. 밀린 것: week note, 폐쇄훈련 #3 3회차 |
+| **이번 주 집중** | Phase 5 — 인프라 ✅ rate limit ✅ **랭킹 ZSET ✅** → 남은 것: 복습 요약 캐시(SHOULD) → 완료 기준(다운 시뮬레이션·구두 5문). 밀린 것: week note, 폐쇄훈련 |
 | **전체 진행도** | Phase 0 ✅ / Phase 1 ✅ / Phase 2 ✅ / Phase 3 ✅ / **Phase 4 ✅** / Phase 5~8 대기 |
 | **다음 마일스톤** | Phase 5 — Redis (개강 전 계획 초과 달성: 목표는 Phase 4 '절반'이었음) |
 | **신규 ADR** | ADR-016~033 — … / **좋아요: unique 멱등** / **인기 정렬: like×5+copy×3, study 항 제외** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **🔵 Phase 5 진행 중 (2026-08-12)** — 인프라 5/5(compose·starter·RedisConfig·yml 3형제·컨벤션 문서) + **rate limit MUST 4/4** (ADR-034: email 기준 고정 창, 없는 이메일도 카운트=누설 차단, fail-open). 테스트 +10, 전체 그린. 다음: **인기 랭킹 ZSET**(어제 filesort 복선 회수) → 복습 요약 캐시. GitHub 푸시 완료.
+| **▶ 다음 액션 (resume)** | **🔵 Phase 5 진행 중 (2026-08-12)** — 인프라 ✅ + rate limit ✅(ADR-034) + **인기 랭킹 ZSET ✅(ADR-035)**: 캐시는 id·순서만/권한은 DB, afterCommit 갱신+TTL 재구축(최종적 일관성), ready 표지 TTL 시차로 만료 레이스 차단, stale 자가치유+DB 폴백, 생성 컬럼 대안 명시("알고도 선택"). Redis MUST 남은 것 **0** — 다음: ① 복습 요약 캐시(SHOULD, 짧음) ② Phase 5 완료 기준(사용처 3개 "왜" 한 문장 + 다운 시뮬레이션 + 구두 5문) ③ week note·폐쇄훈련. 사용처 2개 확보: rate limit(휘발성+INCR+TTL), 랭킹(ZSET+무효화).
 > **🎓 Phase 4 완전 졸업 (2026-08-11)** — 실서버 HTTP 데모(검색→복사→좋아요→popular 1위 반영→400/403) + 구두 3문 통과. 1주 만에 Phase 통째 완료(계획은 '개강 전 절반'). ADR-030~033, 테스트 105+, 면접 1급 재료: FK 데드락 실화(ADR-031)·잠금 순서 3회 학습·조작 방지 3계열(복사 제외/좋아요 1회 캡/학습 보류). 다음: ① **week note 복구** (최고가 밀린 항목 — Phase 4 노트에 데드락 스토리) ② 주말 폐쇄훈련 #3 3회차 (빈칸 채우기, Codex 닫기 체크) ③ **Phase 5 Redis 진입** (사전 설명부터. 인기 정렬 filesort → ZSET 전환이 첫 동기). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 / 데모 서버 아직 켜져 있으면 gradle bootRun 태스크 종료 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
@@ -656,12 +656,12 @@ review:summary:{userId}:{date}  TTL 5분
 - [x] **[MUST]** `429 Too Many Requests` + `Retry-After` 헤더. **없는 이메일도 동일하게 카운트** — 401/429 차이로 회원 명단이 새는 걸 차단 (Phase 4 존재숨김 원칙 재적용)
 - [x] **[MUST]** Redis 장애 시 fail-open (통과 + 경고 로그, timeout 300ms). 닫힌 포트로 장애를 재현한 전용 테스트로 박제
 
-### 🏆 인기 단어장 캐시
-- [ ] **[MUST]** Redis Sorted Set (`popular:decks:{yyyyMMdd}`)
-- [ ] **[MUST]** 좋아요/복사/학습 발생 시 점수 업데이트
-- [ ] **[MUST]** 캐시 무효화 정책 문서화 (`docs/cache-strategy.md`)
-- [ ] **[MUST]** DB fallback 경로 (Redis 다운 시 DB ORDER BY)
-- [ ] **[SHOULD]** 매일 자정 스코어 재계산 스케줄러
+### 🏆 인기 단어장 캐시 — 완료 (2026-08-12, ADR-035)
+- [x] **[MUST]** Redis Sorted Set — `popular:decks` (누적 인기라 단일 키로 정정, 날짜 키는 Phase 6 급상승용으로 이월) + `ready` 표지 **TTL 시차(65/60분)**로 만료 직후 증감이 가짜 순위표 만드는 레이스 차단 (Codex 검산)
+- [x] **[MUST]** 좋아요±5/복사+3/공개전환/삭제 훅 — 전부 **afterCommit** (롤백 시 실행 안 됨 → 드리프트 방지). 학습 항은 ADR-033대로 Phase 6
+- [x] **[MUST]** `docs/cache-strategy.md` — 원본/사본, 무효화 표, 최종적 일관성, stale 자가치유
+- [x] **[MUST]** DB fallback — Redis 예외·미가동·stale 불일치 전부 DB 경로로 (죽은 포트 재현 테스트). **캐시는 id·순서만, 권한·내용 최종 판단은 DB**
+- [x] **[SHOULD]** ~~자정 재계산 스케줄러~~ → TTL 재구축(65분)이 역할 흡수 — 필요성 소멸로 미구현 (cache-strategy.md에 기록)
 
 ### ☀️ 오늘 복습 요약 캐시
 - [ ] **[SHOULD]** `review:summary:{userId}:{date}` — 5분 TTL
@@ -672,12 +672,12 @@ review:summary:{userId}:{date}  TTL 5분
 - [x] **[SHOULD]** Redis Testcontainers 통합 테스트 — RedisConnectivityTest 3종 (연결+TTL / JSON 왕복 / 원자적 INCR). **JSON 왕복 테스트가 List.of 직렬화 함정을 실제로 잡음** → 컨벤션 규칙화
 - [x] **[MUST]** Rate limit — 5회 실패 시 잠금 (+ 없는 이메일 동일 / 대소문자 정규화 / 성공 시 리셋 / 실제 login 6회차 429)
 - [x] **[MUST]** Rate limit — 창 TTL 검증 (첫 실패에만 TTL, 두 번째 실패로 갱신되지 않음). 30분 경과 해제는 TTL 위임 — 실시간 대기 테스트는 하지 않음
-- [ ] **[MUST]** 인기 캐시 — 좋아요 시 점수 반영
-- [ ] **[MUST]** Redis 다운 시 fallback 동작 확인
+- [x] **[MUST]** 인기 캐시 — 좋아요 커밋 시 점수 반영 (+재구축 정렬 / ready 없으면 증감 무시 / stale 자가치유 / 공개전환 훅)
+- [x] **[MUST]** Redis 다운 시 fallback — rate limit(로그인 정상 동작)·인기 정렬(DB 폴백) 각각 닫힌 포트로 재현
 
 ### 📓 학습 노트
 - [ ] **[SHOULD]** week-18 ~ week-21 학습 노트
-- [ ] **[MUST]** `docs/cache-strategy.md` 초안 (Phase 7에서 측정 결과 보강)
+- [x] **[MUST]** `docs/cache-strategy.md` 초안 (Phase 7에서 측정 결과 보강)
 
 ### ✅ Phase 5 완료 기준
 - [ ] 모든 MUST 항목 완료

@@ -7,9 +7,17 @@ import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.dto.PublicDeckResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,10 +30,17 @@ public class PublicDeckService {
 
     private final DeckRepository deckRepository;
     private final CardRepository cardRepository;
+    private final DeckRankingService rankingService;
 
     public Page<PublicDeckResponse> search(String keyword, int page, int size, String sort) {
         String normalized = (keyword == null || keyword.isBlank()) ? null : keyword;
         var pageable = PageableUtils.safe(page, size, Sort.unsorted());   // 정렬은 JPQL order by가 담당
+
+        // 캐시는 좁고 뜨거운 질문 하나만: sort=popular + 검색어 없음 (ZSET은 제목을 모름, ADR-035)
+        if ("popular".equals(sort) && normalized == null) {
+            Page<PublicDeckResponse> cached = searchPopularFromCache(pageable);
+            if (cached != null) return cached;                            // null이면 아래 DB 경로로
+        }
 
         Page<Deck> decks;
         if (sort == null || sort.isBlank() || sort.equals("recent")) {
@@ -36,6 +51,34 @@ public class PublicDeckService {
             throw new BadRequestException("sort는 recent 또는 popular만 가능합니다");
         }
         return decks.map(d -> PublicDeckResponse.from(d, cardRepository.countByDeckId(d.getId())));
+    }
+
+    /**
+     * 랭킹 캐시 경로. null 반환 = 이번 요청은 DB 경로로 (장애·미가동·stale 불일치 전부).
+     * 캐시는 id/순서만 — 내용과 PUBLIC 재검증은 DB가 한다 (비공개 노출 구조적 차단).
+     */
+    private Page<PublicDeckResponse> searchPopularFromCache(PageRequest pageable) {
+        List<Long> ids = rankingService.topDeckIds(pageable.getPageNumber(), pageable.getPageSize());
+        if (ids == null) return null;
+
+        // ZCARD는 낡은 id를 셀 수 있어 총계는 DB가 정확 (비용은 count 하나 — 우리가 아끼려는 건 정렬이지 개수가 아님)
+        long total = deckRepository.countByVisibility(DeckVisibility.PUBLIC);
+        if (ids.isEmpty()) return new PageImpl<>(List.of(), pageable, total);
+
+        List<Deck> decks = deckRepository.findByIdInAndVisibilityWithUser(ids, DeckVisibility.PUBLIC);
+        if (decks.size() < ids.size()) {
+            // 비공개 전환·삭제 직후의 낡은 id — 청소(자가 치유)하고 이번 요청은 DB로 (페이지 구멍 방지)
+            Set<Long> alive = decks.stream().map(Deck::getId).collect(Collectors.toSet());
+            rankingService.evictStale(ids.stream().filter(id -> !alive.contains(id)).toList());
+            return null;
+        }
+
+        Map<Long, Deck> byId = decks.stream().collect(Collectors.toMap(Deck::getId, Function.identity()));
+        List<PublicDeckResponse> content = ids.stream()      // ★ IN 조회는 순서 미보장 — Redis 순서로 재조립
+                .map(byId::get)
+                .map(d -> PublicDeckResponse.from(d, cardRepository.countByDeckId(d.getId())))
+                .toList();
+        return new PageImpl<>(content, pageable, total);
     }
 
     public PublicDeckResponse findOne(Long deckId) {

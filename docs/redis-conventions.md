@@ -18,10 +18,12 @@
 |---|---|---|---|---|
 | `login:fail:{email}` | String (카운터) | 5분 | 로그인 연속 실패 횟수 | 잠금이 풀림 — 보안이 느슨해질 뿐 서비스는 정상 |
 | `login:lock:{email}` | String (플래그) | 30분 | 잠금 상태 | 위와 동일 |
-| `popular:decks:{yyyyMMdd}` | Sorted Set | 7일 | 인기 덱 랭킹 | DB `ORDER BY`로 fallback |
+| `popular:decks` | Sorted Set | **65분** | 인기 덱 랭킹 — **id·순서만** (내용/권한 최종 판단은 DB, ADR-035) | DB `ORDER BY`로 fallback |
+| `popular:decks:ready` | String (표지) | **60분** | 재구축 완료 표지. main보다 **먼저** 만료(TTL 시차) — 만료 직후 증감이 가짜 순위표를 만드는 레이스 차단 | 표지 없으면 다음 조회가 재구축 |
 | `review:summary:{userId}:{yyyyMMdd}` | String (JSON) | 5분 | 오늘 복습 요약 | 집계 쿼리 재실행 |
 
 > 실제 키는 각 기능 구현 시 이 표에 추가한다. **표에 없는 키를 코드에서 만들지 않는다** — 유령 키가 쌓이면 운영에서 무엇을 지워도 되는지 아무도 모르게 된다.
+> 초안의 `popular:decks:{yyyyMMdd}`(7일)는 "일간 급상승" 용도였음 — 현재 점수는 누적치이므로 단일 키로 정정(2026-08-12). 날짜별 키는 Phase 6 이벤트에서 급상승 기능과 함께 재검토.
 
 ## JSON 캐시 값 규칙
 

@@ -1314,6 +1314,33 @@ Phase 4 완료 기준 데모("인기 목록 반영 시연")에 필요한 마지�
 
 ---
 
+## ADR-035: 인기 랭킹 — Redis ZSET, 캐시는 순서만·권한은 DB
+
+**상태:** 채택 (2026-08-12)
+**범위:** `DeckRankingService`, `PublicDeckService` 캐시 경로, 도메인 훅 4곳(좋아요·복사·공개전환·삭제), `docs/cache-strategy.md`, `ranking.popular.enabled` 스위치
+
+### 컨텍스트
+`sort=popular`의 계산식 정렬은 인덱스를 못 타는 filesort (ADR-033에서 예고한 병목). 인기 목록은 비로그인 사용자도 반복 조회하는 hot path라 읽기 부하가 주 DB에 직접 꽂힌다.
+
+### 고려한 대안
+- **A. ❌ MySQL 생성 컬럼 + 인덱스** — `popularity AS (like_count*5+copy_count*3) STORED` + 인덱스로 filesort 제거. **현 규모에선 이게 더 단순하다.** 탈락 이유: 읽기 트래픽이 여전히 주 DB를 침, 일간 급상승 등 확장 시 매 요청 집계 필요, Phase 5의 학습 목표(캐시 무효화를 안전한 자리에서 겪기)와 불일치. **알고도 Redis를 선택했음을 명시** — "인덱스로 되잖아요?"의 답
+- **B. ❌ ZSET에 덱 내용까지 통째 캐싱** — 조회 1번으로 끝나지만 제목·닉네임·visibility 변경마다 완벽 동기화 필요. 갱신 누락 한 곳 = 낡은 정보 노출 한 곳, visibility면 **보안 사고**
+- **C. ✅ ZSET에 id·점수만 + DB 재검증** — 캐시가 낡아도 최악이 "목록이 성긴 것". 비공개 노출은 구조적으로 불가능
+
+### 결정
+- `popular:decks` (ZSET, 65분) + `popular:decks:ready` (표지, 60분) — **TTL 시차**로 만료 직후 증감이 가짜 순위표(덱 하나·무TTL)를 만드는 레이스를 구조 차단 (Codex 검산)
+- 갱신은 **afterCommit에서만** — 더블탭 롤백 등에서 DB는 원복됐는데 Redis 점수만 남는 드리프트 방지. rate limit에선 "트랜잭션 밖" 성질이 약이었지만 여기선 독 — 같은 성질의 양면
+- afterCommit 안의 Redis 예외는 삼킴 — 커밋 성공 후 500은 사용자 재시도 → 중복 유발
+- 캐시 경로는 `sort=popular` + keyword 없음일 때만. stale id 발견 시 ZREM(자가 치유) + 그 요청은 DB 폴백. totalElements는 DB count (ZCARD는 stale 포함 가능)
+- `updateVisibility`/`remove`에 `@Transactional` 신설 — afterCommit 등록 지점 확보 (Codex 검산)
+
+### 트레이드오프 / 한계
+- 최종적 일관성 — 순위가 최대 1시간 낡을 수 있음 (안전망 TTL). 정확성이 필요한 건 전부 DB에 있음
+- 재구축 동시 실행은 last-wins (멱등이라 무해, 분산 락은 과설계)
+- 캐시 경로도 DB를 침 (재검증 PK 조회 + count) — 없앤 건 정렬 비용이지 DB 접근 전부가 아님
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

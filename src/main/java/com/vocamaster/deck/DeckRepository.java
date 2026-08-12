@@ -54,6 +54,17 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
                                          @Param("keyword") String keyword,
                                          Pageable pageable);
 
+    // 랭킹 재구축·전체 개수용 (ADR-035)
+    List<Deck> findByVisibility(DeckVisibility visibility);
+
+    long countByVisibility(DeckVisibility visibility);
+
+    // 캐시가 준 id들을 PUBLIC 조건으로 재검증하며 로드 (ADR-035 — 권한 판단은 항상 DB).
+    // IN 결과는 입력 순서를 보장하지 않음 — 호출자가 Redis 순서로 재조립해야 함
+    @Query("select d from Deck d join fetch d.user where d.id in :ids and d.visibility = :visibility")
+    List<Deck> findByIdInAndVisibilityWithUser(@Param("ids") List<Long> ids,
+                                               @Param("visibility") DeckVisibility visibility);
+
     // 복사 카운터 — read-modify-write의 lost update 방지, 더하기를 DB가 직접 수행 (ADR-031)
     // flush: UPDATE 전에 밀린 INSERT를 먼저 반영 / clear: 벌크 UPDATE가 우회한 1차 캐시를 비움 (알려진 함정)
     @Modifying(flushAutomatically = true, clearAutomatically = true)

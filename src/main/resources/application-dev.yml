@@ -32,3 +32,7 @@ jwt:
 ratelimit:
   login:
     enabled: true       # 긴급 시 끄는 킬 스위치 (Redis 장애는 코드가 fail-open으로 자동 처리)
+
+ranking:
+  popular:
+    enabled: true       # off면 인기 정렬이 DB 경로로만 동작

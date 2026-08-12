@@ -40,3 +40,9 @@ auth:
 ratelimit:
   login:
     enabled: false
+
+# 기본 off — 켜져 있으면 기존 덱 테스트들의 popular 조회가 dev Redis(6379)에 재구축을 일으켜
+# 테스트 데이터 id로 오염시킨다. 랭킹 검증 테스트만 전용 컨테이너와 함께 켠다
+ranking:
+  popular:
+    enabled: false
