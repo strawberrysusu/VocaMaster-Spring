@@ -1,0 +1,15 @@
+# 개발용 인프라 (Phase 5).
+# MySQL은 로컬 설치본(localhost:3306)을 쓰고 있어 여기 포함하지 않음 — dev DB 데이터 혼선 방지.
+# 사용법: docker compose up -d   /   docker compose down
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: vocamaster-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "no"]   # 개발용 — 영속화 불필요 (전부 재생성 가능한 데이터)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5

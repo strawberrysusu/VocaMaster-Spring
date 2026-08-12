@@ -635,12 +635,12 @@
 > **목표:** "왜 Redis 썼나요?"에 한 문장으로 답할 수 있는 사용처.
 > **모드:** ⚪ C (Redis 자체 학습) → 🔵 B (적용)
 
-### 🐳 Redis 인프라
-- [ ] **[MUST]** `docker-compose.yml`에 Redis 서비스 추가 (개발용)
-- [ ] **[MUST]** `spring-boot-starter-data-redis` 의존성
-- [ ] **[MUST]** `RedisConfig` — Lettuce 기반, JSON 직렬화
-- [ ] **[MUST]** `application-dev.yml` Redis 설정
-- [ ] **[MUST]** `docs/redis-conventions.md` — key naming + TTL 정책 문서화
+### 🐳 Redis 인프라 — 완료 (2026-08-12)
+- [x] **[MUST]** `docker-compose.yml`에 Redis 서비스 추가 (redis:7.2-alpine, MySQL은 로컬 설치본이라 미포함)
+- [x] **[MUST]** `spring-boot-starter-data-redis` 의존성 (기존 105개 테스트 그린 확인)
+- [x] **[MUST]** `RedisConfig` — Lettuce 기반, 키는 평문/값은 JSON (역직렬화 타입 화이트리스트로 가젯 공격 차단)
+- [x] **[MUST]** `application-dev.yml` Redis 설정 (+ **test/prod에도 짝 맞춤** — 알려진 함정 회피, timeout 300ms = fail-open 전제)
+- [x] **[MUST]** `docs/redis-conventions.md` — 키 네이밍/TTL/장애 시 동작 표
 
 #### Redis Key 컨벤션 (예시)
 ```
