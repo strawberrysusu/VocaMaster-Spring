@@ -21,7 +21,11 @@ export default function Login() {
     })
     const data = await res.json().catch(() => null)
     if (!res.ok) {
-      setError(data?.message ?? '요청에 실패했습니다')
+      // 백엔드가 꺼져 있으면 프록시가 JSON 아닌 에러를 돌려줌 — 주인장용 힌트를 명확히
+      setError(
+        data?.message ??
+          '백엔드 서버가 꺼져 있는 것 같아요 — 바탕화면의 VocaMaster 아이콘을 실행한 뒤 다시 시도하세요',
+      )
       return
     }
     setToken(data.accessToken)
