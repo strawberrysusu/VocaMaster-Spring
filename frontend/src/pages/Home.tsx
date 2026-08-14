@@ -42,6 +42,47 @@ export default function Home() {
   const dueMinutes = Math.max(1, Math.round((due * SECONDS_PER_CARD) / 60))
   const maxBox = boxes ? Math.max(1, ...boxes.map((b) => b.count)) : 1
 
+  // 디자인 v2: 신규 유저 온보딩 + 이어서 학습 (마지막 학습 덱은 localStorage로 — 별도 API 불필요)
+  const isNewUser = decks.length === 0
+  const lastStudyId = localStorage.getItem('vm.lastStudyDeckId')
+  const resumeDeck = decks.find((d) => String(d.id) === lastStudyId && d.cardCount > 0)
+
+  if (isNewUser) {
+    return (
+      <>
+        <TopNav />
+        <div className="shell">
+          <div className="section-head">
+            <h1>시작하기</h1>
+            <span className="date">{today}</span>
+          </div>
+          <section className="hero onboard">
+            <h2 className="onboard-title">첫 단어장을 만들어볼까요?</h2>
+            <p className="hero-copy">Quizlet 대신, 내 것으로. 3분이면 충분해요.</p>
+            <div className="onboard-steps">
+              <div className="onboard-step">
+                <span className="step-num">1</span>
+                <b>덱 만들기</b>
+                <span>주제별 단어장 하나</span>
+              </div>
+              <div className="onboard-step">
+                <span className="step-num">2</span>
+                <b>단어 추가</b>
+                <span>일단 5장이면 충분</span>
+              </div>
+              <div className="onboard-step">
+                <span className="step-num">3</span>
+                <b>오늘 복습</b>
+                <span>간격은 라이트너가 알아서</span>
+              </div>
+            </div>
+            <Link to="/decks" className="cta">첫 덱 만들기</Link>
+          </section>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <TopNav streak={summary?.streak} />
@@ -51,7 +92,7 @@ export default function Home() {
           <span className="date">{today}</span>
         </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
 
         <section className="hero">
           <div className="hero-main">
@@ -131,6 +172,21 @@ export default function Home() {
               </div>
             </div>
           </div>
+        )}
+
+        {resumeDeck && (
+          <section className="resume-card">
+            <div>
+              <p className="label">이어서 학습</p>
+              <p className="resume-title">{resumeDeck.title}</p>
+              <p className="muted" style={{ fontSize: 13, margin: '4px 0 0' }}>
+                카드 {resumeDeck.cardCount}장 · 최근 학습한 덱
+              </p>
+            </div>
+            <Link to={`/study?deckId=${resumeDeck.id}`} className="btn-primary" style={{ textDecoration: 'none' }}>
+              이어서 학습
+            </Link>
+          </section>
         )}
 
         <div className="section-head" style={{ margin: '44px 0 16px' }}>

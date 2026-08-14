@@ -47,7 +47,10 @@ export default function Study() {
     setError('')
     if (deckId) {
       fetchAllCards(deckId)
-        .then(({ cards }) => setQueue(cards.map((c) => ({ cardId: c.id, front: c.front, back: c.back }))))
+        .then(({ cards }) => {
+          setQueue(cards.map((c) => ({ cardId: c.id, front: c.front, back: c.back })))
+          localStorage.setItem('vm.lastStudyDeckId', deckId) // 홈 '이어서 학습' 카드 재료
+        })
         .catch((e) => setError(e.message))
     } else {
       api<StudyCard[]>('/reviews/due').then(setQueue).catch((e) => setError(e.message))

@@ -759,6 +759,102 @@ input {
   color: var(--sub);
 }
 
+/* ── 온보딩 (신규 유저 빈 상태 — 디자인 v2) ── */
+.onboard {
+  text-align: center;
+  padding: 52px 40px 48px;
+}
+
+.onboard-title {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-2);
+}
+
+.onboard-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 32px auto 34px;
+  max-width: 640px;
+}
+
+.onboard-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: #fcfcfd;
+  border: 1px solid #f1f1f5;
+  border-radius: 16px;
+  padding: 22px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.onboard-step b {
+  color: var(--ink-2);
+  font-size: 14.5px;
+}
+
+.step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 99px;
+  background: var(--a-soft);
+  color: var(--a);
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+/* ── 이어서 학습 (디자인 v2) ── */
+.resume-card {
+  margin-top: 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--a);
+  border-radius: 18px;
+  padding: 22px 26px;
+  box-shadow: 0 1px 2px rgba(26, 27, 38, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.resume-card .label {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--a);
+}
+
+.resume-title {
+  margin: 6px 0 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-2);
+}
+
+@media (max-width: 768px) {
+  .onboard-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .resume-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* ── 접근성 ── */
 :focus-visible {
   outline: 2px solid var(--a);
