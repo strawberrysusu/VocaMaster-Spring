@@ -1,0 +1,151 @@
+/* 임시 최소 스타일 — 진짜 디자인은 목업 확정 후 입힌다 */
+:root {
+  --accent: #4f46e5;
+  --bg: #f7f7f9;
+  --card: #ffffff;
+  --text: #1f2430;
+  --muted: #8a8fa3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Pretendard', -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.page,
+.auth-page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+.auth-page {
+  max-width: 400px;
+  text-align: center;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.topbar h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.topbar a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(20, 24, 40, 0.07);
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+input {
+  padding: 12px 14px;
+  border: 1px solid #e2e4ee;
+  border-radius: 10px;
+  font-size: 15px;
+  width: 100%;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 15px;
+  cursor: pointer;
+  background: #edeef5;
+}
+
+button.primary,
+.button.primary {
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  display: inline-block;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.big {
+  font-size: 17px;
+  padding: 14px 26px;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-num {
+  font-size: 34px;
+  font-weight: 700;
+}
+
+.stat-num.accent {
+  color: var(--accent);
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.cta-row {
+  text-align: center;
+}
+
+.create-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.deck-card h3 {
+  margin: 0 0 6px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: #d33;
+}
