@@ -31,8 +31,8 @@ export default function TopNav({ streak }: { streak?: number }) {
         <nav className="nav-links">
           <Link to="/" className={pathname === '/' ? 'active' : ''}>홈</Link>
           <Link to="/decks" className={pathname.startsWith('/decks') ? 'active' : ''}>내 덱</Link>
-          {/* 다음 시공 화면들 — 누르면 공사중 표지판 (무반응보다 낫다) */}
-          <Link to="/soon/탐색" className="soon">탐색</Link>
+          <Link to="/explore" className={pathname.startsWith('/explore') ? 'active' : ''}>탐색</Link>
+          {/* 통계·설정 — 통계는 그래프 API(주간/덱별) 신설 후, 설정은 담을 기능 생기면 */}
           <Link to="/soon/통계" className="soon">통계</Link>
           <Link to="/soon/설정" className="soon">설정</Link>
         </nav>
