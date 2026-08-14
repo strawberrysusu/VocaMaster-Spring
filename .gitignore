@@ -30,3 +30,6 @@ bin/
 
 # 개인 공부 자료 (시험 스캔/노션 추출 등, 프로젝트 무관)
 tmp/
+
+# React 빌드 산출물 (vite build가 생성 — bat/CI가 만들고 jar에 포함)
+src/main/resources/static/app/

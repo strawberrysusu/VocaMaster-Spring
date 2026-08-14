@@ -20,6 +20,7 @@ const VISIBILITY_LABEL: Record<Deck['visibility'], string> = {
 export default function Decks() {
   const [decks, setDecks] = useState<Deck[]>([])
   const [title, setTitle] = useState('')
+  const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
 
   function load() {
@@ -29,10 +30,17 @@ export default function Decks() {
   useEffect(load, [])
 
   async function create() {
-    if (!title.trim()) return
-    await api('/decks', { method: 'POST', body: JSON.stringify({ title }) })
-    setTitle('')
-    load()
+    if (creating || !title.trim()) return // 더블클릭/엔터 연타 중복 생성 방어
+    setCreating(true)
+    try {
+      await api('/decks', { method: 'POST', body: JSON.stringify({ title }) })
+      setTitle('')
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setCreating(false)
+    }
   }
 
   const totalCards = decks.reduce((a, d) => a + d.cardCount, 0)
@@ -50,17 +58,18 @@ export default function Decks() {
 
         <div className="create-row">
           <input
+            aria-label="새 덱 이름"
             placeholder="새 덱 이름을 입력하세요"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && create()}
           />
-          <button className="btn-primary" disabled={!title.trim()} onClick={create}>
-            덱 만들기
+          <button className="btn-primary" disabled={creating || !title.trim()} onClick={create}>
+            {creating ? '만드는 중...' : '덱 만들기'}
           </button>
         </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
 
         <div className="deck-grid">
           {decks.map((d) => (

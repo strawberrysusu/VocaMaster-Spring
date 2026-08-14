@@ -7,29 +7,36 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [nickname, setNickname] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
   async function submit() {
+    if (submitting) return
+    setSubmitting(true)
     setError('')
-    const path = mode === 'login' ? '/auth/login' : '/auth/register'
-    const body = mode === 'login' ? { email, password } : { email, password, nickname }
-    const res = await fetch(path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    const data = await res.json().catch(() => null)
-    if (!res.ok) {
-      // 백엔드가 꺼져 있으면 프록시가 JSON 아닌 에러를 돌려줌 — 주인장용 힌트를 명확히
-      setError(
-        data?.message ??
-          '백엔드 서버가 꺼져 있는 것 같아요 — 바탕화면의 VocaMaster 아이콘을 실행한 뒤 다시 시도하세요',
-      )
-      return
+    try {
+      const path = mode === 'login' ? '/auth/login' : '/auth/register'
+      const body = mode === 'login' ? { email, password } : { email, password, nickname }
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        // 백엔드가 꺼져 있으면 프록시가 JSON 아닌 에러를 돌려줌 — 주인장용 힌트를 명확히
+        setError(
+          data?.message ??
+            '백엔드 서버가 꺼져 있는 것 같아요 — 바탕화면의 VocaMaster 아이콘을 실행한 뒤 다시 시도하세요',
+        )
+        return
+      }
+      setToken(data.accessToken)
+      navigate('/')
+    } finally {
+      setSubmitting(false)
     }
-    setToken(data.accessToken)
-    navigate('/')
   }
 
   return (
@@ -48,9 +55,9 @@ export default function Login() {
         {mode === 'register' && (
           <input placeholder="닉네임" value={nickname} onChange={(e) => setNickname(e.target.value)} />
         )}
-        {error && <p className="error">{error}</p>}
-        <button className="primary" onClick={submit}>
-          {mode === 'login' ? '로그인' : '가입하고 시작'}
+        {error && <p className="error" role="alert">{error}</p>}
+        <button className="primary" disabled={submitting} onClick={submit}>
+          {submitting ? '처리 중...' : mode === 'login' ? '로그인' : '가입하고 시작'}
         </button>
         <button className="ghost" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
           {mode === 'login' ? '계정이 없어요 → 회원가입' : '이미 계정이 있어요 → 로그인'}

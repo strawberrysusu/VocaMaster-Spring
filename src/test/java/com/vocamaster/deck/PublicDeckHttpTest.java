@@ -53,6 +53,9 @@ class PublicDeckHttpTest {
     @Autowired private TestRestTemplate rest;
     @Autowired private UserRepository userRepository;
     @Autowired private DeckRepository deckRepository;
+
+    @org.springframework.boot.test.web.server.LocalServerPort
+    private int port;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private User user;
@@ -94,19 +97,27 @@ class PublicDeckHttpTest {
     }
 
     @Test
-    @DisplayName("익명으로 보호 API(/decks) 접근은 차단됨")
+    @DisplayName("익명으로 보호 API(/decks) 접근은 401 — 미인증과 권한부족(403)의 분리 계약")
     void anonymousProtected_blocked() {
         ResponseEntity<String> res = rest.getForEntity("/decks", String.class);
-        // entry point 미설정 → Spring Security 기본 403 (401 아님 — JwtAuthFilter 주석과 다른 실측값)
-        assertEquals(HttpStatus.FORBIDDEN, res.getStatusCode());
+        // 401은 프런트 자동 갱신 인터셉터의 신호 — 과거 기본값 403이던 것을 entry point로 통일 (2026-08-14)
+        assertEquals(HttpStatus.UNAUTHORIZED, res.getStatusCode());
     }
 
     @Test
-    @DisplayName("익명 좋아요(POST /public/**)는 차단 — permitAll이 GET에만 열려있음 (ADR-032)")
-    void anonymousLike_blocked() {
-        ResponseEntity<String> res = rest.postForEntity(
-                "/public/decks/" + pub.getId() + "/like", null, String.class);
-        assertEquals(HttpStatus.FORBIDDEN, res.getStatusCode());
+    @DisplayName("익명 좋아요(POST /public/**)는 401 — permitAll이 GET에만 열려있음 (ADR-032)")
+    void anonymousLike_blocked() throws Exception {
+        // TestRestTemplate 기본(HttpURLConnection)은 POST+401에서 응답 대신
+        // "cannot retry due to server authentication" 예외를 던짐 → JDK HttpClient로 상태코드 직접 확인
+        java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+        java.net.http.HttpResponse<String> res = client.send(
+                java.net.http.HttpRequest.newBuilder(
+                                java.net.URI.create("http://localhost:" + port + "/public/decks/" + pub.getId() + "/like"))
+                        .POST(java.net.http.HttpRequest.BodyPublishers.noBody())
+                        .build(),
+                java.net.http.HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(401, res.statusCode());
     }
 
     @Test

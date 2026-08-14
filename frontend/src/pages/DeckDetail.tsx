@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api/client'
+import { fetchAllCards, type CardDto } from '../api/cards'
 import TopNav from '../components/TopNav'
 
 interface Deck {
@@ -11,41 +12,37 @@ interface Deck {
   starredCount: number
 }
 
-interface CardItem {
-  id: number
-  front: string
-  back: string
-  starred: boolean
-}
-
-interface Page<T> {
-  content: T[]
-  totalElements: number
-}
-
 export default function DeckDetail() {
   const { id } = useParams()
   const [deck, setDeck] = useState<Deck | null>(null)
-  const [cards, setCards] = useState<CardItem[]>([])
+  const [cards, setCards] = useState<CardDto[]>([])
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
+  const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
 
   const load = useCallback(() => {
     api<Deck>(`/decks/${id}`).then(setDeck).catch((e) => setError(e.message))
-    api<Page<CardItem>>(`/decks/${id}/cards?size=200`)
-      .then((p) => setCards(p.content))
+    fetchAllCards(id!)
+      .then(({ cards }) => setCards(cards))
       .catch((e) => setError(e.message))
   }, [id])
 
   useEffect(load, [load])
 
   async function addCard() {
-    if (!front.trim() || !back.trim()) return
-    await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify({ front, back }) })
-    setFront('')
-    setBack('')
-    load()
+    if (adding || !front.trim() || !back.trim()) return // 더블클릭 중복 등록 방어
+    setAdding(true)
+    try {
+      await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify({ front, back }) })
+      setFront('')
+      setBack('')
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setAdding(false)
+    }
   }
 
   return (
@@ -64,10 +61,10 @@ export default function DeckDetail() {
           <div className="mode-buttons">
             {cards.length > 0 ? (
               <Link to={`/study?deckId=${id}`} className="btn-primary" style={{ textDecoration: 'none' }}>
-                플래시카드 학습
+                복습 학습 (Leitner)
               </Link>
             ) : (
-              <button className="btn-primary" disabled title="카드를 먼저 추가하세요">플래시카드 학습</button>
+              <button className="btn-primary" disabled title="카드를 먼저 추가하세요">복습 학습 (Leitner)</button>
             )}
             <button className="mode-stub" title="다음 시공 화면">퀴즈</button>
             <button className="mode-stub" title="다음 시공 화면">타이핑</button>
@@ -76,22 +73,24 @@ export default function DeckDetail() {
 
         <div className="create-row">
           <input
+            aria-label="단어"
             placeholder="단어 (예: 会議)"
             value={front}
             onChange={(e) => setFront(e.target.value)}
           />
           <input
+            aria-label="뜻"
             placeholder="뜻 (예: 회의)"
             value={back}
             onChange={(e) => setBack(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addCard()}
           />
-          <button className="btn-primary" disabled={!front.trim() || !back.trim()} onClick={addCard}>
-            추가
+          <button className="btn-primary" disabled={adding || !front.trim() || !back.trim()} onClick={addCard}>
+            {adding ? '추가 중...' : '추가'}
           </button>
         </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
 
         <div className="word-list">
           {cards.map((c, i) => (

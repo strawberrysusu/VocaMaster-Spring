@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
+import { fetchAllCards } from '../api/cards'
 import TopNav from '../components/TopNav'
 
 interface StudyCard {
@@ -13,15 +14,15 @@ interface AnswerResult {
   boxLevel: number
 }
 
-interface PageResp {
-  content: { id: number; front: string; back: string }[]
-}
-
 /**
- * 플래시카드 학습 — 두 입구, 한 흐름:
+ * Leitner 복습 학습 — 두 입구, 한 흐름:
  * - /study            → 오늘 복습 (due 카드 전체)
  * - /study?deckId=N   → 그 덱의 전 카드 (새 카드는 첫 답변으로 박스 1 입장)
- * 답변은 /reviews/cards/{id}/answer — Leitner 증감의 그 API.
+ *
+ * 설계 결정(2026-08-14): 답변은 /reviews/answer 하나만 호출한다.
+ * 기존 StudySession/StudyRecord(플래시카드 세션 이력)는 여기서 기록되지 않음 —
+ * 프런트에서 API 두 개를 따로 쏘면 한쪽만 성공하는 반쪽 상태가 생기므로,
+ * "복습 기록 + 세션 이력"의 묶음은 Phase 6 백엔드 오케스트레이션(이벤트)에서 해결한다.
  */
 export default function Study() {
   const [params] = useSearchParams()
@@ -33,35 +34,47 @@ export default function Study() {
   const [known, setKnown] = useState(0)
   const [unknown, setUnknown] = useState(0)
   const [lastBox, setLastBox] = useState<number | null>(null)
+  const [answering, setAnswering] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  const loadQueue = useCallback(() => {
+    setQueue(null)
+    setIdx(0)
+    setKnown(0)
+    setUnknown(0)
+    setRevealed(false)
+    setLastBox(null)
+    setError('')
     if (deckId) {
-      api<PageResp>(`/decks/${deckId}/cards?size=200`)
-        .then((p) => setQueue(p.content.map((c) => ({ cardId: c.id, front: c.front, back: c.back }))))
+      fetchAllCards(deckId)
+        .then(({ cards }) => setQueue(cards.map((c) => ({ cardId: c.id, front: c.front, back: c.back }))))
         .catch((e) => setError(e.message))
     } else {
       api<StudyCard[]>('/reviews/due').then(setQueue).catch((e) => setError(e.message))
     }
   }, [deckId])
 
+  useEffect(loadQueue, [loadQueue])
+
   async function answer(correct: boolean) {
-    if (!queue) return
-    const card = queue[idx]
+    if (answering || !queue) return // 더블클릭 방어 — 두 번 전송되면 박스가 두 번 움직인다
+    setAnswering(true)
     try {
+      const card = queue[idx]
       const res = await api<AnswerResult>(`/reviews/cards/${card.cardId}/answer`, {
         method: 'POST',
         body: JSON.stringify({ correct }),
       })
       setLastBox(res.boxLevel)
+      if (correct) setKnown((n) => n + 1)
+      else setUnknown((n) => n + 1)
+      setRevealed(false)
+      setIdx((i) => i + 1)
     } catch (e) {
       setError((e as Error).message)
-      return
+    } finally {
+      setAnswering(false)
     }
-    if (correct) setKnown((n) => n + 1)
-    else setUnknown((n) => n + 1)
-    setRevealed(false)
-    setIdx((i) => i + 1)
   }
 
   const total = queue?.length ?? 0
@@ -71,7 +84,7 @@ export default function Study() {
     <>
       <TopNav />
       <div className="shell study-shell">
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error" role="alert">{error}</p>}
 
         {queue === null && !error && <p className="muted">불러오는 중...</p>}
 
@@ -94,7 +107,13 @@ export default function Study() {
                 {idx + 1} / {total}
               </span>
             </div>
-            <div className="progress-track">
+            <div
+              className="progress-track"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={total}
+              aria-valuenow={idx}
+            >
               <div className="progress-fill" style={{ width: `${(idx / total) * 100}%` }} />
             </div>
 
@@ -109,10 +128,10 @@ export default function Study() {
 
             {revealed ? (
               <div className="answer-buttons">
-                <button className="answer-no" onClick={() => answer(false)}>
+                <button className="answer-no" disabled={answering} onClick={() => answer(false)}>
                   몰라요
                 </button>
-                <button className="answer-yes" onClick={() => answer(true)}>
+                <button className="answer-yes" disabled={answering} onClick={() => answer(true)}>
                   알아요
                 </button>
               </div>
@@ -142,7 +161,7 @@ export default function Study() {
               <Link to="/" className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>
                 홈으로
               </Link>
-              <button className="answer-yes" onClick={() => window.location.reload()}>
+              <button className="answer-yes" onClick={loadQueue}>
                 한 번 더
               </button>
             </div>

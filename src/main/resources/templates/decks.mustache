@@ -65,9 +65,19 @@ async function loadDecks() {
                 ' <span class="badge">' + d.cardCount + '장</span>' +
                 (d.description ? '<p style="color:#888;font-size:0.85rem;margin-top:4px;">' + escHtml(d.description) + '</p>' : '') +
             '</div>' +
-            '<button class="deck-delete" onclick="event.stopPropagation();deleteDeck(' + d.id + ',\'' + escJs(d.title) + '\')" title="삭제">&times;</button>' +
+            '<button class="deck-delete" data-deck-id="' + d.id + '" title="삭제">&times;</button>' +
         '</div>';
     }).join('');
+
+    // 인라인 onclick에 제목 문자열을 넣으면 " 하나로 속성 탈출(stored XSS)이 가능 — 리스너 바인딩으로 교체
+    el.querySelectorAll('.deck-delete').forEach(function(btn) {
+        btn.addEventListener('click', function(ev) {
+            ev.stopPropagation();
+            var id = Number(btn.getAttribute('data-deck-id'));
+            var deck = decks.find(function(d) { return d.id === id; });
+            deleteDeck(id, deck ? deck.title : '');
+        });
+    });
 }
 
 async function createDeck() {
@@ -101,7 +111,6 @@ function escHtml(s) {
     div.textContent = s;
     return div.innerHTML;
 }
-function escJs(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 document.getElementById('deck-title').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') createDeck();

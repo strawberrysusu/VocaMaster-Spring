@@ -1,14 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// dev: React(5173)가 Spring(8080)으로 API를 프록시 — CORS 설정 없이 same-origin처럼 동작.
-// 운영 번들(Spring static 통합)은 별도 단계에서 NewsPick 방식으로 붙인다.
+// React 화면은 /app/** 네임스페이스 — /decks 같은 API 경로와의 충돌 제거 (F5·북마크·직접 입력 전부 안전).
+// 빌드 결과는 Spring static/app 으로 들어가 jar 하나로 서빙된다 (SpaConfig가 딥링크 fallback 담당).
 const backend = 'http://localhost:8080'
 const apiPrefixes = ['/auth', '/decks', '/cards', '/public', '/reviews', '/quiz', '/typing', '/study', '/stats']
 
 export default defineConfig({
+  base: '/app/',
   plugins: [react()],
   server: {
     proxy: Object.fromEntries(apiPrefixes.map((p) => [p, { target: backend, changeOrigin: false }])),
+  },
+  build: {
+    outDir: '../src/main/resources/static/app',
+    emptyOutDir: true,
   },
 })

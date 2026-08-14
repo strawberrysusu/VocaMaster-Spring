@@ -110,12 +110,13 @@ export default function Home() {
         {summary && (
           <div className="stats-2col">
             <div className="stat-card">
-              <p className="label">오늘 학습한 카드</p>
+              {/* studyCount = 모든 학습 '답변 횟수' (고유 카드 수 아님) — 데이터 정의에 맞는 문구 (Codex 검산) */}
+              <p className="label">오늘 학습 활동</p>
               <div className="value">
                 <span className="num big">{summary.studyCount}</span>
-                <span className="unit">장</span>
+                <span className="unit">회</span>
               </div>
-              <p className="foot">복습으로 외운 카드 {summary.reviewedTodayCount}장</p>
+              <p className="foot">오늘 복습한 카드 {summary.reviewedTodayCount}장</p>
             </div>
             <div className="stat-card">
               <p className="label">연속 학습</p>
