@@ -5,6 +5,7 @@ import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.DeckService;
+import com.vocamaster.review.dto.BoxCountResponse;
 import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
 import com.vocamaster.review.dto.TodaySummaryResponse;
@@ -20,6 +21,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -120,6 +124,16 @@ public class ReviewService {
                 .build();
         summaryCache.put(userId, today, fresh);
         return fresh;
+    }
+
+    // 박스별 분포 (홈 사다리 차트) — 카드가 없는 박스도 0으로 채워 항상 6칸 고정 반환
+    @Transactional(readOnly = true)
+    public List<BoxCountResponse> getBoxDistribution(Long userId) {
+        Map<Integer, Long> byBox = cardProgressRepository.countByBoxLevel(userId).stream()
+                .collect(Collectors.toMap(BoxCountResponse::getBox, BoxCountResponse::getCount));
+        return IntStream.rangeClosed(1, MAX_BOX)
+                .mapToObj(box -> new BoxCountResponse(box, byBox.getOrDefault(box, 0L)))
+                .toList();
     }
 
     // 처음 만난 카드의 성적표 생성 (box 1, 즉시 복습 대상)

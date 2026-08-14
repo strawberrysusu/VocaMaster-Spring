@@ -1,6 +1,7 @@
 package com.vocamaster.review;
 
 import com.vocamaster.common.CurrentUser;
+import com.vocamaster.review.dto.BoxCountResponse;
 import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerRequest;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
@@ -25,6 +26,12 @@ public class ReviewController {
     @Operation(summary = "복습 대상 카드 목록 — nextReviewAt이 지난 카드, 오래 기다린 순 (deckId 없으면 전체 덱)")
     public List<DueCardResponse> getDueCards(@RequestParam(required = false) Long deckId) {
         return reviewService.getDueCards(CurrentUser.getId(), deckId);
+    }
+
+    @GetMapping("/box-distribution")
+    @Operation(summary = "라이트너 박스별 카드 분포 — 항상 6칸 (빈 박스는 0), 홈 사다리 차트용")
+    public List<BoxCountResponse> getBoxDistribution() {
+        return reviewService.getBoxDistribution(CurrentUser.getId());
     }
 
     @GetMapping("/today-summary")

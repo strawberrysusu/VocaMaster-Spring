@@ -1,5 +1,6 @@
 package com.vocamaster.review;
 
+import com.vocamaster.review.dto.BoxCountResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -40,4 +41,13 @@ public interface CardProgressRepository extends JpaRepository<CardProgress, Long
     long countReviewedBetween(@Param("userId") Long userId,
                               @Param("start") LocalDateTime start,
                               @Param("end") LocalDateTime end);
+
+    // 박스별 분포 — 생성자 표현식으로 DTO 직행 (있는 박스만 반환됨, 0 채우기는 서비스 몫)
+    @Query("""
+            select new com.vocamaster.review.dto.BoxCountResponse(p.boxLevel, count(p))
+            from CardProgress p
+            where p.user.id = :userId
+            group by p.boxLevel
+            """)
+    List<BoxCountResponse> countByBoxLevel(@Param("userId") Long userId);
 }

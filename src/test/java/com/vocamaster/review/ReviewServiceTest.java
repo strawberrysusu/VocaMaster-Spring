@@ -7,6 +7,7 @@ import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
+import com.vocamaster.review.dto.BoxCountResponse;
 import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerResponse;
 import com.vocamaster.review.dto.TodaySummaryResponse;
@@ -250,5 +251,25 @@ class ReviewServiceTest extends AbstractIntegrationTest {
                 .wrongCount(0)
                 .nextReviewAt(nextReviewAt)
                 .build());
+    }
+
+    @Test
+    @DisplayName("박스 분포 — 카드 없는 박스도 0으로 채워 항상 6칸 (홈 사다리 차트 계약)")
+    void boxDistribution_alwaysSixSlotsZeroFilled() {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        saveProgress(user, card, 2, now);
+        Card second = cardRepository.save(Card.builder().front("banana").back("바나나").deck(deck).build());
+        saveProgress(user, second, 2, now);
+        Card third = cardRepository.save(Card.builder().front("cherry").back("체리").deck(deck).build());
+        saveProgress(user, third, 5, now);
+
+        List<BoxCountResponse> dist = reviewService.getBoxDistribution(user.getId());
+
+        assertEquals(6, dist.size());
+        assertEquals(1, dist.get(0).getBox());
+        assertEquals(0, dist.get(0).getCount(), "빈 박스 1은 0으로 채워져야");
+        assertEquals(2, dist.get(1).getCount(), "박스 2에 두 장");
+        assertEquals(1, dist.get(4).getCount(), "박스 5에 한 장");
+        assertEquals(0, dist.get(5).getCount());
     }
 }

@@ -1,10 +1,15 @@
-/* 임시 최소 스타일 — 진짜 디자인은 목업 확정 후 입힌다 */
+/* 디자인 시스템 — 목업(VocaMaster.dc.html)에서 추출한 실측값 */
 :root {
-  --accent: #4f46e5;
-  --bg: #f7f7f9;
-  --card: #ffffff;
-  --text: #1f2430;
-  --muted: #8a8fa3;
+  --a: #3d3e96;             /* 인디고 액센트 */
+  --a-soft: #ececf7;        /* 액센트 9% 틴트 (nav 활성 배경) */
+  --bg: #fafafb;
+  --ink: #1a1b26;
+  --ink-2: #22232f;
+  --sub: #4e4f60;
+  --muted: #8a8b9c;
+  --muted-2: #9b9cab;
+  --border: #efeff3;
+  --bar-rest: #dfdff0;      /* 사다리 3~6박스 연보라 */
 }
 
 * {
@@ -13,139 +18,572 @@
 
 body {
   margin: 0;
-  font-family: 'Pretendard', -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-.page,
-.auth-page {
-  max-width: 880px;
+button {
+  font-family: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+input {
+  font-family: inherit;
+  outline: none;
+}
+
+::selection {
+  background: #dedef3;
+}
+
+.num {
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-weight: 700;
+}
+
+/* ── 상단 네비게이션 ── */
+.topnav {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+
+.topnav-inner {
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 32px 20px;
-}
-
-.auth-page {
-  max-width: 400px;
-  text-align: center;
-}
-
-.topbar {
+  padding: 14px 32px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  gap: 22px;
 }
 
-.topbar h1 {
-  font-size: 22px;
-  margin: 0;
-}
-
-.topbar a {
-  color: var(--text);
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-2);
   text-decoration: none;
 }
 
-.card {
-  background: var(--card);
+.logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--a);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.nav-links a,
+.nav-links span {
+  padding: 8px 13px;
+  border-radius: 9px;
+  font-size: 14.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  color: #6e6f80;
+}
+
+.nav-links a.active {
+  background: var(--a-soft);
+  color: var(--a);
+}
+
+.nav-links span {
+  color: #c3c4cf;
+  cursor: default;
+}
+
+.streak-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1px solid #ededf2;
+  font-size: 13px;
+  color: var(--sub);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.streak-pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--a);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 99px;
+  background: #eaeaf0;
+  color: #63647a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.nav-logout {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ── 공통 레이아웃 ── */
+.shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 52px 32px 100px;
+  animation: fadeUp 0.3s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.section-head h1,
+.section-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.section-head .date {
+  font-size: 13.5px;
+  color: var(--muted-2);
+}
+
+.section-head .link {
+  font-size: 13.5px;
+  color: var(--a);
+  font-weight: 500;
+}
+
+/* ── 히어로 카드 ── */
+.hero {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 1px 2px rgba(26, 27, 38, 0.03), 0 14px 34px -18px rgba(26, 27, 38, 0.12);
+  overflow: hidden;
+}
+
+.hero-main {
+  padding: 44px 44px 40px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.hero-count {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.hero-count .big {
+  font-size: 96px;
+  line-height: 0.86;
+  letter-spacing: -0.04em;
+  color: var(--a);
+}
+
+.hero-count .unit {
+  font-size: 22px;
+  font-weight: 500;
+  color: #3a3b4c;
+  padding-bottom: 8px;
+}
+
+.hero-copy {
+  margin: 18px 0 0;
+  font-size: 16.5px;
+  color: var(--sub);
+}
+
+.hero-sub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--muted-2);
+}
+
+.hero-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.cta {
+  padding: 19px 34px;
   border-radius: 14px;
-  padding: 20px;
-  box-shadow: 0 1px 4px rgba(20, 24, 40, 0.07);
+  background: var(--a);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: 0 8px 20px -8px rgba(61, 62, 150, 0.6);
+  transition: transform 0.16s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.cta:hover {
+  transform: translateY(-1px);
+}
+
+.cta.disabled {
+  background: #f2f2f6;
+  color: #b4b5c2;
+  box-shadow: none;
+  cursor: default;
+}
+
+.hero-secondary {
+  font-size: 13.5px;
+  color: #7c7d8e;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* ── 라이트너 사다리 ── */
+.ladder {
+  border-top: 1px solid #f1f1f5;
+  padding: 26px 44px 30px;
+  background: #fcfcfd;
+}
+
+.ladder-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.ladder-head .title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.ladder-head .hint {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.ladder-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 76px;
+}
+
+.ladder-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.ladder-col .count {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #63647a;
+}
+
+.ladder-col .bar {
+  width: 100%;
+  border-radius: 6px 6px 3px 3px;
+}
+
+.ladder-col .label {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* ── 스탯 카드 2열 ── */
+.stats-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 26px 28px;
+  box-shadow: 0 1px 2px rgba(26, 27, 38, 0.03);
+}
+
+.stat-card .label {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.stat-card .value {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.stat-card .value .big {
+  font-size: 38px;
+  letter-spacing: -0.03em;
+  color: var(--ink-2);
+}
+
+.stat-card .value .unit {
+  font-size: 15px;
+  color: #63647a;
+}
+
+.stat-card .foot {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.streak-dots {
+  display: flex;
+  gap: 5px;
+  margin-top: 14px;
+}
+
+.streak-dots div {
+  flex: 1;
+  height: 5px;
+  border-radius: 99px;
+}
+
+/* ── 덱 카드 ── */
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.deck-card {
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 26px 28px 24px;
+  box-shadow: 0 1px 2px rgba(26, 27, 38, 0.03);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.deck-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -14px rgba(26, 27, 38, 0.18);
+}
+
+.deck-card .tag {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 7px;
+  background: #f5f5f9;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #7c7d8e;
+}
+
+.deck-card .title {
+  margin: 14px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink-2);
+}
+
+.deck-card .meta {
+  margin: 7px 0 0;
+  font-size: 13px;
+  color: var(--muted-2);
+}
+
+/* ── 페이지 헤더 (내 덱 등) ── */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.page-head .sub {
+  margin: 9px 0 0;
+  font-size: 14.5px;
+  color: var(--muted);
+}
+
+.create-row {
+  display: flex;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px 14px 12px 20px;
+  box-shadow: 0 1px 2px rgba(26, 27, 38, 0.03);
+  margin-bottom: 22px;
+}
+
+.create-row input {
+  flex: 1;
+  border: 0;
+  font-size: 15px;
+  color: var(--ink-2);
+  background: none;
+  padding: 8px 0;
+}
+
+.btn-primary {
+  padding: 11px 22px;
+  border-radius: 11px;
+  background: var(--a);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.btn-primary:disabled {
+  background: #f2f2f6;
+  color: #b4b5c2;
+  cursor: default;
+}
+
+/* ── 로그인 ── */
+.auth-page {
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.auth-page > h1 {
+  font-size: 26px;
+  letter-spacing: -0.02em;
 }
 
 .auth-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 1px 2px rgba(26, 27, 38, 0.03), 0 14px 34px -18px rgba(26, 27, 38, 0.12);
   display: flex;
   flex-direction: column;
   gap: 10px;
   text-align: left;
 }
 
-input {
+.auth-card h2 {
+  margin: 0 0 6px;
+  font-size: 19px;
+}
+
+.auth-card input {
   padding: 12px 14px;
   border: 1px solid #e2e4ee;
-  border-radius: 10px;
+  border-radius: 11px;
   font-size: 15px;
   width: 100%;
 }
 
-button {
-  border: none;
-  border-radius: 10px;
-  padding: 12px 18px;
-  font-size: 15px;
-  cursor: pointer;
-  background: #edeef5;
-}
-
-button.primary,
-.button.primary {
-  background: var(--accent);
+.auth-card .primary {
+  padding: 13px 18px;
+  border-radius: 11px;
+  background: var(--a);
   color: #fff;
-  text-decoration: none;
-  display: inline-block;
-}
-
-button.ghost {
-  background: transparent;
-  color: var(--muted);
-}
-
-.big {
-  font-size: 17px;
-  padding: 14px 26px;
-}
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 14px;
-  margin-bottom: 28px;
-}
-
-.stat {
-  text-align: center;
-}
-
-.stat-num {
-  font-size: 34px;
+  font-size: 15px;
   font-weight: 700;
 }
 
-.stat-num.accent {
-  color: var(--accent);
-}
-
-.stat-label {
+.auth-card .ghost {
   color: var(--muted);
-  font-size: 13px;
-  margin-top: 4px;
+  font-size: 13.5px;
+  padding: 6px;
 }
 
-.cta-row {
-  text-align: center;
-}
-
-.create-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.deck-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-}
-
-.deck-card h3 {
-  margin: 0 0 6px;
+.error {
+  color: #d33;
+  font-size: 13.5px;
+  margin: 4px 0 0;
 }
 
 .muted {
   color: var(--muted);
 }
 
-.error {
-  color: #d33;
+/* 임시(공사중) 화면 */
+.stub {
+  text-align: center;
+  padding: 90px 20px;
+  color: var(--muted);
+}
+
+.stub h2 {
+  color: var(--ink-2);
 }
