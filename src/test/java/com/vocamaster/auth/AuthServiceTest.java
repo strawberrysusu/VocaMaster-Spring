@@ -77,8 +77,10 @@ class AuthServiceTest extends AbstractIntegrationTest {
         assertNotNull(pair.accessToken());
         assertNotNull(pair.refreshToken());
         Long userId = jwtProvider.getUserId(pair.accessToken());
-        assertEquals(1L, userRepository.count());
-        assertNotNull(userId);
+        // 전역 count()==1 검증은 재사용 컨테이너에 남은 타 테스트 커밋 데이터에 깨짐(실제로 깨졌음) —
+        // '이 테스트가 만든 사용자'가 존재하고 토큰의 주인인지로 좁혀 검증 (Codex 검산)
+        assertTrue(userRepository.findByEmail("test@example.com").isPresent());
+        assertEquals(userRepository.findByEmail("test@example.com").get().getId(), userId);
     }
 
     @Test

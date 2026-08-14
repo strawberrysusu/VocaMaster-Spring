@@ -27,14 +27,17 @@ const SECONDS_PER_CARD = 25 // 예상 시간 어림값 — 카드당 평균 답�
 export default function Home() {
   const [summary, setSummary] = useState<TodaySummary | null>(null)
   const [boxes, setBoxes] = useState<BoxCount[] | null>(null)
-  const [decks, setDecks] = useState<Deck[]>([])
+  // null=로딩 중, []=정말 덱 없음 — 초기값 []로 두면 로딩 순간 기존 유저에게 온보딩이 번쩍임 (Codex 검산)
+  const [decks, setDecks] = useState<Deck[] | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     api<TodaySummary>('/reviews/today-summary').then(setSummary).catch((e) => setError(e.message))
     // 구버전 백엔드(엔드포인트 없음)면 차트만 조용히 숨김
     api<BoxCount[]>('/reviews/box-distribution').then(setBoxes).catch(() => setBoxes(null))
-    api<Deck[]>('/decks').then(setDecks).catch(() => {})
+    api<Deck[]>('/decks')
+      .then(setDecks)
+      .catch((e) => setError(e.message))   // 삼키면 장애 시 영원히 '신규 유저'로 오판
   }, [])
 
   const today = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
@@ -43,9 +46,9 @@ export default function Home() {
   const maxBox = boxes ? Math.max(1, ...boxes.map((b) => b.count)) : 1
 
   // 디자인 v2: 신규 유저 온보딩 + 이어서 학습 (마지막 학습 덱은 localStorage로 — 별도 API 불필요)
-  const isNewUser = decks.length === 0
+  const isNewUser = decks !== null && decks.length === 0   // 로딩 중(null)엔 판정 보류
   const lastStudyId = localStorage.getItem('vm.lastStudyDeckId')
-  const resumeDeck = decks.find((d) => String(d.id) === lastStudyId && d.cardCount > 0)
+  const resumeDeck = decks?.find((d) => String(d.id) === lastStudyId && d.cardCount > 0)
 
   if (isNewUser) {
     return (
@@ -194,14 +197,14 @@ export default function Home() {
           <Link to="/decks" className="link">전체 보기</Link>
         </div>
         <div className="deck-grid">
-          {decks.slice(0, 3).map((d) => (
+          {(decks ?? []).slice(0, 3).map((d) => (
             <Link key={d.id} to={`/decks/${d.id}`} className="deck-card">
               <span className="tag">{d.visibility}</span>
               <p className="title">{d.title}</p>
               <p className="meta">카드 {d.cardCount}장</p>
             </Link>
           ))}
-          {decks.length === 0 && <p className="muted">아직 덱이 없어요 — 첫 단어장을 만들어보세요.</p>}
+          {decks === null && <p className="muted">불러오는 중...</p>}
         </div>
       </div>
     </>

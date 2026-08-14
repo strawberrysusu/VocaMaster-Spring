@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { clearToken, getToken } from '../api/client'
 
 // JWT payload에서 이메일 첫 글자 — 별도 /me API 없이 아바타 이니셜용
@@ -15,11 +15,12 @@ function emailInitial(): string {
 
 export default function TopNav({ streak }: { streak?: number }) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
 
   async function logout() {
     await fetch('/auth/logout', { method: 'POST' }).catch(() => {})
     clearToken()
-    window.location.href = '/login'
+    navigate('/login')   // basename(/app)을 라우터가 처리 — 절대경로 /login은 API 보안에 걸림 (Codex 검산)
   }
 
   return (
