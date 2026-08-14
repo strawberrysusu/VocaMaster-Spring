@@ -627,7 +627,7 @@
 ### 🆕 추가 아이디어
 - [ ] MockMvc 컨트롤러 슬라이스 테스트 도입 — 400 계약(빈 visibility / 오타 enum) 자동 검증. 지금은 Jackson+`@Valid` 프레임워크 보증에 의존 (프로젝트에 MockMvc 전례 없음 — 도입 자체가 별도 결정)
   - 도입 시 함께: 동일 유저 더블탭의 UNIQUE 충돌 → 실제 컨트롤러 catch → currentState 복구 경로 **결정적** 검증 (현 테스트는 최종 상태 멱등만 보증, 충돌 경로 강제는 아님 — Codex 검산 2026-08-11)
-- [ ] **React 후속 백로그 (2026-08-14, Codex 재검산)**: ① Explore 로딩 상태·페이지네이션(현재 30개 상한) ② 공개 덱 상세 화면 + UNLISTED 링크 진입 화면 ③ 목록 API에 `likedByMe` 필드 ④ 자기 덱 복사 시 UI가 copyCount +1 오표시(서버는 제외하는데) ⑤ Gradle bootJar에 frontend build 연결(CI/clean clone 대비 — 지금은 bat이 담당) ⑥ 통계 화면용 API(주간 활동·덱별 진행률) ⑦ OSIV 명시 off + 스프링 기본 계정 소음 정리 ⑧ bat이 서버 준비 후 브라우저 열기
+- [ ] **React 후속 백로그 (2026-08-14, Codex 재검산)**: ① Explore 로딩 상태·페이지네이션(현재 30개 상한) ② 공개 덱 상세 화면 + UNLISTED 링크 진입 화면 ③ 목록 API에 `likedByMe` 필드 ④ 자기 덱 복사 시 UI가 copyCount +1 오표시(서버는 제외하는데) ⑤ Gradle bootJar에 frontend build 연결(CI/clean clone 대비 — 지금은 bat이 담당) ⑥ 통계 화면용 API(주간 활동·덱별 진행률) ⑦ OSIV 명시 off + 스프링 기본 계정 소음 정리 ⑧ bat이 서버 준비 후 브라우저 열기 ⑨ **Card에 읽기(reading) 필드** — 일본어 요미가나 표시 (목업 showReading 토글에서 발견, 마이그레이션+화면 세트) ⑩ 퀴즈 자동 넘김·덱 그리드 열 수 등 목업 옵션들은 설정 화면 생길 때 함께
 - [ ] 익명 요청 거부를 401로 통일 — SecurityConfig에 authenticationEntryPoint 미설정이라 현재 실측 403 (PublicDeckHttpTest가 박제). 프론트가 "로그인 필요"와 "권한 없음"을 구별하려면 401 + ErrorResponse JSON이 맞음
 
 ---
