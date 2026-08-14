@@ -30,11 +30,16 @@ public class SpaConfig implements WebMvcConfigurer {
                 .addResolver(new PathResourceResolver() {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
-                        Resource requested = location.createRelative(resourcePath);
-                        if (requested.exists() && requested.isReadable()) {
-                            return requested;
+                        // 빈 경로("/app/")는 디렉토리 리소스로 해석돼 읽기에서 500이 났었음(2026-08-14 실측)
+                        // — 실제 '파일' 요청만 그대로 서빙하고 나머지는 전부 index.html로
+                        if (resourcePath != null && !resourcePath.isEmpty()) {
+                            Resource requested = location.createRelative(resourcePath);
+                            if (requested.exists() && requested.isReadable()) {
+                                return requested;
+                            }
                         }
-                        return new ClassPathResource("/static/app/index.html");
+                        Resource index = new ClassPathResource("/static/app/index.html");
+                        return index.exists() ? index : null;   // 번들 없는 환경이면 404 (500 아님)
                     }
                 });
     }
@@ -44,6 +49,13 @@ public class SpaConfig implements WebMvcConfigurer {
         @GetMapping("/")
         public String root() {
             return "redirect:/app/";        // 새 화면이 기본 입구, 옛 화면은 /pages/** 에 유지
+        }
+
+        // 빈 경로("/app/")는 ResourceHttpRequestHandler가 리졸버 호출 '전에'
+        // NoResourceFoundException을 던짐 (실측 500) — 실제 파일 경로로 forward해서 우회
+        @GetMapping({"/app", "/app/"})
+        public String appIndex() {
+            return "forward:/app/index.html";
         }
     }
 }

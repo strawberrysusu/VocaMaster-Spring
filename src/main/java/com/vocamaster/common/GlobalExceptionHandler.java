@@ -70,6 +70,15 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(409, "CONFLICT", "다른 요청이 먼저 처리되었습니다. 최신 상태를 다시 조회해주세요"));
     }
 
+    // 없는 정적 경로/URL — 스프링이 던지는 404성 예외가 catch-all에 걸려 500으로 둔갑하던 것 수리
+    // (SPA 서빙 붙이다 발견 — 그동안 모든 미존재 경로가 "서버 내부 오류"로 보였음)
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of(404, "NOT_FOUND", "요청한 경로를 찾을 수 없습니다"));
+    }
+
     // 본문 자체가 안 읽힘 (깨진 JSON, 잘못된 인코딩 등) = 클라이언트 잘못 → 400.
     // 이 핸들러가 없으면 catch-all에 걸려 500 "서버 오류"로 둔갑함 (2026-07-22 시연에서 발견)
     @ExceptionHandler(HttpMessageNotReadableException.class)
