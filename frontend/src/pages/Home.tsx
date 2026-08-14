@@ -74,7 +74,7 @@ export default function Home() {
             </div>
             <div className="hero-actions">
               {due > 0 ? (
-                <Link to="/review" className="cta">오늘 복습 시작</Link>
+                <Link to="/study" className="cta">오늘 복습 시작</Link>
               ) : (
                 <span className="cta disabled">오늘 복습 시작</span>
               )}
@@ -138,7 +138,7 @@ export default function Home() {
         </div>
         <div className="deck-grid">
           {decks.slice(0, 3).map((d) => (
-            <Link key={d.id} to="/decks" className="deck-card">
+            <Link key={d.id} to={`/decks/${d.id}`} className="deck-card">
               <span className="tag">{d.visibility}</span>
               <p className="title">{d.title}</p>
               <p className="meta">카드 {d.cardCount}장</p>

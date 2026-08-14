@@ -31,10 +31,10 @@ export default function TopNav({ streak }: { streak?: number }) {
         <nav className="nav-links">
           <Link to="/" className={pathname === '/' ? 'active' : ''}>홈</Link>
           <Link to="/decks" className={pathname.startsWith('/decks') ? 'active' : ''}>내 덱</Link>
-          {/* 탐색·통계·설정은 다음 시공 순서 — 목업 레이아웃 유지를 위해 자리만 */}
-          <span title="다음에 입힐 화면">탐색</span>
-          <span title="다음에 입힐 화면">통계</span>
-          <span title="다음에 입힐 화면">설정</span>
+          {/* 다음 시공 화면들 — 누르면 공사중 표지판 (무반응보다 낫다) */}
+          <Link to="/soon/탐색" className="soon">탐색</Link>
+          <Link to="/soon/통계" className="soon">통계</Link>
+          <Link to="/soon/설정" className="soon">설정</Link>
         </nav>
         {streak !== undefined && streak > 0 && (
           <div className="streak-pill">

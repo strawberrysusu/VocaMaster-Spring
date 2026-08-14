@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
 
@@ -63,12 +64,11 @@ export default function Decks() {
 
         <div className="deck-grid">
           {decks.map((d) => (
-            <div key={d.id} className="deck-card">
+            <Link key={d.id} to={`/decks/${d.id}`} className="deck-card">
               <span className="tag">{VISIBILITY_LABEL[d.visibility]}</span>
               <p className="title">{d.title}</p>
               <p className="meta">카드 {d.cardCount}장{d.description ? ` · ${d.description}` : ''}</p>
-              {/* 덱 상세(카드 추가/학습 시작)는 다음 시공 화면 */}
-            </div>
+            </Link>
           ))}
           {decks.length === 0 && <p className="muted">덱이 없어요. 위에서 첫 덱을 만들어보세요.</p>}
         </div>
