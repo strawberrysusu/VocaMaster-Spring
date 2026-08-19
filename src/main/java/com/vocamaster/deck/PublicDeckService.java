@@ -1,6 +1,8 @@
 package com.vocamaster.deck;
 
 import com.vocamaster.card.CardRepository;
+import com.vocamaster.card.dto.CardResponse;
+import com.vocamaster.common.CurrentUser;
 import com.vocamaster.common.PageableUtils;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.NotFoundException;
@@ -30,7 +32,21 @@ public class PublicDeckService {
 
     private final DeckRepository deckRepository;
     private final CardRepository cardRepository;
+    private final DeckLikeRepository deckLikeRepository;
     private final DeckRankingService rankingService;
+
+    // 응답 조립 — 로그인 사용자면 likedByMe(IN 한 방)·mine 계산, 익명이면 둘 다 false
+    private List<PublicDeckResponse> toResponses(List<Deck> decks) {
+        Long me = CurrentUser.tryGetId();
+        Set<Long> liked = (me == null || decks.isEmpty())
+                ? Set.of()
+                : deckLikeRepository.findLikedDeckIds(me, decks.stream().map(Deck::getId).toList());
+        return decks.stream()
+                .map(d -> PublicDeckResponse.from(d, cardRepository.countByDeckId(d.getId()),
+                        liked.contains(d.getId()),
+                        me != null && me.equals(d.getUser().getId())))
+                .toList();
+    }
 
     public Page<PublicDeckResponse> search(String keyword, int page, int size, String sort) {
         String normalized = (keyword == null || keyword.isBlank()) ? null : keyword;
@@ -50,7 +66,7 @@ public class PublicDeckService {
         } else {
             throw new BadRequestException("sort는 recent 또는 popular만 가능합니다");
         }
-        return decks.map(d -> PublicDeckResponse.from(d, cardRepository.countByDeckId(d.getId())));
+        return new PageImpl<>(toResponses(decks.getContent()), pageable, decks.getTotalElements());
     }
 
     /**
@@ -74,19 +90,28 @@ public class PublicDeckService {
         }
 
         Map<Long, Deck> byId = decks.stream().collect(Collectors.toMap(Deck::getId, Function.identity()));
-        List<PublicDeckResponse> content = ids.stream()      // ★ IN 조회는 순서 미보장 — Redis 순서로 재조립
-                .map(byId::get)
-                .map(d -> PublicDeckResponse.from(d, cardRepository.countByDeckId(d.getId())))
-                .toList();
-        return new PageImpl<>(content, pageable, total);
+        List<Deck> ordered = ids.stream().map(byId::get).toList();   // ★ IN 조회는 순서 미보장 — Redis 순서로 재조립
+        return new PageImpl<>(toResponses(ordered), pageable, total);
     }
 
     public PublicDeckResponse findOne(Long deckId) {
+        return toResponses(List.of(visibleDeckOrThrow(deckId))).get(0);
+    }
+
+    // 공개 덱 카드 미리보기 — 소유자 전용 /decks/{id}/cards와 달리 PUBLIC/UNLISTED면 누구나.
+    // 내용을 보기 전에 복사부터 해야 했던 UX 구멍 해소. 접근 규칙은 findOne과 동일(PRIVATE=404)
+    public Page<CardResponse> findCards(Long deckId, int page, int size) {
+        visibleDeckOrThrow(deckId);
+        var pageable = PageableUtils.safe(page, size, Sort.by("position").ascending().and(Sort.by("id")));
+        return cardRepository.findByDeckId(deckId, pageable).map(CardResponse::from);
+    }
+
+    private Deck visibleDeckOrThrow(Long deckId) {
         Deck deck = deckRepository.findById(deckId)
                 .orElseThrow(() -> new NotFoundException(DECK_NOT_FOUND));
         if (deck.getVisibility() == DeckVisibility.PRIVATE) {
             throw new NotFoundException(DECK_NOT_FOUND);   // 403 아님 — 존재 자체를 숨김
         }
-        return PublicDeckResponse.from(deck, cardRepository.countByDeckId(deckId));
+        return deck;
     }
 }

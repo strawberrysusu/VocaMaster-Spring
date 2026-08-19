@@ -1,43 +1,25 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api/client'
+import { afterCopy, copyDeckApi, toggleLikeApi, type PageResp, type PublicDeck } from '../api/publicDecks'
 import TopNav from '../components/TopNav'
 
-interface PublicDeck {
-  id: number
-  title: string
-  description: string
-  authorNickname: string
-  cardCount: number
-  likeCount: number
-  copyCount: number
-}
-
-interface PageResp {
-  content: PublicDeck[]
-  totalElements: number
-}
-
-interface LikeResponse {
-  liked: boolean
-  likeCount: number
-}
-
-// 탐색 — Phase 4에서 만든 공개 API 3종(검색·복사·좋아요)의 첫 새 화면.
-// 좋아요 초기 상태(내가 눌렀는지)는 목록 API에 없어서 세션 내 토글로만 추적 — likedByMe 필드는 백엔드 후보.
+// 탐색 — Phase 4에서 만든 공개 API 3종(검색·복사·좋아요)의 새 화면.
+// 좋아요 초기 상태·내 덱 여부는 서버 필드(likedByMe/mine) 사용 — 세션 내 추적 제거 (백로그 ①③).
 export default function Explore() {
-  const [decks, setDecks] = useState<PublicDeck[]>([])
+  const [decks, setDecks] = useState<PublicDeck[] | null>(null)
   const [keyword, setKeyword] = useState('')
   const [query, setQuery] = useState('')          // 실제 검색에 쓰인 값
   const [sort, setSort] = useState<'popular' | 'recent'>('popular')
-  const [liked, setLiked] = useState<Record<number, boolean>>({})
   const [copiedIds, setCopiedIds] = useState<Record<number, boolean>>({})
   const [busyId, setBusyId] = useState<number | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    setDecks(null)
     const params = new URLSearchParams({ sort, size: '30' })
     if (query.trim()) params.set('keyword', query.trim())
-    api<PageResp>(`/public/decks?${params}`)
+    api<PageResp<PublicDeck>>(`/public/decks?${params}`)
       .then((p) => setDecks(p.content))
       .catch((e) => setError(e.message))
   }, [query, sort])
@@ -46,10 +28,8 @@ export default function Explore() {
     if (busyId) return
     setBusyId(deck.id)
     try {
-      const method = liked[deck.id] ? 'DELETE' : 'POST'
-      const res = await api<LikeResponse>(`/public/decks/${deck.id}/like`, { method })
-      setLiked((m) => ({ ...m, [deck.id]: res.liked }))
-      setDecks((ds) => ds.map((d) => (d.id === deck.id ? { ...d, likeCount: res.likeCount } : d)))
+      const res = await toggleLikeApi(deck)
+      setDecks((ds) => (ds ?? []).map((d) => (d.id === deck.id ? { ...d, likedByMe: res.liked, likeCount: res.likeCount } : d)))
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -61,9 +41,9 @@ export default function Explore() {
     if (busyId) return
     setBusyId(deck.id)
     try {
-      await api(`/decks/${deck.id}/copy`, { method: 'POST' })
+      await copyDeckApi(deck.id)
       setCopiedIds((m) => ({ ...m, [deck.id]: true }))
-      setDecks((ds) => ds.map((d) => (d.id === deck.id ? { ...d, copyCount: d.copyCount + 1 } : d)))
+      setDecks((ds) => (ds ?? []).map((d) => (d.id === deck.id ? afterCopy(d) : d)))
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -105,21 +85,25 @@ export default function Explore() {
         </div>
 
         {error && <p className="error" role="alert">{error}</p>}
+        {decks === null && !error && <p className="muted">불러오는 중...</p>}
 
         <div className="deck-grid">
-          {decks.map((d) => (
+          {(decks ?? []).map((d) => (
             <div key={d.id} className="deck-card explore-card">
-              <span className="tag">{d.authorNickname}</span>
-              <p className="title">{d.title}</p>
+              <span className="tag">{d.mine ? '내 덱' : d.authorNickname}</span>
+              <Link to={`/explore/${d.id}`} className="title-link">
+                <p className="title">{d.title}</p>
+              </Link>
               <p className="meta">
                 카드 {d.cardCount}장{d.description ? ` · ${d.description}` : ''}
               </p>
               <div className="explore-actions">
                 <button
-                  className={`like-btn ${liked[d.id] ? 'on' : ''}`}
+                  className={`like-btn ${d.likedByMe ? 'on' : ''}`}
                   disabled={busyId === d.id}
                   onClick={() => toggleLike(d)}
-                  aria-label="좋아요"
+                  aria-label={d.likedByMe ? '좋아요 취소' : '좋아요'}
+                  aria-pressed={d.likedByMe}
                 >
                   ♥ {d.likeCount}
                 </button>
@@ -134,7 +118,7 @@ export default function Explore() {
               </div>
             </div>
           ))}
-          {decks.length === 0 && !error && (
+          {decks !== null && decks.length === 0 && !error && (
             <p className="muted">
               {query ? '검색 결과가 없어요.' : '아직 공개 덱이 없어요 — 내 덱을 공개해서 첫 주자가 되어보세요.'}
             </p>

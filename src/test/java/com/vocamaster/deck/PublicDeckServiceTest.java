@@ -1,16 +1,21 @@
 package com.vocamaster.deck;
 
 import com.vocamaster.AbstractIntegrationTest;
+import com.vocamaster.card.Card;
+import com.vocamaster.card.CardRepository;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.dto.PublicDeckResponse;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 
@@ -19,9 +24,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class PublicDeckServiceTest extends AbstractIntegrationTest {
 
     @Autowired private PublicDeckService publicDeckService;
+    @Autowired private DeckLikeService deckLikeService;
     @Autowired private DeckRepository deckRepository;
+    @Autowired private CardRepository cardRepository;
     @Autowired private UserRepository userRepository;
 
+    private User deckOwner;
     private Deck pub;       // PUBLIC, 제목에 tag+토익
     private Deck pub2;      // PUBLIC, 설명에 tag+일본어
     private Deck unlisted;  // UNLISTED, 제목에 tag+토익 — 검색엔 절대 안 나와야 함
@@ -38,6 +46,7 @@ class PublicDeckServiceTest extends AbstractIntegrationTest {
                 .password("encoded")
                 .nickname("decker")
                 .build());
+        deckOwner = user;
 
         pub = deckRepository.save(Deck.builder()
                 .title(tag + " 토익 영단어").description("기초부터")
@@ -164,5 +173,66 @@ class PublicDeckServiceTest extends AbstractIntegrationTest {
                 () -> publicDeckService.findOne(999_999L));
 
         assertEquals(missingEx.getMessage(), privateEx.getMessage());
+    }
+
+    // === likedByMe / mine (React 백로그 ①③) ===
+
+    private void loginAs(User u) {
+        var principal = new com.vocamaster.auth.CustomUserDetails(u.getId(), u.getEmail());
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, List.of()));
+    }
+
+    @AfterEach
+    void clearAuth() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    @DisplayName("익명 조회 — likedByMe·mine 전부 false (예외 없이 통과)")
+    void anonymous_flagsFalse() {
+        PublicDeckResponse res = publicDeckService.findOne(pub.getId());
+        assertFalse(res.isLikedByMe());
+        assertFalse(res.isMine());
+    }
+
+    @Test
+    @DisplayName("로그인 조회 — 내가 누른 덱만 likedByMe, 내 덱만 mine (목록 IN 한 방)")
+    void loggedIn_flagsPerDeck() {
+        User fan = userRepository.save(User.builder()
+                .email(tag + "fan@test.com").password("encoded").nickname("팬").build());
+        deckLikeService.like(pub.getId(), fan.getId());
+        loginAs(fan);
+
+        List<PublicDeckResponse> list = publicDeckService.search(tag, 0, 20, null).getContent();
+        PublicDeckResponse likedOne = list.stream().filter(d -> d.getId().equals(pub.getId())).findFirst().orElseThrow();
+        PublicDeckResponse other = list.stream().filter(d -> d.getId().equals(pub2.getId())).findFirst().orElseThrow();
+
+        assertTrue(likedOne.isLikedByMe());
+        assertFalse(other.isLikedByMe());
+        assertFalse(likedOne.isMine(), "팬의 덱이 아님");
+
+        // 덱 주인으로 보면 mine=true, 좋아요는 안 눌렀으니 false
+        loginAs(deckOwner);
+        PublicDeckResponse asOwner = publicDeckService.findOne(pub.getId());
+        assertTrue(asOwner.isMine());
+        assertFalse(asOwner.isLikedByMe());
+    }
+
+    // === 공개 카드 미리보기 (React 백로그 ②) ===
+
+    @Test
+    @DisplayName("공개 덱 카드는 익명도 조회 — position 순, PRIVATE은 상세와 같은 404")
+    void publicCards_visibleAndPrivateHidden() {
+        cardRepository.save(Card.builder().front("b").back("2").position(2).deck(pub).build());
+        cardRepository.save(Card.builder().front("a").back("1").position(1).deck(pub).build());
+
+        var page = publicDeckService.findCards(pub.getId(), 0, 50);
+        assertEquals(2, page.getTotalElements());
+        assertEquals("a", page.getContent().get(0).getFront(), "position 오름차순");
+
+        NotFoundException ex = assertThrows(NotFoundException.class,
+                () -> publicDeckService.findCards(priv.getId(), 0, 50));
+        assertEquals(PublicDeckService.DECK_NOT_FOUND, ex.getMessage(), "존재 숨김 메시지 동일");
     }
 }

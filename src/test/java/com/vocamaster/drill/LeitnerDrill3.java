@@ -62,7 +62,8 @@ public class LeitnerDrill3 {
             progress.correctstreak = 0;
         }
         LocalDateTime now = LocalDateTime.now();
-        progress.nextReviewAt = /* ★ 지금 + 현재 박스의 간격 (배열 인덱스 주의) */ ;
+        // [4회차 빈칸 — 3회차 '모름'] progress.nextReviewAt = ★ 지금 + 현재 박스의 간격 (배열 인덱스 주의) ;
+        // (컴파일 통과를 위해 주석 처리. 재도전 시 위 줄을 풀고 채울 것)
     }
 
     public static void main(String[] args) {

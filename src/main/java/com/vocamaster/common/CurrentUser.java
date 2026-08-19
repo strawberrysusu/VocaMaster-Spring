@@ -24,6 +24,15 @@ public class CurrentUser {
         return get().getUserId();
     }
 
+    /** 익명 허용 엔드포인트용 — 로그인 안 했으면 null (예외 X). 공개 목록의 likedByMe/isMine 계산에 사용 */
+    public static Long tryGetId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof CustomUserDetails cud)) {
+            return null;
+        }
+        return cud.getUserId();
+    }
+
     public static String getEmail() {
         return get().getEmail();
     }

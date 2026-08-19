@@ -981,3 +981,13 @@ button:disabled {
     overflow-wrap: anywhere;
   }
 }
+
+/* ── 탐색 카드 제목 링크 ── */
+.title-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.title-link:hover .title {
+  color: var(--a);
+}

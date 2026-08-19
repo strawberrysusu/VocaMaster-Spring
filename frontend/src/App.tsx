@@ -6,6 +6,7 @@ import Decks from './pages/Decks'
 import DeckDetail from './pages/DeckDetail'
 import Study from './pages/Study'
 import Explore from './pages/Explore'
+import PublicDeckDetail from './pages/PublicDeckDetail'
 import ComingSoon from './pages/ComingSoon'
 import { getToken } from './api/client'
 
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/decks/:id" element={<RequireAuth><DeckDetail /></RequireAuth>} />
         <Route path="/study" element={<RequireAuth><Study /></RequireAuth>} />
         <Route path="/explore" element={<RequireAuth><Explore /></RequireAuth>} />
+        <Route path="/explore/:id" element={<RequireAuth><PublicDeckDetail /></RequireAuth>} />
         <Route path="/soon/:name" element={<RequireAuth><ComingSoon /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
