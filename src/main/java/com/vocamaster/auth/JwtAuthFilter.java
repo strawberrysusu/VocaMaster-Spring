@@ -18,8 +18,10 @@ import java.util.List;
  *
  * - DB 조회 X (JWT 자체 검증 + JWT의 claim만 사용) — 성능 ↑
  * - type=access 만 통과 (refresh token으로 일반 API 호출 차단 — 이중 방어)
- * - 검증 실패 시 SecurityContext 안 박음 → SecurityConfig의 entry point가 401 JSON 응답
- *   (과거엔 미설정으로 403이 나가 프런트 자동 갱신이 안 돌았음 — 2026-08-14 401 통일, 테스트 박제)
+ * - 3분기 (2026-08-19 정리):
+ *   · 헤더 없음        → 익명으로 통과 (permitAll 공개 GET은 익명 응답, 보호 API는 entry point가 401)
+ *   · 헤더 있고 유효   → SecurityContext에 principal
+ *   · 헤더 있고 무효   → 필터에서 즉시 401 (익명으로 흘리면 공개 GET에서 개인화가 조용히 풀림)
  */
 @Component
 @RequiredArgsConstructor
@@ -43,6 +45,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 var auth = new UsernamePasswordAuthenticationToken(principal, null, List.of());
                 SecurityContextHolder.getContext().setAuthentication(auth);
+            } else {
+                // 토큰을 '보냈는데' 만료·위조면 익명으로 흘려보내지 않고 즉시 401.
+                // 흘려보내면 permitAll인 공개 GET이 익명으로 통과해 likedByMe/mine이 전부 false가 되고,
+                // 401이 아니라 프런트 자동 갱신도 안 돌아 "로그인했는데 하트가 다 꺼진" 상태가 됨 (Codex 검산).
+                // 헤더가 아예 없는 요청은 지금처럼 익명 — 그건 정상 사용자
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write(
+                        "{\"status\":401,\"code\":\"UNAUTHORIZED\",\"message\":\"토큰이 만료되었거나 유효하지 않습니다\"}");
+                return;
             }
         }
 

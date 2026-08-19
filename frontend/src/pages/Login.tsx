@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { setToken } from '../api/client'
 
 export default function Login() {
@@ -10,6 +10,8 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: string } | null)?.from ?? '/'   // 좋아요·복사 누르다 로그인 온 경우 원래 화면으로
 
   async function submit() {
     if (submitting) return
@@ -33,7 +35,7 @@ export default function Login() {
         return
       }
       setToken(data.accessToken)
-      navigate('/')
+      navigate(from, { replace: true })
     } finally {
       setSubmitting(false)
     }

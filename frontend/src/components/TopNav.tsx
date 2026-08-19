@@ -42,10 +42,19 @@ export default function TopNav({ streak }: { streak?: number }) {
             <span className="dot" /> {streak}일 연속
           </div>
         )}
-        <div className="avatar">{emailInitial()}</div>
-        <button className="nav-logout" onClick={logout}>
-          로그아웃
-        </button>
+        {getToken() ? (
+          <>
+            <div className="avatar">{emailInitial()}</div>
+            <button className="nav-logout" onClick={logout}>
+              로그아웃
+            </button>
+          </>
+        ) : (
+          // 비로그인 열람(UNLISTED 링크 진입 등) — 로그인으로 유도
+          <Link to="/login" className="btn-primary" style={{ textDecoration: 'none', padding: '9px 16px', fontSize: 13.5 }}>
+            로그인
+          </Link>
+        )}
       </div>
     </header>
   )

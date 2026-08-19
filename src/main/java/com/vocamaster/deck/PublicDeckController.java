@@ -1,6 +1,6 @@
 package com.vocamaster.deck;
 
-import com.vocamaster.card.dto.CardResponse;
+import com.vocamaster.card.dto.PublicCardResponse;
 import com.vocamaster.common.CurrentUser;
 import com.vocamaster.deck.dto.LikeResponse;
 import com.vocamaster.deck.dto.PublicDeckResponse;
@@ -37,7 +37,7 @@ public class PublicDeckController {
 
     @GetMapping("/{deckId}/cards")
     @Operation(summary = "공개 단어장 카드 미리보기 — 복사 전 내용 확인용, 접근 규칙은 상세와 동일")
-    public Page<CardResponse> findCards(@PathVariable Long deckId,
+    public Page<PublicCardResponse> findCards(@PathVariable Long deckId,
                                         @RequestParam(defaultValue = "0") int page,
                                         @RequestParam(defaultValue = "50") int size) {
         return publicDeckService.findCards(deckId, page, size);

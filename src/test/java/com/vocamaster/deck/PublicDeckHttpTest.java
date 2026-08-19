@@ -121,6 +121,25 @@ class PublicDeckHttpTest {
     }
 
     @Test
+    @DisplayName("공개 GET: 헤더 없음=익명 200 / 헤더 있고 무효 토큰=401 (익명으로 흘리면 개인화가 조용히 풀림)")
+    void publicGet_anonymousOk_butInvalidTokenIs401() throws Exception {
+        java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+        java.net.URI uri = java.net.URI.create("http://localhost:" + port + "/public/decks/" + pub.getId());
+
+        java.net.http.HttpResponse<String> anonymous = client.send(
+                java.net.http.HttpRequest.newBuilder(uri).GET().build(),
+                java.net.http.HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, anonymous.statusCode(), "헤더 없는 요청은 익명 열람");
+
+        java.net.http.HttpResponse<String> badToken = client.send(
+                java.net.http.HttpRequest.newBuilder(uri)
+                        .header("Authorization", "Bearer this.is.garbage").GET().build(),
+                java.net.http.HttpResponse.BodyHandlers.ofString());
+        assertEquals(401, badToken.statusCode(),
+                "무효 토큰을 익명으로 통과시키면 likedByMe/mine이 false로 내려가고 프런트 갱신도 안 돔");
+    }
+
+    @Test
     @DisplayName("UNLISTED는 링크(직접 URL)로 200")
     void unlistedDetail_visible() {
         ResponseEntity<String> res = rest.getForEntity("/public/decks/" + unlisted.getId(), String.class);

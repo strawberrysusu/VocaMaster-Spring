@@ -24,7 +24,9 @@ export default function App() {
         <Route path="/decks/:id" element={<RequireAuth><DeckDetail /></RequireAuth>} />
         <Route path="/study" element={<RequireAuth><Study /></RequireAuth>} />
         <Route path="/explore" element={<RequireAuth><Explore /></RequireAuth>} />
-        <Route path="/explore/:id" element={<RequireAuth><PublicDeckDetail /></RequireAuth>} />
+        {/* 공개 덱 상세는 비로그인 열람 허용 — UNLISTED "링크 받은 사람은 본다"(ADR-030)와 일치.
+            좋아요·복사는 눌렀을 때 로그인으로 유도 (화면 안에서 처리) */}
+        <Route path="/explore/:id" element={<PublicDeckDetail />} />
         <Route path="/soon/:name" element={<RequireAuth><ComingSoon /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,7 +1,7 @@
 package com.vocamaster.deck;
 
 import com.vocamaster.card.CardRepository;
-import com.vocamaster.card.dto.CardResponse;
+import com.vocamaster.card.dto.PublicCardResponse;
 import com.vocamaster.common.CurrentUser;
 import com.vocamaster.common.PageableUtils;
 import com.vocamaster.common.exception.BadRequestException;
@@ -100,10 +100,10 @@ public class PublicDeckService {
 
     // 공개 덱 카드 미리보기 — 소유자 전용 /decks/{id}/cards와 달리 PUBLIC/UNLISTED면 누구나.
     // 내용을 보기 전에 복사부터 해야 했던 UX 구멍 해소. 접근 규칙은 findOne과 동일(PRIVATE=404)
-    public Page<CardResponse> findCards(Long deckId, int page, int size) {
+    public Page<PublicCardResponse> findCards(Long deckId, int page, int size) {
         visibleDeckOrThrow(deckId);
         var pageable = PageableUtils.safe(page, size, Sort.by("position").ascending().and(Sort.by("id")));
-        return cardRepository.findByDeckId(deckId, pageable).map(CardResponse::from);
+        return cardRepository.findByDeckId(deckId, pageable).map(PublicCardResponse::from);
     }
 
     private Deck visibleDeckOrThrow(Long deckId) {

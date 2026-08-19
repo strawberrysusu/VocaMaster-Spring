@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { api } from '../api/client'
+import { api, getToken } from '../api/client'
 import { afterCopy, copyDeckApi, toggleLikeApi, type PageResp, type PublicCard, type PublicDeck } from '../api/publicDecks'
 import TopNav from '../components/TopNav'
 
@@ -25,8 +25,15 @@ export default function PublicDeckDetail() {
       .catch((e) => setError(e.message))
   }, [id])
 
+  // 비로그인 열람은 허용, 행동(좋아요·복사)은 로그인 유도 — 돌아올 곳을 기억
+  function requireLogin(): boolean {
+    if (getToken()) return true
+    navigate('/login', { state: { from: `/explore/${id}` } })
+    return false
+  }
+
   async function toggleLike() {
-    if (!deck || busy) return
+    if (!deck || busy || !requireLogin()) return
     setBusy(true)
     try {
       const res = await toggleLikeApi(deck)
@@ -39,7 +46,7 @@ export default function PublicDeckDetail() {
   }
 
   async function copy() {
-    if (!deck || busy) return
+    if (!deck || busy || !requireLogin()) return
     setBusy(true)
     try {
       const created = await copyDeckApi(deck.id)
