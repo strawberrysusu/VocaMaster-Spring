@@ -603,7 +603,7 @@
 
 ### 🏷️ 태그
 - [ ] **[STRETCH]** `deck_tags` 테이블 (deck_id, tag_name)
-- [ ] **[STRETCH]** `V13__add_deck_tags.sql` *(번호 재정정 — V12는 좋아요 CASCADE 수리가 사용)*
+- [ ] **[STRETCH]** `V14__add_deck_tags.sql` *(번호 재정정 — V13은 study 출석부가 사용, 2026-08-22)*
 - [ ] **[STRETCH]** 덱 생성/수정 시 태그 등록
 - [ ] **[STRETCH]** `GET /api/public/decks?tag=toeic`
 
