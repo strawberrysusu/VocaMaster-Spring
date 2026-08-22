@@ -739,7 +739,7 @@ review:summary:{userId}:{date}  TTL 5분
 - [ ] **[STRETCH]** 실패 시 재시도 정책
 
 ### 🧪 테스트
-- [ ] **[MUST]** 이벤트 발행 시 통계 갱신 확인
+- [x] **[MUST]** 이벤트 발행 시 갱신 확인 — 커밋→캐시 삭제(비동기 폴링) / 롤백→미삭제 / 원본 귀속·하루 1회·자기 제외·6명 동시 / Redis on: 비공개 멤버 없음·커밋 후 +1·롤백 불변·공개 전환 점수 / 포화 caller-runs·예외 로그 — 총 +14 (2026-08-19~22)
 - [ ] **[MUST]** Async 처리로 API 응답 시간 영향 없음 확인
 - [ ] **[MUST]** AFTER_COMMIT 동작 확인 (롤백된 트랜잭션은 이벤트 발행 X)
 - [ ] **[STRETCH]** Kafka Consumer 중복 메시지 idempotent
