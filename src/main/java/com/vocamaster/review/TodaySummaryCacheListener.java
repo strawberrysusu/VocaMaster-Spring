@@ -1,7 +1,9 @@
 package com.vocamaster.review;
 
+import com.vocamaster.config.AsyncConfig;
 import com.vocamaster.study.event.StudyRecordedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -13,7 +15,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * 커밋 전의 낡은 DB 값을 다른 요청이 읽어 다시 캐싱하는 빈틈이 생긴다 (ADR-035/036과 같은 이유).
  * 롤백되면 이 리스너는 아예 안 불린다 — 지울 이유가 없으니 맞는 동작.
  *
- * 지금은 동기(커밋한 스레드가 이어서 실행). 비동기(@Async)는 리스너가 무거워질 때 — ADR-037.
+ * @Async (ADR-039): 캐시 삭제는 '복구 가능한 복사본 작업'이라 비동기로 보내 응답에서 뗀다 —
+ * 유실돼도 TTL 5분이 상한. 반대로 DeckStudyRankingListener의 출석부 INSERT는 원본 기록이라 동기 유지.
  */
 @Component
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ public class TodaySummaryCacheListener {
 
     private final TodaySummaryCache summaryCache;
 
+    @Async(AsyncConfig.EVENT_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onStudyRecorded(StudyRecordedEvent event) {
         summaryCache.evict(event.userId(), event.date());

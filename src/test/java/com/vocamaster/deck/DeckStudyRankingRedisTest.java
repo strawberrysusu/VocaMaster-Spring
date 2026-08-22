@@ -16,8 +16,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.GenericContainer;
 
 import java.time.LocalDate;
@@ -60,6 +62,7 @@ class DeckStudyRankingRedisTest extends AbstractIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private DailyUserStatRepository dailyUserStatRepository;
     @Autowired private StringRedisTemplate redis;
+    @Autowired private PlatformTransactionManager txManager;
 
     private User owner;
     private User learner;
@@ -132,6 +135,24 @@ class DeckStudyRankingRedisTest extends AbstractIntegrationTest {
 
         statsService.recordStudy(learner.getId(), copyId);
         assertEquals(4.0, score(root), "같은 날 재학습은 Redis에도 +0");
+    }
+
+    @Test
+    @DisplayName("학습 트랜잭션 롤백 → AFTER_COMMIT 리스너 미호출 → ZSET도 DB도 불변")
+    void rollback_noRedisIncrement() {
+        Deck root = newRoot(DeckVisibility.PUBLIC);
+        rankingService.topDeckIds(0, 50);
+        Long copyId = deckService.copy(root.getId(), learner.getId()).getId();
+        assertEquals(3.0, score(root), "전제: 복사 +3");
+
+        new TransactionTemplate(txManager).execute(status -> {
+            statsService.recordStudy(learner.getId(), copyId);
+            status.setRollbackOnly();
+            return null;
+        });
+
+        assertEquals(3.0, score(root), "롤백이면 +1 없음 — 즉시 실행 리스너였다면 4.0");
+        assertEquals(0, deckRepository.findById(root.getId()).orElseThrow().getStudyCount(), "DB도 0");
     }
 
     @Test

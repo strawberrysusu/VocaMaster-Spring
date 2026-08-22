@@ -716,12 +716,12 @@ review:summary:{userId}:{date}  TTL 5분
 - [x] **[MUST]** 두 번째 구독자 `DeckStudyRankingListener` — study 항 재도입: 원본 귀속(평탄화)·하루 1회(DB unique 출석부)·자기 학습 제외 (ADR-038, 2026-08-22). 통과 질문 "왜 Redis SET이 아니라 DB unique" → "최종 검증은 DB, Redis 죽으면 DB 방식" 자력 통과. **부수 발견: 출석부 갭 락 데드락 잠복 버그 수리** (6명 동시 테스트가 꺼냄)
 - [ ] **[SHOULD]** `DeckCopiedEvent`, `DeckLikedEvent` — 현재 직접 호출(`rankingService.onCopied/onLiked`)을 이벤트로 교체할지는 구독자가 둘 이상 생길 때 판단 (구독자 1개면 직접 호출이 더 단순 — ADR-037 원칙)
 - [x] **[MUST]** `@TransactionalEventListener(phase = AFTER_COMMIT)` 사용 — 롤백 시 미호출 테스트 박제 (`rollback_doesNotEvict`)
-- [ ] **[MUST]** `@Async` 적용 + ThreadPoolTaskExecutor 설정
-- [ ] **[MUST]** `@EnableAsync`
-- [ ] **[MUST]** Async 리스너 예외 시 로깅 정책 (조용히 묻히지 않게)
-- [ ] **[MUST]** 통계 집계 리스너 (daily_user_stats 갱신)
+- [x] **[MUST]** `@Async` — **혼합안 (ADR-039, 2026-08-22)**: 캐시 삭제 리스너만 비동기(유실 시 TTL 복구), 출석부·study_count는 동기(원본 기록). 통과 질문 "왜 출석부는 안 되나" → "복구 장치가 없다" 자력. `eventExecutor` 2/4/100 + CallerRunsPolicy
+- [x] **[MUST]** `@EnableAsync` — `AsyncConfig`
+- [x] **[MUST]** Async 리스너 예외 로깅 — `AsyncUncaughtExceptionHandler` ERROR 로그, 큐 포화 caller-runs. 둘 다 `AsyncConfigTest`로 박제
+- [x] **[MUST]** 통계 집계 — 리스너가 아니라 **발행자(StatsService.recordStudy) 자체가 출석부 upsert** (원본 기록은 동기 확정 원칙). 리스너 분리 불필요로 판단
 - [x] **[SHOULD]** 인기 점수 갱신 리스너 — ADR-038 (위)
-- [ ] **[SHOULD]** 이벤트 실패 시 재처리 정책 — 문서만 작성, 구현은 선택
+- [x] **[SHOULD]** 이벤트 실패 시 재처리 정책 — ADR-039에 문서화: 캐시는 TTL, Redis 점수는 재구축이 대체 → **재처리 없음이 정책**. Outbox는 "반드시 한 번" 기능이 생길 때
 
 ### 🏅 배지/업적
 - [ ] **[STRETCH]** `badges` 테이블 + `user_badges` 테이블

@@ -1426,6 +1426,36 @@ Phase 4 완료 기준 데모("인기 목록 반영 시연")에 필요한 마지�
 
 ---
 
+## ADR-039: 비동기 정책 — "복구 가능한 것만 @Async" (혼합안)
+
+**상태:** 채택 (2026-08-22)
+**범위:** `AsyncConfig`(@EnableAsync, `eventExecutor` 2/4/100 + CallerRunsPolicy + AsyncUncaughtExceptionHandler), `TodaySummaryCacheListener`에 `@Async`, `DeckStudyRankingListener`는 동기 유지
+
+**결정 기준 (통과 질문 — 사용자 자기 말):** *"사라졌을 때 복구 장치가 있나"*. 캐시 삭제는 유실돼도 TTL 5분이 만료시키고 다음 조회가 DB로 재생성 → 비동기 OK. 출석부 INSERT·study_count는 원본 기록 — 유실되면 복구할 근거가 없다 (DB unique는 "두 번 쓰지 마"를 보장하지 "반드시 한 번 써라"는 보장 안 함) → 동기로 확정.
+
+```
+학습 커밋
+├─ 출석부 INSERT + study_count + ZSET +1 : 동기 (REQUIRES_NEW, 요청 스레드)
+└─ 요약 캐시 삭제                          : @Async (유실 시 TTL이 복구)
+```
+
+**대안:**
+- (A) 전부 동기 — 유실 0, 단순. 리스너가 무거워지면(배지·외부 호출) 응답 지연. 지금 리스너는 ms 단위라 실익은 작지만 정책 경계를 먼저 긋는 것이 목적
+- (B) 전부 @Async best-effort — 커밋 직후 프로세스 종료·큐 포화 시 **원본 기록 증발**. "인기 통계는 드문 누락 허용"이라 명시할 수도 있으나 study_count는 DB 정렬의 근거라 거부
+- (C) Outbox — 이벤트를 같은 트랜잭션으로 테이블에 적고 워커가 처리. 유실 0 + 비동기. 테이블·워커·재시도·멱등 = 작은 시스템. **"반드시 한 번"이 필요한 기능(포인트·결제류)이 생기면 그때** — 경로만 기록
+
+**안전장치 (테스트 박제 `AsyncConfigTest`):**
+- 큐 포화 → `CallerRunsPolicy`: 버리지 않고 호출 스레드가 직접 실행 (동기로 후퇴, 유실 0)
+- void 비동기 메서드의 예외는 기본적으로 아무 데도 안 나타남 → `AsyncUncaughtExceptionHandler`가 ERROR 로그 (메서드명 포함)
+- 정상 종료 시 큐 잔여 작업 완료 대기 10초 (`waitForTasksToCompleteOnShutdown`) — kill -9엔 무력, 그래서 복구 가능한 작업만
+
+**트레이드오프 / 알려진 한계:**
+- 테스트가 '곧' 일어나는 삭제를 폴링(최대 3초)으로 기다림 — 비동기의 비용이 테스트 코드에 나타남
+- 워커가 죽은 채 큐만 쌓이는 상황(풀 고갈)은 caller-runs로 응답 지연으로 드러남 — 모니터링(Phase 7)에서 executor 지표 노출 후보
+- 재처리(재시도) 정책: 캐시 삭제는 재시도 불필요(TTL이 대체), Redis 점수는 재구축이 대체 — 따라서 **재처리 없음이 정책** (이 ADR이 그 문서)
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

@@ -115,9 +115,9 @@ class TodaySummaryCacheTest extends AbstractIntegrationTest {
         TodaySummaryResponse stale = reviewService.getTodaySummary(user.getId());
         assertEquals(0, stale.getDueCount(), "DB엔 due 1인데 0이 나오면 = 캐시에서 읽었다는 증거");
 
-        // 3) 학습 기록(커밋) → afterCommit 무효화 → 다음 조회는 재계산
+        // 3) 학습 기록(커밋) → AFTER_COMMIT 리스너(@Async, ADR-039)가 무효화 → 다음 조회는 재계산
         statsService.recordStudy(user.getId(), deck.getId());
-        assertNotEquals(Boolean.TRUE, stringRedis.hasKey(cacheKey()), "커밋 후 캐시가 지워져야");
+        awaitEvicted("커밋 후 캐시가 지워져야 (비동기라 잠깐 기다림)");
 
         TodaySummaryResponse fresh = reviewService.getTodaySummary(user.getId());
         assertEquals(1, fresh.getDueCount(), "무효화 후엔 DB의 진짜 숫자");
@@ -156,5 +156,14 @@ class TodaySummaryCacheTest extends AbstractIntegrationTest {
     private String cacheKey() {
         return "review:summary:" + user.getId() + ":"
                 + LocalDate.now(KST).format(DateTimeFormatter.BASIC_ISO_DATE);
+    }
+
+    // 캐시 리스너가 @Async라 삭제는 '곧' 일어남 — 최대 3초 폴링 (보통 수 ms)
+    private void awaitEvicted(String message) {
+        long deadline = System.currentTimeMillis() + 3000;
+        while (Boolean.TRUE.equals(stringRedis.hasKey(cacheKey())) && System.currentTimeMillis() < deadline) {
+            try { Thread.sleep(20); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+        assertNotEquals(Boolean.TRUE, stringRedis.hasKey(cacheKey()), message);
     }
 }
