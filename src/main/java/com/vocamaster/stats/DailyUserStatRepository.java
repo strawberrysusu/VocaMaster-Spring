@@ -12,16 +12,8 @@ public interface DailyUserStatRepository extends JpaRepository<DailyUserStat, Lo
 
     Optional<DailyUserStat> findByUserIdAndStatDate(Long userId, LocalDate statDate);
 
-    // 같은 날 답변이 동시에 와도 증가가 분실되지 않도록 DB에서 원자적으로 +1 (lost update 방지).
-    // 반환값 = 수정된 행 수: 1이면 오늘 줄 있음, 0이면 오늘 첫 학습 (서비스에서 행 생성)
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("""
-            update DailyUserStat s
-               set s.studyCount = s.studyCount + 1
-             where s.user.id = :userId
-               and s.statDate = :date
-            """)
-    int incrementStudyCount(@Param("userId") Long userId, @Param("date") LocalDate date);
+    // (제거됨 2026-08-22) 0행 매치 UPDATE로 '오늘 줄 있나' 탐색하던 incrementStudyCount —
+    // InnoDB 갭 락 데드락의 원인. 이제 upsertTodayRow 한 방이 두 경우를 모두 처리한다.
 
     // 오늘 줄 생성 — 동시에 다른 요청이 먼저 만들었어도(UNIQUE 충돌) INSERT가 study_count +1로 전환됨 (MySQL upsert).
     // try/catch로 제약 위반을 잡는 방식은 위반 시점(커밋/flush)과 세션 오염 문제로 불안정 → DB에 맡기는 게 정석.

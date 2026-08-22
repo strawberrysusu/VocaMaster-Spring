@@ -1390,6 +1390,38 @@ Phase 4 완료 기준 데모("인기 목록 반영 시연")에 필요한 마지�
 
 ---
 
+## ADR-038: 인기 점수 study 항 재도입 — 원본 귀속 + 하루 1회 + 자기 학습 제외
+
+**상태:** 채택 (2026-08-22)
+**범위:** V13(`decks.study_count`, `deck_study_days` unique 출석부, original_deck_id 평탄화), `DeckStudyRankingListener`(AFTER_COMMIT + REQUIRES_NEW), `StudyRecordedEvent.deckId`, `DeckService.copy` 평탄화, 가중치 like 5 / copy 3 / **study 1** (JPQL·rebuild·증분 3곳)
+
+**배경 — ADR-033에서 study 항을 뺀 이유 2가지를 해소:**
+① 남들은 복사본으로 공부하니 원본엔 점수가 안 쌓임 → **원본 귀속** ② 학습은 무한 반복 → **상한**.
+
+**결정:**
+- **귀속**: 학습 덱의 `originalDeckId`(없으면 자신)에 점수. 복사 시점에 최상위 원본으로 **평탄화**해 체인을 안 탐 (Codex 검산 ①). 기존 데이터는 V13에서 깊이 5까지 수습
+- **단위**: 답변 수가 아니라 **(사용자, 원본 덱, 날짜) 1회** = "누적 학습자-일수". 의미가 "실제로 쓰이는 덱" 신호라 가중치 1로 낮게
+- **보증**: `deck_study_days` **DB unique** + `INSERT IGNORE` 영향 행 수로 신규 판단. Redis SET은 장애·재시작·TTL로 기억이 사라져 fail-open 원칙상 보증자가 될 수 없음 (통과 질문: "최종 검증은 DB, Redis 죽으면 DB 방식" — 자기 말로 통과)
+- **자기 학습 제외**: 학습자 == 귀속 덱 주인이면 0점. 자기 복사 제외(ADR-031)와 같은 기준 — 상한 없는 자기 행동은 점수에서 뺀다
+- **잠금 순서**: 대상 덱 `SELECT … FOR UPDATE`(X) → 출석부 INSERT → `study_count` UPDATE. INSERT 먼저면 FK S → X 승급 = ADR-031 데드락 재현 (Codex 검산 ②). `join fetch` 없이 잠궈 users 행은 안 잠금
+- **Redis 순서**: 리스너의 REQUIRES_NEW 트랜잭션 **커밋 후** ZSET +1 (`onStudied` → afterCommit). 롤백 시 Redis만 +1 남는 일 없음 (Codex 검산 ③)
+
+**대안:**
+- 답변마다 +1 — 하루 1000번 답 = 1000점, 조작 통로
+- 세션 단위 1회 — 세션을 안 쓰는 Leitner 복습 경로(ReviewService)가 빠짐. 날짜 단위가 모든 모드를 덮음
+- Redis SET dedupe — 빠르고 TTL 공짜지만 최종 보증 불가 (위)
+- 유니크 사용자 수(distinct) — 매 조회 집계 비용, 카운터 컬럼이 정렬·재구축에 단순
+
+**트레이드오프 / 알려진 한계:**
+- 가중치가 JPQL 문자열과 자바 상수 **두 곳**에 존재 — JPQL은 상수를 못 읽음. 양쪽에 ★ 주석으로 교차 참조, 드리프트 시 DB 정렬과 Redis 순서가 어긋남
+- 출석부 행이 날짜마다 쌓임(사용자×덱×일) — 현 규모 무해, 보관 기간 정책은 Phase 7 운영 항목
+- PRIVATE 원본도 카운트는 쌓임(랭킹 노출은 PUBLIC만) — 나중에 공개 전환 시 이력이 살아있는 게 자연스럽다고 판단
+
+**부수 발견 — 잠복 데드락 수리 (StatsService.recordStudy):**
+6명 동시 학습 테스트가 **기존 출석부 코드**의 InnoDB 갭 락 데드락(SQL 1213)을 꺼냄. "0행 매치 UPDATE로 오늘 줄 탐색 → 없으면 INSERT" 2단계에서, 같은 순간 첫 학습인 사용자들이 같은 인덱스 갭에 갭 락을 쥔 채 INSERT를 서로 기다림. 수리 = 탐색 제거, **항상 upsert 한 방**(`ON DUPLICATE KEY UPDATE`). 교훈: **"0행을 매치하는 UPDATE도 잠금을 남긴다"** — 동시성 테스트 없이는 못 보는 종류.
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

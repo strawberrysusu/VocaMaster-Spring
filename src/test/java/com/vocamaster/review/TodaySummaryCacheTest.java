@@ -116,7 +116,7 @@ class TodaySummaryCacheTest extends AbstractIntegrationTest {
         assertEquals(0, stale.getDueCount(), "DB엔 due 1인데 0이 나오면 = 캐시에서 읽었다는 증거");
 
         // 3) 학습 기록(커밋) → afterCommit 무효화 → 다음 조회는 재계산
-        statsService.recordStudy(user.getId());
+        statsService.recordStudy(user.getId(), deck.getId());
         assertNotEquals(Boolean.TRUE, stringRedis.hasKey(cacheKey()), "커밋 후 캐시가 지워져야");
 
         TodaySummaryResponse fresh = reviewService.getTodaySummary(user.getId());
@@ -132,7 +132,7 @@ class TodaySummaryCacheTest extends AbstractIntegrationTest {
 
         // recordStudy는 이벤트를 '발행'하지만, 트랜잭션이 롤백되면 AFTER_COMMIT 단계는 오지 않는다
         new TransactionTemplate(txManager).execute(status -> {
-            statsService.recordStudy(user.getId());
+            statsService.recordStudy(user.getId(), deck.getId());
             status.setRollbackOnly();
             return null;
         });

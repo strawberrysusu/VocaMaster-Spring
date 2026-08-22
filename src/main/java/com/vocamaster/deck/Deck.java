@@ -41,6 +41,10 @@ public class Deck {
     @Column(nullable = false)
     private long likeCount;
 
+    // 인기 점수 study 항 — "사용자×날짜 1회" 누적 학습자-일수, 답변 수 아님 (ADR-038)
+    @Column(nullable = false)
+    private long studyCount;
+
     // 복사 출처 추적 — 자기참조 FK, 원본 삭제 시 DB가 SET NULL (ADR-031)
     @Column(name = "original_deck_id")
     private Long originalDeckId;

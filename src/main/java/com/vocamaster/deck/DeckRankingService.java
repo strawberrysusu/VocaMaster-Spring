@@ -39,8 +39,10 @@ public class DeckRankingService {
     static final String READY_KEY = "popular:decks:ready";
     private static final Duration READY_TTL = Duration.ofMinutes(60);
     private static final Duration MAIN_TTL = Duration.ofMinutes(65);
+    // ★ DeckRepository.searchByVisibilityPopular의 JPQL 가중치와 반드시 일치 (ADR-038)
     private static final int LIKE_WEIGHT = 5;
     private static final int COPY_WEIGHT = 3;
+    private static final int STUDY_WEIGHT = 1;   // 보조 신호 — "실제로 쓰이는 덱", 하루 1점이라 낮게
 
     private final StringRedisTemplate redis;
     private final DeckRepository deckRepository;
@@ -72,6 +74,8 @@ public class DeckRankingService {
     public void onUnliked(Long deckId) { afterCommit(() -> incrementIfReady(deckId, -LIKE_WEIGHT)); }
 
     public void onCopied(Long deckId)  { afterCommit(() -> incrementIfReady(deckId, COPY_WEIGHT)); }
+    // 호출처가 REQUIRES_NEW 트랜잭션(DeckStudyRankingListener) 안이라, 그 새 트랜잭션의 커밋 후에 실행됨
+    public void onStudied(Long deckId) { afterCommit(() -> incrementIfReady(deckId, STUDY_WEIGHT)); }
 
     /** PRIVATE/UNLISTED → PUBLIC 전환: 현재 DB 카운트 기준 점수로 등재 */
     public void onBecamePublic(Long deckId, long likeCount, long copyCount) {
@@ -129,7 +133,8 @@ public class DeckRankingService {
             Set<ZSetOperations.TypedTuple<String>> tuples = publicDecks.stream()
                     .map(d -> ZSetOperations.TypedTuple.of(
                             String.valueOf(d.getId()),
-                            (double) (d.getLikeCount() * LIKE_WEIGHT + d.getCopyCount() * COPY_WEIGHT)))
+                            (double) (d.getLikeCount() * LIKE_WEIGHT + d.getCopyCount() * COPY_WEIGHT
+                                    + d.getStudyCount() * STUDY_WEIGHT)))
                     .collect(Collectors.toSet());
             redis.opsForZSet().add(KEY, tuples);
             redis.expire(KEY, MAIN_TTL);

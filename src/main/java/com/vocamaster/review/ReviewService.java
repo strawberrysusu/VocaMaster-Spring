@@ -81,7 +81,7 @@ public class ReviewService {
         progress.setNextReviewAt(now.plus(BOX_INTERVALS[progress.getBoxLevel() - 1]));
 
         // 출석 도장 — 모든 학습 모드 공통 (연속 학습일). 같은 트랜잭션이라 답변과 함께 성공/롤백
-        statsService.recordStudy(userId);
+        statsService.recordStudy(userId, card.getDeck().getId());
 
         // ⑥ 저장 — 처음 만난 카드는 INSERT, 기존 카드는 더티체킹으로도 저장되지만 패턴 통일
         return ReviewAnswerResponse.from(cardProgressRepository.save(progress));

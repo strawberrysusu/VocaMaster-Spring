@@ -713,13 +713,14 @@ review:summary:{userId}:{date}  TTL 5분
 
 ### 🔔 Spring ApplicationEvent
 - [x] **[MUST]** 첫 이벤트 `StudyRecordedEvent` — recordStudy가 캐시를 직접 알던 결합 해소 (ADR-037, 2026-08-19). 통과 질문: "즉시 리스너면 무슨 사고?" → 커밋 전 빈틈 재캐싱 — 자기 말로 통과
-- [ ] **[MUST]** `CardAnsweredEvent`, `DeckCopiedEvent`, `DeckLikedEvent` 정의 (다음: 랭킹 study 항 = 원본 귀속과 세트)
+- [x] **[MUST]** 두 번째 구독자 `DeckStudyRankingListener` — study 항 재도입: 원본 귀속(평탄화)·하루 1회(DB unique 출석부)·자기 학습 제외 (ADR-038, 2026-08-22). 통과 질문 "왜 Redis SET이 아니라 DB unique" → "최종 검증은 DB, Redis 죽으면 DB 방식" 자력 통과. **부수 발견: 출석부 갭 락 데드락 잠복 버그 수리** (6명 동시 테스트가 꺼냄)
+- [ ] **[SHOULD]** `DeckCopiedEvent`, `DeckLikedEvent` — 현재 직접 호출(`rankingService.onCopied/onLiked`)을 이벤트로 교체할지는 구독자가 둘 이상 생길 때 판단 (구독자 1개면 직접 호출이 더 단순 — ADR-037 원칙)
 - [x] **[MUST]** `@TransactionalEventListener(phase = AFTER_COMMIT)` 사용 — 롤백 시 미호출 테스트 박제 (`rollback_doesNotEvict`)
 - [ ] **[MUST]** `@Async` 적용 + ThreadPoolTaskExecutor 설정
 - [ ] **[MUST]** `@EnableAsync`
 - [ ] **[MUST]** Async 리스너 예외 시 로깅 정책 (조용히 묻히지 않게)
 - [ ] **[MUST]** 통계 집계 리스너 (daily_user_stats 갱신)
-- [ ] **[SHOULD]** 인기 점수 갱신 리스너
+- [x] **[SHOULD]** 인기 점수 갱신 리스너 — ADR-038 (위)
 - [ ] **[SHOULD]** 이벤트 실패 시 재처리 정책 — 문서만 작성, 구현은 선택
 
 ### 🏅 배지/업적

@@ -111,7 +111,8 @@ public class DeckService {
                 .title(original.getTitle())
                 .description(original.getDescription())
                 .user(user)
-                .originalDeckId(original.getId())
+                // 평탄화: 복사본의 복사본도 '최상위 원본'을 가리킴 — study 점수 귀속이 체인을 안 타게 (ADR-038)
+                .originalDeckId(original.getOriginalDeckId() != null ? original.getOriginalDeckId() : original.getId())
                 .build());                                  // visibility는 @Builder.Default → PRIVATE
 
         List<Card> copiedCards = cardRepository.findByDeckId(deckId).stream()

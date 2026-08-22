@@ -155,7 +155,7 @@ public class TypingService {
             session.setEndedAt(LocalDateTime.now());
         }
 
-        statsService.recordStudy(userId);   // 출석 도장 (연속 학습일)
+        statsService.recordStudy(userId, session.getDeck().getId());   // 출석 도장 (연속 학습일)
 
         return SubmitTypedAnswerResponse.builder()
                 .correct(isCorrect)

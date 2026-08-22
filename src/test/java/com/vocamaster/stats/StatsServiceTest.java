@@ -35,7 +35,7 @@ class StatsServiceTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("생애 첫 학습 (어제 기록 없음) → 오늘 줄 생성, streak 1")
     void recordStudy_firstEver_startsAtOne() {
-        statsService.recordStudy(user.getId());
+        statsService.recordStudy(user.getId(), null);   // deckId null = 랭킹 구독자 skip (출석만 검증)
 
         DailyUserStat stat = dailyUserStatRepository
                 .findByUserIdAndStatDate(user.getId(), TODAY).orElseThrow();
@@ -48,7 +48,7 @@ class StatsServiceTest extends AbstractIntegrationTest {
     void recordStudy_consecutive_incrementsStreak() {
         saveStat(TODAY.minusDays(1), 5, 3);     // 어제: streak 3
 
-        statsService.recordStudy(user.getId());
+        statsService.recordStudy(user.getId(), null);   // deckId null = 랭킹 구독자 skip (출석만 검증)
 
         DailyUserStat todayStat = dailyUserStatRepository
                 .findByUserIdAndStatDate(user.getId(), TODAY).orElseThrow();
@@ -61,7 +61,7 @@ class StatsServiceTest extends AbstractIntegrationTest {
     void recordStudy_gap_resetsToOne() {
         saveStat(TODAY.minusDays(2), 5, 7);     // 그제: streak 7, 어제는 쉼
 
-        statsService.recordStudy(user.getId());
+        statsService.recordStudy(user.getId(), null);   // deckId null = 랭킹 구독자 skip (출석만 검증)
 
         DailyUserStat todayStat = dailyUserStatRepository
                 .findByUserIdAndStatDate(user.getId(), TODAY).orElseThrow();
@@ -72,8 +72,8 @@ class StatsServiceTest extends AbstractIntegrationTest {
     @DisplayName("같은 날 두 번째 학습 → studyCount만 +1, streak은 그대로")
     void recordStudy_sameDay_incrementsCountOnly() {
         saveStat(TODAY.minusDays(1), 2, 3);     // 어제: streak 3
-        statsService.recordStudy(user.getId());     // 오늘 첫 학습 → streak 4
-        statsService.recordStudy(user.getId());     // 오늘 두 번째 → 원자적 +1 경로
+        statsService.recordStudy(user.getId(), null);   // deckId null = 랭킹 구독자 skip (출석만 검증)     // 오늘 첫 학습 → streak 4
+        statsService.recordStudy(user.getId(), null);   // deckId null = 랭킹 구독자 skip (출석만 검증)     // 오늘 두 번째 → 원자적 +1 경로
 
         DailyUserStat todayStat = dailyUserStatRepository
                 .findByUserIdAndStatDate(user.getId(), TODAY).orElseThrow();

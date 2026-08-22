@@ -3,11 +3,14 @@ package com.vocamaster.deck;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
+import jakarta.persistence.LockModeType;
 
 public interface DeckRepository extends JpaRepository<Deck, Long> {
     List<Deck> findByUserIdOrderByCreatedAtDesc(Long userId);
@@ -33,7 +36,8 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
                                   @Param("keyword") String keyword,
                                   Pageable pageable);
 
-    // 인기 정렬 (ADR-033): like×5 + copy×3, 동점은 최신순. study 항은 Phase 6에서 재도입.
+    // 인기 정렬 (ADR-033 → ADR-038): like×5 + copy×3 + study×1, 동점은 최신순.
+    // ★ 가중치는 DeckRankingService 상수와 반드시 일치 (JPQL은 자바 상수를 못 읽어 두 곳에 존재 — 드리프트 주의)
     // 계산식 정렬은 인덱스를 못 타는 filesort — 현 규모 무해, 대규모엔 Redis ZSET 후보 (Phase 5)
     @Query(value = """
             select d from Deck d join fetch d.user
@@ -41,7 +45,7 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
               and (:keyword is null
                    or lower(d.title) like lower(concat('%', :keyword, '%'))
                    or lower(d.description) like lower(concat('%', :keyword, '%')))
-            order by (d.likeCount * 5 + d.copyCount * 3) desc, d.createdAt desc, d.id desc
+            order by (d.likeCount * 5 + d.copyCount * 3 + d.studyCount * 1) desc, d.createdAt desc, d.id desc
             """,
            countQuery = """
             select count(d) from Deck d
@@ -70,6 +74,16 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update Deck d set d.copyCount = d.copyCount + 1 where d.id = :id")
     int incrementCopyCount(@Param("id") Long id);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Deck d set d.studyCount = d.studyCount + 1 where d.id = :id")
+    int incrementStudyCount(@Param("id") Long id);
+
+    // SELECT ... FOR UPDATE — 대상 덱의 X 잠금을 '먼저' 잡기 위해 (자식 INSERT의 FK S 잠금 → X 승급 데드락 차단, ADR-031/038)
+    // join fetch 없음: 붙이면 FOR UPDATE가 users 행까지 잠금. 주인 판별은 LAZY 프록시의 getId()로 충분 (쿼리 X)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from Deck d where d.id = :id")
+    Optional<Deck> findWithLockById(@Param("id") Long id);
 
     // 좋아요 카운터 (ADR-032) — 복사와 동일하게 원자적, 호출 순서도 동일 (X락 먼저)
     @Modifying(flushAutomatically = true, clearAutomatically = true)
