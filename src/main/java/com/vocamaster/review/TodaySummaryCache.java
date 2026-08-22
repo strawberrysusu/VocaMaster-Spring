@@ -6,8 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -57,27 +55,16 @@ public class TodaySummaryCache {
     }
 
     /**
-     * 커밋 확정 후 삭제 — 랭킹(ADR-035)과 같은 이유: 트랜잭션 '안'에서 지우면
-     * 커밋 전의 낡은 DB 값을 다른 요청이 읽어 다시 캐싱하는 레이스가 생긴다.
+     * 즉시 삭제. "커밋 확정 후"라는 타이밍은 이제 호출자(TodaySummaryCacheListener의 AFTER_COMMIT)가 책임진다.
+     * Phase 5에선 여기서 TransactionSynchronization을 손으로 등록했는데(evictAfterCommit),
+     * Phase 6에서 스프링 표준 @TransactionalEventListener로 교체 — 같은 의미, 결합은 제거 (ADR-037).
      */
-    public void evictAfterCommit(Long userId, LocalDate date) {
+    public void evict(Long userId, LocalDate date) {
         if (!enabled) return;
-        Runnable evict = () -> {
-            try {
-                redisTemplate.delete(key(userId, date));
-            } catch (RuntimeException e) {
-                log.warn("요약 캐시 삭제 실패 — TTL 5분이 상한선 (fail-open)", e);
-            }
-        };
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    evict.run();
-                }
-            });
-        } else {
-            evict.run();
+        try {
+            redisTemplate.delete(key(userId, date));
+        } catch (RuntimeException e) {
+            log.warn("요약 캐시 삭제 실패 — TTL 5분이 상한선 (fail-open)", e);
         }
     }
 

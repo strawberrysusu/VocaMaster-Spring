@@ -1366,6 +1366,30 @@ Phase 4 완료 기준 데모("인기 목록 반영 시연")에 필요한 마지�
 
 ---
 
+## ADR-037: 도메인 이벤트 도입 — 학습 기록이 구독자를 모르게 (Phase 6 첫 걸음)
+
+**상태:** 채택 (2026-08-19)
+**범위:** `StudyRecordedEvent`(record), `StatsService.recordStudy`의 발행, `TodaySummaryCacheListener`(`@TransactionalEventListener(AFTER_COMMIT)`), `TodaySummaryCache.evictAfterCommit → evict` 단순화
+
+**배경 — ADR-036에서 승인했던 냄새:**
+출석 담당 `StatsService`가 복습 요약 캐시 `TodaySummaryCache`를 직접 호출했다. "모든 학습 모드의 단일 관문이라 여기서 지우는 게 제일 싸다"는 판단은 맞았지만, 학습 후에 해야 할 일이 늘면(인기 점수 study 항, 배지, 미션) recordStudy가 그 전부를 직접 알게 되는 구조 — 한 메서드가 5개 부서를 호출하는 미래.
+
+**결정:** recordStudy는 `StudyRecordedEvent(userId, date)`를 **발행만** 한다. 관심 있는 쪽이 각자 구독.
+- 구독자 실행 시점은 **`AFTER_COMMIT`** — Phase 5에서 손으로 짰던 `TransactionSynchronization.afterCommit`(ADR-035/036)의 스프링 표준판. 의미 동일: 커밋 전에 캐시를 지우면 그 빈틈에 다른 요청이 커밋 전 옛 값을 읽어 재캐싱한다. 롤백이면 리스너가 아예 안 불린다(지울 이유가 없으니 맞는 동작 — 테스트 `rollback_doesNotEvict`로 박제).
+- 지금은 **동기** 리스너(커밋한 스레드가 이어서 실행). `@Async`는 리스너가 무거워질 때(외부 호출·집계) — 그때 "실패가 조용히 묻히지 않게" 로깅 정책과 세트로.
+
+**대안:**
+- (a) 현상 유지(직접 호출) — 지금은 1줄이라 제일 단순. 그러나 구독자가 늘 때마다 recordStudy 수정 = 출석 코드가 남의 사정으로 바뀜
+- (b) `@EventListener`(즉시 실행) — 트랜잭션 안에서 돌아 ADR-036의 레이스가 부활
+- (c) 바로 Kafka — 프로세스 밖 브로커는 지금 문제(같은 프로세스 안 결합)에 과한 도구. Spring Event로 먼저 경계를 그리고, 필요가 증명되면 리스너 하나씩 교체(체크리스트 STRETCH)
+
+**트레이드오프 / 알려진 한계:**
+- 흐름이 코드에서 안 보인다 — "recordStudy 다음에 뭐가 일어나지?"를 알려면 이벤트 타입으로 리스너를 검색해야 함. 이벤트 클래스 javadoc에 발행처·구독처를 적어 상쇄
+- AFTER_COMMIT 리스너 안에서 쓰기 트랜잭션은 기본적으로 새로 시작되지 않는다(`REQUIRES_NEW` 필요) — 지금은 Redis 삭제뿐이라 해당 없음, 다음 리스너(랭킹 study 항)에서 주의
+- 동기 리스너의 예외는 발행자에게 전파되지 않고 로그로 끝남(스프링 기본) — fail-open과 같은 성질, 단 "모르고 지나감" 위험 → Async 전환 시 정책 명시
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

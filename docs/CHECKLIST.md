@@ -11,8 +11,8 @@
 |---|---|
 | **진행 중인 Phase** | **Phase 5 완전 졸업 🎓 (2026-08-12 — 시작과 졸업이 같은 날)** · Phase 4 졸업(08-11) |
 | **이번 주 집중** | **week note 복구** (Phase 4·5 면접 원고 — 세션의 완성 문장 세트를 자기 손으로) → 주말 폐쇄훈련 #3 3회차 → 주3(8/17~) 행정 |
-| **전체 진행도** | Phase 0~3 ✅ / Phase 4 ✅ / **Phase 5 ✅** / Phase 6~8 대기 |
-| **다음 마일스톤** | 개강(8/27) 전 마무리 — week note·폐쇄훈련·행정. Phase 6(이벤트)는 개강 후 리듬 봐서 |
+| **전체 진행도** | Phase 0~3 ✅ / Phase 4 ✅ / Phase 5 ✅ / **Phase 6 🟢 진행 중 (8/19 시작)** / Phase 7~8 대기 |
+| **다음 마일스톤** | 개강(8/27) 전 Phase 6 Spring Event 파트 — 첫 이벤트 완료, 다음은 랭킹 study 항(원본 귀속) + Async |
 | **신규 ADR** | ADR-016~033 — … / **좋아요: unique 멱등** / **인기 정렬: like×5+copy×3, study 항 제외** — `docs/decisions.md` |
 | **▶ 다음 액션 (resume)** | **🎓 Phase 5 완전 졸업 (2026-08-12 — 시작·기능·시험이 하루)** — ADR-034~036, 테스트 +23, 구두 5문 통과(스캐폴드 동반 — 세부는 완료 기준 참조). **인출 훈련 발견**: 이해(대화)와 인출(백지)은 다른 근육 — 시험이 막히자 폐쇄훈련式 빈칸으로 낮춰 전부 통과. 다음 3가지: ① **week note** — Phase 4·5 원고화, 세션의 조립 완성문들을 자기 손으로 다시 쓰기 (인출 3단계) ② 주말 폐쇄훈련 #3 3회차(빈칸, Codex 닫기) ③ 주3(8/17~) 국비 행정. Phase 6(이벤트 — study 귀속·recordStudy 결합 해소 예고 2건 대기 중)는 개강 후. 잔여 STRETCH·TTS·React는 별도 판단.
 > **🎓 Phase 4 완전 졸업 (2026-08-11)** — 실서버 HTTP 데모(검색→복사→좋아요→popular 1위 반영→400/403) + 구두 3문 통과. 1주 만에 Phase 통째 완료(계획은 '개강 전 절반'). ADR-030~033, 테스트 105+, 면접 1급 재료: FK 데드락 실화(ADR-031)·잠금 순서 3회 학습·조작 방지 3계열(복사 제외/좋아요 1회 캡/학습 보류). 다음: ① **week note 복구** (최고가 밀린 항목 — Phase 4 노트에 데드락 스토리) ② 주말 폐쇄훈련 #3 3회차 (빈칸 채우기, Codex 닫기 체크) ③ **Phase 5 Redis 진입** (사전 설명부터. 인기 정렬 filesort → ZSET 전환이 첫 동기). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 / 데모 서버 아직 켜져 있으면 gradle bootRun 태스크 종료 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
@@ -712,8 +712,9 @@ review:summary:{userId}:{date}  TTL 5분
 > **Phase 4에서 이월 (ADR-033):** 인기 점수의 study 항 — 세션 시작 이벤트 발행 + **복사본 학습을 원본에 귀속**(original_deck_id 추적) 설계와 함께 재도입. 자기 학습 무한 반복 조작 방지 포함
 
 ### 🔔 Spring ApplicationEvent
-- [ ] **[MUST]** `CardAnsweredEvent`, `DeckCopiedEvent`, `DeckLikedEvent` 정의
-- [ ] **[MUST]** `@TransactionalEventListener(phase = AFTER_COMMIT)` 사용 — 트랜잭션 커밋 후 처리
+- [x] **[MUST]** 첫 이벤트 `StudyRecordedEvent` — recordStudy가 캐시를 직접 알던 결합 해소 (ADR-037, 2026-08-19). 통과 질문: "즉시 리스너면 무슨 사고?" → 커밋 전 빈틈 재캐싱 — 자기 말로 통과
+- [ ] **[MUST]** `CardAnsweredEvent`, `DeckCopiedEvent`, `DeckLikedEvent` 정의 (다음: 랭킹 study 항 = 원본 귀속과 세트)
+- [x] **[MUST]** `@TransactionalEventListener(phase = AFTER_COMMIT)` 사용 — 롤백 시 미호출 테스트 박제 (`rollback_doesNotEvict`)
 - [ ] **[MUST]** `@Async` 적용 + ThreadPoolTaskExecutor 설정
 - [ ] **[MUST]** `@EnableAsync`
 - [ ] **[MUST]** Async 리스너 예외 시 로깅 정책 (조용히 묻히지 않게)

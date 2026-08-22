@@ -20,7 +20,9 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.GenericContainer;
 
 import java.time.LocalDate;
@@ -64,6 +66,7 @@ class TodaySummaryCacheTest extends AbstractIntegrationTest {
     @Autowired private DeckRepository deckRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private StringRedisTemplate stringRedis;
+    @Autowired private PlatformTransactionManager txManager;
 
     private User user;
     private Deck deck;
@@ -119,6 +122,24 @@ class TodaySummaryCacheTest extends AbstractIntegrationTest {
         TodaySummaryResponse fresh = reviewService.getTodaySummary(user.getId());
         assertEquals(1, fresh.getDueCount(), "무효화 후엔 DB의 진짜 숫자");
         assertEquals(1, fresh.getStudyCount(), "recordStudy 반영");
+    }
+
+    @Test
+    @DisplayName("Phase 6 이벤트: 학습 트랜잭션이 롤백되면 AFTER_COMMIT 리스너가 안 불려 캐시가 살아있다")
+    void rollback_doesNotEvict() {
+        reviewService.getTodaySummary(user.getId());
+        assertTrue(Boolean.TRUE.equals(stringRedis.hasKey(cacheKey())), "전제: 캐시 존재");
+
+        // recordStudy는 이벤트를 '발행'하지만, 트랜잭션이 롤백되면 AFTER_COMMIT 단계는 오지 않는다
+        new TransactionTemplate(txManager).execute(status -> {
+            statsService.recordStudy(user.getId());
+            status.setRollbackOnly();
+            return null;
+        });
+
+        assertTrue(Boolean.TRUE.equals(stringRedis.hasKey(cacheKey())),
+                "롤백 = 학습이 없던 일 → 지울 이유도 없음. 즉시 실행 리스너였다면 여기서 지워져 있었을 것");
+        assertEquals(0, reviewService.getTodaySummary(user.getId()).getStudyCount(), "DB도 되돌아감");
     }
 
     @Test

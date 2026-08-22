@@ -1,7 +1,8 @@
 package com.vocamaster.stats;
 
-import com.vocamaster.review.TodaySummaryCache;
+import com.vocamaster.study.event.StudyRecordedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +18,9 @@ public class StatsService {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final DailyUserStatRepository dailyUserStatRepository;
-    // 설계 냄새 승인분: 출석 담당이 복습 요약 캐시를 아는 건 책임이 섞인 상태.
-    // 모든 학습 모드의 단일 관문이라 지금은 여기서 무효화하고, Phase 6에서 이벤트로 분리 (ADR-036)
-    private final TodaySummaryCache summaryCache;
+    // Phase 6: 캐시를 직접 알던 결합(ADR-036 승인 냄새)을 이벤트로 해소.
+    // 출석은 "학습했다"고 외치기만 — 누가 듣는지(캐시·랭킹·배지) 모른다 (ADR-037)
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 학습 활동 1회 = 출석 도장. 모든 학습 모드(Review/Quiz/Typing/Study)가 호출.
@@ -42,7 +43,8 @@ public class StatsService {
 
         // 첫 학습이든 N번째든 반드시 도달 — 예전처럼 updated==1에서 조기 return하면
         // 오늘 두 번째 학습부터(최다 경로) 캐시가 안 지워지는 조용한 버그 (Codex 검산)
-        summaryCache.evictAfterCommit(userId, today);
+        // 발행은 트랜잭션 안에서 하지만, AFTER_COMMIT 리스너는 커밋 확정 후에야 실행된다
+        eventPublisher.publishEvent(new StudyRecordedEvent(userId, today));
     }
 
     // 오늘 학습 답변 수 — 출석부 오늘 줄이 없으면 0 (아직 오늘 공부 전)
