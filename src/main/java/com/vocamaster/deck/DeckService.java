@@ -71,7 +71,7 @@ public class DeckService {
         if (before == DeckVisibility.PUBLIC && visibility != DeckVisibility.PUBLIC) {
             rankingService.onLeftPublic(id);        // 노출은 DB 필터가 막지만, 순위표 품질 유지를 위해 즉시 제거
         } else if (before != DeckVisibility.PUBLIC && visibility == DeckVisibility.PUBLIC) {
-            rankingService.onBecamePublic(id, deck.getLikeCount(), deck.getCopyCount());
+            rankingService.onBecamePublic(deck);   // like·copy·study 전부 포함한 점수로 등재 (공식 단일 지점)
         }
         return DeckResponse.listOf(deck, cardRepository.countByDeckId(id));
     }
@@ -101,7 +101,7 @@ public class DeckService {
         //   실패 시에도 같은 트랜잭션이라 카운트만 오르는 일 없음 (전체 롤백)
         if (!isOwner) {
             deckRepository.incrementCopyCount(deckId);      // 원자적 +1. 자기 복사는 카운트 제외 — 인기 조작 방지
-            rankingService.onCopied(deckId);                // 커밋 확정 후 +3 (실패·롤백 시 실행 안 됨)
+            rankingService.onCopied(original);              // 커밋 확정 후 +3, PUBLIC일 때만 (실패·롤백 시 실행 안 됨)
         }
 
         User user = userRepository.findById(userId)

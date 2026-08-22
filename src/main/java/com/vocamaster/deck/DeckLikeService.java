@@ -34,7 +34,7 @@ public class DeckLikeService {
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을수없습니다."));
         deckLikeRepository.save(DeckLike.builder().user(user).deck(fresh).build());
 
-        rankingService.onLiked(deckId);     // 커밋 확정 후 +5 — 더블탭 롤백이면 실행 자체가 안 됨 (ADR-035)
+        rankingService.onLiked(deck);       // 커밋 확정 후 +5, PUBLIC일 때만 — 더블탭 롤백이면 실행 자체가 안 됨 (ADR-035)
         return LikeResponse.of(true, fresh.getLikeCount());
     }
 
@@ -45,7 +45,7 @@ public class DeckLikeService {
         long deleted = deckLikeRepository.deleteByUserIdAndDeckId(userId, deckId);
         if (deleted > 0) {                                        // 지웠을 때만 -1 → 자연 멱등, 음수 불가
             deckRepository.decrementLikeCount(deckId);
-            rankingService.onUnliked(deckId);                     // 커밋 확정 후 -5
+            rankingService.onUnliked(deck);                       // 커밋 확정 후 -5, PUBLIC일 때만
             return LikeResponse.of(false, deckRepository.findById(deckId)
                     .orElseThrow(() -> new NotFoundException(PublicDeckService.DECK_NOT_FOUND))
                     .getLikeCount());

@@ -52,6 +52,6 @@ public class DeckStudyRankingListener {
         if (inserted == 0) return;                                             // 오늘 이미 셌음
 
         deckRepository.incrementStudyCount(targetId);
-        rankingService.onStudied(targetId);                                    // 이 트랜잭션 커밋 후 ZSET +1
+        rankingService.onStudied(target);                                      // 이 트랜잭션 커밋 후 ZSET +1 — target이 PUBLIC일 때만
     }
 }

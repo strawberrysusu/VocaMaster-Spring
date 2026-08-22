@@ -1417,6 +1417,10 @@ Phase 4 완료 기준 데모("인기 목록 반영 시연")에 필요한 마지�
 - 출석부 행이 날짜마다 쌓임(사용자×덱×일) — 현 규모 무해, 보관 기간 정책은 Phase 7 운영 항목
 - PRIVATE 원본도 카운트는 쌓임(랭킹 노출은 PUBLIC만) — 나중에 공개 전환 시 이력이 살아있는 게 자연스럽다고 판단
 
+**Codex 검산 수리 (같은 날):**
+- Redis 훅(`onLiked/onUnliked/onCopied/onStudied`)이 visibility를 안 보고 `ZINCRBY` → **없는 멤버를 만들어** UNLISTED 좋아요·비공개 원본 study 점수가 순위표에 섞임 (노출은 DB 필터가 막지만 사본 오염). 훅이 `Deck`을 받아 **PUBLIC일 때만** 증분. DB 카운터는 visibility 무관하게 사실로 쌓임
+- 공개 전환 `onBecamePublic`이 like·copy만 계산 → study 항 누락(재구축까지 최대 1시간 순위 오류). `score(Deck)` **자바 쪽 단일 지점**으로 통합(재구축·전환 공용). 두 버그 모두 "랭킹 off 테스트는 DB만 본다"는 검증 공백 — `DeckStudyRankingRedisTest`(Redis on) 3건으로 박제
+
 **부수 발견 — 잠복 데드락 수리 (StatsService.recordStudy):**
 6명 동시 학습 테스트가 **기존 출석부 코드**의 InnoDB 갭 락 데드락(SQL 1213)을 꺼냄. "0행 매치 UPDATE로 오늘 줄 탐색 → 없으면 INSERT" 2단계에서, 같은 순간 첫 학습인 사용자들이 같은 인덱스 갭에 갭 락을 쥔 채 INSERT를 서로 기다림. 수리 = 탐색 제거, **항상 upsert 한 방**(`ON DUPLICATE KEY UPDATE`). 교훈: **"0행을 매치하는 UPDATE도 잠금을 남긴다"** — 동시성 테스트 없이는 못 보는 종류.
 

@@ -69,17 +69,33 @@ public class DeckRankingService {
 
     // === 도메인 이벤트 훅 — 전부 '커밋 확정 후' 실행, 롤백이면 실행 자체가 안 됨 (드리프트 방지) ===
 
-    public void onLiked(Long deckId)   { afterCommit(() -> incrementIfReady(deckId, LIKE_WEIGHT)); }
+    // ★ 훅은 Deck을 받아 PUBLIC일 때만 증분 (Codex 검산 2026-08-22): ZINCRBY는 없는 멤버를 '만들기' 때문에
+    //   UNLISTED 좋아요·비공개 원본 study 점수가 순위표에 멤버로 섞인다. 노출은 DB 필터가 막지만 순위표가 더러워짐.
+    //   DB 카운터(like/copy/study_count)는 visibility와 무관하게 사실로 쌓이고, Redis 사본만 PUBLIC으로 제한
+    public void onLiked(Deck deck)   { incrementIfPublic(deck, LIKE_WEIGHT); }
 
-    public void onUnliked(Long deckId) { afterCommit(() -> incrementIfReady(deckId, -LIKE_WEIGHT)); }
+    public void onUnliked(Deck deck) { incrementIfPublic(deck, -LIKE_WEIGHT); }
 
-    public void onCopied(Long deckId)  { afterCommit(() -> incrementIfReady(deckId, COPY_WEIGHT)); }
+    public void onCopied(Deck deck)  { incrementIfPublic(deck, COPY_WEIGHT); }
     // 호출처가 REQUIRES_NEW 트랜잭션(DeckStudyRankingListener) 안이라, 그 새 트랜잭션의 커밋 후에 실행됨
-    public void onStudied(Long deckId) { afterCommit(() -> incrementIfReady(deckId, STUDY_WEIGHT)); }
+    public void onStudied(Deck deck) { incrementIfPublic(deck, STUDY_WEIGHT); }
 
-    /** PRIVATE/UNLISTED → PUBLIC 전환: 현재 DB 카운트 기준 점수로 등재 */
-    public void onBecamePublic(Long deckId, long likeCount, long copyCount) {
-        double score = likeCount * LIKE_WEIGHT + copyCount * COPY_WEIGHT;
+    private void incrementIfPublic(Deck deck, double delta) {
+        if (deck.getVisibility() != DeckVisibility.PUBLIC) return;
+        Long id = deck.getId();
+        afterCommit(() -> incrementIfReady(id, delta));
+    }
+
+    /** 점수 공식의 자바 쪽 단일 지점 — 재구축·공개 전환이 모두 이걸 쓴다 (JPQL 쪽과 ★ 교차 참조) */
+    static double score(Deck d) {
+        return d.getLikeCount() * LIKE_WEIGHT + d.getCopyCount() * COPY_WEIGHT + d.getStudyCount() * STUDY_WEIGHT;
+    }
+
+    /** PRIVATE/UNLISTED → PUBLIC 전환: 현재 DB 카운트 기준 점수로 등재.
+     *  예전엔 like·copy만 받아 study 항이 빠졌었다 — 비공개 상태에서 쌓인 study_count가 공개 직후 순위에 누락 (Codex 검산) */
+    public void onBecamePublic(Deck deck) {
+        Long deckId = deck.getId();
+        double score = score(deck);
         afterCommit(() -> {
             try {
                 if (Boolean.TRUE.equals(redis.hasKey(READY_KEY))) {
@@ -133,8 +149,7 @@ public class DeckRankingService {
             Set<ZSetOperations.TypedTuple<String>> tuples = publicDecks.stream()
                     .map(d -> ZSetOperations.TypedTuple.of(
                             String.valueOf(d.getId()),
-                            (double) (d.getLikeCount() * LIKE_WEIGHT + d.getCopyCount() * COPY_WEIGHT
-                                    + d.getStudyCount() * STUDY_WEIGHT)))
+                            score(d)))
                     .collect(Collectors.toSet());
             redis.opsForZSet().add(KEY, tuples);
             redis.expire(KEY, MAIN_TTL);
