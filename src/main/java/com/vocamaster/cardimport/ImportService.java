@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,6 +64,7 @@ public class ImportService {
             Card card = Card.builder()
                     .front(front)
                     .back(c.get("back"))
+                    .reading(c.get("reading"))          // 3칸 포맷일 때만 존재, 아니면 null
                     .deck(deck)
                     .build();
             cardRepository.save(card);
@@ -94,9 +96,16 @@ public class ImportService {
             String line = lines[i].trim();
             if (line.isEmpty()) continue;
 
-            String[] parts = line.split(Pattern.quote(sep), 2);
+            // 2칸 = 단어 | 뜻, 3칸 = 단어 | 읽기 | 뜻 (읽기는 요미가나, V14). 4칸 이상은 3번째 이후를 뜻으로 합치지 않고 실패 처리
+            String[] parts = line.split(Pattern.quote(sep), 3);
             if (parts.length == 2 && !parts[0].trim().isEmpty() && !parts[1].trim().isEmpty()) {
                 cards.add(Map.of("front", parts[0].trim(), "back", parts[1].trim()));
+            } else if (parts.length == 3 && !parts[0].trim().isEmpty() && !parts[2].trim().isEmpty()) {
+                Map<String, String> card = new HashMap<>();
+                card.put("front", parts[0].trim());
+                card.put("back", parts[2].trim());
+                if (!parts[1].trim().isEmpty()) card.put("reading", parts[1].trim());
+                cards.add(card);
             } else {
                 failed.add(Map.of("line", i + 1, "content", line));
             }
@@ -113,7 +122,8 @@ public class ImportService {
                 if (line.isEmpty()) continue;
                 if (checked >= 5) break;
                 checked++;
-                if (line.split(Pattern.quote(candidate)).length == 2) {   // limit 없음 = "정확히 2조각"
+                int pieces = line.split(Pattern.quote(candidate)).length;   // limit 없음 = 정확한 조각 수
+                if (pieces == 2 || pieces == 3) {                            // 2칸(단어|뜻) 또는 3칸(단어|읽기|뜻)
                     twoParts++;
                 }
             }

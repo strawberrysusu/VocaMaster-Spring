@@ -119,6 +119,7 @@ public class DeckService {
                 .map(c -> Card.builder()
                         .front(c.getFront())
                         .back(c.getBack())
+                        .reading(c.getReading())               // 읽기는 공유 콘텐츠 (memo와 동일 분류)
                         .exampleSentence(c.getExampleSentence())
                         .memo(c.getMemo())                  // memo는 공유 콘텐츠로 분류 (ADR-031)
                         .position(c.getPosition())

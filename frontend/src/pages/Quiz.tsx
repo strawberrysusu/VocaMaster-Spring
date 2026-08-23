@@ -14,6 +14,7 @@ interface Question {
   questionId: number
   questionOrder: number
   question: string
+  reading?: string | null   // 단어가 문제일 때 읽기(요미가나), 없으면 null
   choices: string[]
 }
 
@@ -197,7 +198,8 @@ export default function Quiz() {
             <div className="quiz-card">
               <p className="quiz-kicker">{direction === 'front_to_back' ? '이 단어의 뜻은?' : '이 뜻의 단어는?'}</p>
               <p className="quiz-question">
-                {q.question} <SpeakButton text={q.question} />
+                {q.reading && <span className="reading">{q.reading}</span>}
+                {q.question} <SpeakButton text={q.reading || q.question} />
               </p>
               <div className="choice-grid">
                 {q.choices.map((c, i) => {

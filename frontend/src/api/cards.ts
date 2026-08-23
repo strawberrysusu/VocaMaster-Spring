@@ -4,6 +4,7 @@ export interface CardDto {
   id: number
   front: string
   back: string
+  reading?: string | null   // 읽기(요미가나) — 없으면 null
   starred: boolean
 }
 

@@ -1252,3 +1252,25 @@ button:disabled {
     flex-direction: column;
   }
 }
+
+/* ── 읽기(요미가나) ── */
+.reading {
+  display: block;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+
+.reading-inline {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.create-row .reading-input {
+  flex: 0 1 220px;
+}

@@ -123,4 +123,23 @@ class ImportServiceTest extends AbstractIntegrationTest {
         assertEquals(2, result.getSkipped());
         assertEquals(3, cardRepository.countByDeckId(deck.getId()));   // 1차 2개 + cherry 1개
     }
+
+    @Test
+    @DisplayName("3칸 포맷 — 단어 | 읽기 | 뜻 (읽기는 요미가나, V14). 2칸 줄과 섞여도 OK, 구분자 자동 감지")
+    void importCards_threeColumnsWithReading() {
+        ImportRequest req = new ImportRequest();
+        req.setText("会議 | かいぎ | 회의\n約束 | やくそく | 약속\napple | 사과\n会う |  | 만나다");
+
+        ImportResponse result = importService.importCards(deck.getId(), user.getId(), req);
+
+        assertEquals(4, result.getImported());
+        var byFront = cardRepository.findByDeckId(deck.getId()).stream()
+                .collect(java.util.stream.Collectors.toMap(c -> c.getFront(), c -> c));
+        assertEquals("かいぎ", byFront.get("会議").getReading());
+        assertEquals("회의", byFront.get("会議").getBack());
+        assertEquals("약속", byFront.get("約束").getBack());
+        assertNull(byFront.get("apple").getReading(), "2칸 줄은 읽기 없음");
+        assertNull(byFront.get("会う").getReading(), "가운데 칸이 비면 읽기 없음");
+        assertEquals("만나다", byFront.get("会う").getBack());
+    }
 }

@@ -74,6 +74,31 @@ class CardServiceTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("읽기(요미가나) — 생성·수정·빈 문자열은 null (V14)")
+    void reading_createUpdateAndBlankToNull() {
+        CreateCardRequest createReq = new CreateCardRequest();
+        createReq.setFront("会議");
+        createReq.setBack("회의");
+        createReq.setReading("  かいぎ ");
+        CardResponse card = cardService.create(deck.getId(), user.getId(), createReq);
+        assertEquals("かいぎ", card.getReading(), "앞뒤 공백 정리");
+
+        UpdateCardRequest clear = new UpdateCardRequest();
+        clear.setReading("");                                   // ""로 보내면 읽기 삭제
+        assertNull(cardService.update(card.getId(), user.getId(), clear).getReading());
+
+        UpdateCardRequest untouched = new UpdateCardRequest();
+        untouched.setBack("회의(명사)");                          // reading 미전송(null)이면 그대로
+        CardResponse u = cardService.update(card.getId(), user.getId(), untouched);
+        assertNull(u.getReading());
+
+        CreateCardRequest en = new CreateCardRequest();
+        en.setFront("apple");
+        en.setBack("사과");
+        assertNull(cardService.create(deck.getId(), user.getId(), en).getReading(), "영어 덱은 null");
+    }
+
+    @Test
     @DisplayName("별표 토글")
     void toggleStar() {
         CreateCardRequest req = new CreateCardRequest();

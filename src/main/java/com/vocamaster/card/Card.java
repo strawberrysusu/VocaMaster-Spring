@@ -28,6 +28,10 @@ public class Card {
     @Column(nullable = false)
     private String back;
 
+    // 읽기(요미가나) — 会議 → かいぎ. 표시·🔊 전용, 채점엔 안 씀 (V14, 2026-08-23). 영어 덱은 null
+    @Column(length = 200)
+    private String reading;
+
     @Builder.Default
     private Boolean starred = false;
 

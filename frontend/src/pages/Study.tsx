@@ -9,6 +9,7 @@ interface StudyCard {
   cardId: number
   front: string
   back: string
+  reading?: string | null
 }
 
 interface AnswerResult {
@@ -49,7 +50,7 @@ export default function Study() {
     if (deckId) {
       fetchAllCards(deckId)
         .then(({ cards }) => {
-          setQueue(cards.map((c) => ({ cardId: c.id, front: c.front, back: c.back })))
+          setQueue(cards.map((c) => ({ cardId: c.id, front: c.front, back: c.back, reading: c.reading })))
           localStorage.setItem('vm.lastStudyDeckId', deckId) // 홈 '이어서 학습' 카드 재료
         })
         .catch((e) => setError(e.message))
@@ -124,6 +125,7 @@ export default function Study() {
             {/* 🔊는 카드 button의 '형제' — 안에 넣으면 button 중첩(HTML 위반) + Enter/Space가 카드 뒤집기로 전파 */}
             <div className="study-card-wrap">
               <button className="study-card" onClick={() => setRevealed(true)}>
+                {queue[idx].reading && <span className="reading">{queue[idx].reading}</span>}
                 <span className="study-word">{queue[idx].front}</span>
                 {revealed ? (
                   <span className="study-answer">{queue[idx].back}</span>
@@ -131,7 +133,8 @@ export default function Study() {
                   <span className="study-hint">카드를 눌러 뜻 확인</span>
                 )}
               </button>
-              <SpeakButton text={queue[idx].front} size="lg" className="study-speak" />
+              {/* 읽기가 있으면 읽기를 읽는다 — 한자 TTS 오독 방지 */}
+              <SpeakButton text={queue[idx].reading || queue[idx].front} size="lg" className="study-speak" />
             </div>
 
             {revealed ? (

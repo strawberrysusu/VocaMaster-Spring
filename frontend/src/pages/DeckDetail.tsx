@@ -19,6 +19,7 @@ export default function DeckDetail() {
   const [cards, setCards] = useState<CardDto[]>([])
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
+  const [reading, setReading] = useState('')   // 읽기(요미가나) — 선택
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
 
@@ -35,8 +36,9 @@ export default function DeckDetail() {
     if (adding || !front.trim() || !back.trim()) return // 더블클릭 중복 등록 방어
     setAdding(true)
     try {
-      await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify({ front, back }) })
+      await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify({ front, reading, back }) })
       setFront('')
+      setReading('')
       setBack('')
       load()
     } catch (e) {
@@ -88,6 +90,14 @@ export default function DeckDetail() {
             onChange={(e) => setFront(e.target.value)}
           />
           <input
+            aria-label="읽기"
+            className="reading-input"
+            placeholder="읽기 (예: かいぎ, 선택)"
+            value={reading}
+            onChange={(e) => setReading(e.target.value)}
+            maxLength={200}
+          />
+          <input
             aria-label="뜻"
             placeholder="뜻 (예: 회의)"
             value={back}
@@ -105,7 +115,7 @@ export default function DeckDetail() {
           {cards.map((c, i) => (
             <div key={c.id} className="word-row">
               <span className="word-idx">{i + 1}</span>
-              <span className="word-front">{c.front} <SpeakButton text={c.front} /></span>
+              <span className="word-front">{c.reading && <span className="reading-inline">{c.reading}</span>}{c.front} <SpeakButton text={c.reading || c.front} /></span>
               <span className="word-back">{c.back}</span>
               {c.starred && <span title="별표 카드">⭐</span>}
             </div>

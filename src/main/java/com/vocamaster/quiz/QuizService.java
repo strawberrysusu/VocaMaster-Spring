@@ -273,6 +273,7 @@ public class QuizService {
                     .questionId(q.getId())
                     .questionOrder(i)
                     .question(questionText)
+                    .reading(direction.isFrontToBack() ? qc.getReading() : null)
                     .choices(choices)
                     .build());
         }

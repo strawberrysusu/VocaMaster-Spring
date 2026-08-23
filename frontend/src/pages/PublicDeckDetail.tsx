@@ -108,7 +108,7 @@ export default function PublicDeckDetail() {
             {cards.map((c, i) => (
               <div key={c.id} className="word-row">
                 <span className="word-idx">{i + 1}</span>
-                <span className="word-front">{c.front} <SpeakButton text={c.front} /></span>
+                <span className="word-front">{c.reading && <span className="reading-inline">{c.reading}</span>}{c.front} <SpeakButton text={c.reading || c.front} /></span>
                 <span className="word-back">{c.back}</span>
               </div>
             ))}

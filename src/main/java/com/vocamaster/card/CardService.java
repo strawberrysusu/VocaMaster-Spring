@@ -26,6 +26,7 @@ public class CardService {
         Card card = Card.builder()
                 .front(req.getFront())
                 .back(req.getBack())
+                .reading(blankToNull(req.getReading()))
                 .exampleSentence(req.getExampleSentence())
                 .memo(req.getMemo())
                 .position(req.getPosition())
@@ -58,6 +59,7 @@ public class CardService {
 
         if (req.getFront() != null) card.setFront(req.getFront());
         if (req.getBack() != null) card.setBack(req.getBack());
+        if (req.getReading() != null) card.setReading(blankToNull(req.getReading()));   // ""로 보내면 읽기 삭제
         if (req.getExampleSentence() != null) card.setExampleSentence(req.getExampleSentence());
         if (req.getMemo() != null) card.setMemo(req.getMemo());
         if (req.getPosition() != null) card.setPosition(req.getPosition());
@@ -90,5 +92,10 @@ public class CardService {
     private Card getCard(Long id) {
         return cardRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("카드를 찾을 수 없습니다"));
+    }
+
+    // 읽기 칸은 선택 — 빈 문자열은 null로 (영어 덱에 ""가 쌓이지 않게, 표시 조건도 null 하나로)
+    static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
     }
 }

@@ -20,6 +20,7 @@ public class StartSessionResponse {
         private Long questionId;
         private int questionOrder;
         private String question;        // 화면 표시용
+        private String reading;         // 읽기(요미가나) — 단어가 문제일 때만(단어→뜻), 없으면 null (V14)
         private List<String> choices;   // 셔플된 4지선다
         // correctAnswer는 응답에 X — 서버만 알고 있음 (ADR-021 정신: 서버에서 판정)
     }

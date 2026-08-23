@@ -26,6 +26,7 @@ export interface PublicCard {
   id: number
   front: string
   back: string
+  reading?: string | null
 }
 
 export function toggleLikeApi(deck: PublicDeck) {

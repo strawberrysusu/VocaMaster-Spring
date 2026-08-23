@@ -108,6 +108,7 @@ public class TypingService {
                     .questionId(q.getId())
                     .questionOrder(i)
                     .question(questionText)
+                    .reading(direction.isFrontToBack() ? qc.getReading() : null)
                     .build());
         }
 

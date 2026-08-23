@@ -13,6 +13,7 @@ public class CardResponse {
     private Long id;
     private String front;
     private String back;
+    private String reading;     // 읽기(요미가나), 없으면 null
     private Boolean starred;
     private String exampleSentence;
     private String memo;
@@ -25,6 +26,7 @@ public class CardResponse {
                 .id(card.getId())
                 .front(card.getFront())
                 .back(card.getBack())
+                .reading(card.getReading())
                 .starred(card.getStarred())
                 .exampleSentence(card.getExampleSentence())
                 .memo(card.getMemo())

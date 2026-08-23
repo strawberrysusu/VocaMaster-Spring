@@ -16,6 +16,7 @@ public class PublicCardResponse {
     private Long id;
     private String front;
     private String back;
+    private String reading;     // 읽기(요미가나), 없으면 null
     private String exampleSentence;
     private Integer position;
 
@@ -24,6 +25,7 @@ public class PublicCardResponse {
                 .id(card.getId())
                 .front(card.getFront())
                 .back(card.getBack())
+                .reading(card.getReading())
                 .exampleSentence(card.getExampleSentence())
                 .position(card.getPosition())
                 .build();
