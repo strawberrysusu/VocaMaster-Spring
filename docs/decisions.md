@@ -625,7 +625,7 @@ class ExpiredRefreshTest {
 **상태:** ~~채택 (2026-05-12)~~ → **개정 (2026-08-23, Codex 검산)** — 아래 "개정" 참조. 원문은 기록용으로 보존.
 
 > **개정 (2026-08-23):** 비공식 endpoint는 약관 위반 + 예고 없는 차단(403/캡차) 위험이라 **공개 서비스의 핵심 기능으로 부적합**. 또한 "프론트 직접 호출"과 "Redis 캐싱"은 한 경로가 아니라 백엔드 프록시 전환이 필요한 별개 구조였음(원문의 설계 결함).
-> **새 결정: 브라우저 내장 `speechSynthesis`** — `frontend/src/lib/tts.ts` `speak(text, lang)` 한 곳. 데스크톱 Chrome의 "Google US English"(구글 네트워크 음성)·Edge의 Microsoft Natural 음성을 우선 선택(이름 우선순위 Google → Natural → Microsoft), 언어는 텍스트 휴리스틱(가나·한자=ja, 한글=ko, 그 외=en). **비용 0, 서버 0, Redis 불필요.** 한계: 기기마다 목소리 다름, 네트워크 음성은 오프라인 불가. **업그레이드 경로:** 공개 서비스 단계에서 공식 Google Cloud TTS(무료 구간 존재, 결제 계정 필요 — 금액은 당시 요금표로 재확인)를 백엔드에서 호출하도록 `speak()` 구현만 교체. 대안 비교: ① 브라우저(채택) ② 공식 Cloud TTS(결제 계정 장벽) ③ 비공식(철회).
+> **새 결정: 브라우저 내장 `speechSynthesis` = "기기 의존 브라우저 TTS"** (구글 번역 음성 확보가 아니라 **사용자 브라우저·OS에 설치된 음성을 쓰는 것** — Codex 표현 정정). `frontend/src/lib/tts.ts` `speak(text, lang)` 한 곳. Chrome은 "Google US English"(구글 네트워크 음성), Edge는 "Microsoft … Online (Natural)"(Azure 신경망 — 실청취 결과 번역기보다 낫다는 평) 등 **있는 것 중** 이름 우선순위(Google → Natural → Microsoft)로 선택, 언어는 텍스트 휴리스틱(가나·한자=ja, 한글=ko, 그 외=en). **비용 0, 서버 0, Redis 불필요.** 한계: **기기마다 목소리 다름·동일 음성 보장 없음**, 네트워크 음성은 오프라인 불가, 한자만 있는 텍스트는 중국어여도 일본어로 판별, 재생 실패 시 안내 없음(백로그). 🔊는 반드시 카드 button의 **형제**로 배치 — 중첩 시 HTML 위반 + Enter/Space 전파. **업그레이드 경로:** 공개 서비스 단계에서 공식 Google Cloud TTS(무료 구간 존재, 결제 계정 필요 — 금액은 당시 요금표로 재확인)를 백엔드에서 호출하도록 `speak()` 구현만 교체. 대안 비교: ① 브라우저(채택) ② 공식 Cloud TTS(결제 계정 장벽) ③ 비공식(철회).
 **범위:** 프론트엔드 + Phase 5 Redis
 
 ### 컨텍스트

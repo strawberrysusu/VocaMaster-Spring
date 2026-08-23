@@ -689,7 +689,8 @@ review:summary:{userId}:{date}  TTL 5분
 ### 🆕 추가 아이디어
 
 **🔊 TTS — 발음 듣기 (ADR-017 개정 2026-08-23: 브라우저 내장 speechSynthesis)**
-- [x] **[MUST]** `lib/tts.ts` `speak()` + 🔊 `SpeakButton` — 학습 카드(큰 버튼)·덱 상세·공개 상세 단어 행. 구글/Natural 음성 우선, 언어 자동 판별(en/ja/ko). 비용·서버·Redis 0 (2026-08-23)
+- [x] **[MUST]** `lib/tts.ts` `speak()` + 🔊 `SpeakButton` — 학습 카드(형제 배치, absolute)·덱 상세·공개 상세 단어 행. **기기 의존 브라우저 TTS** (Chrome=Google 네트워크 음성, Edge=Microsoft Natural — 실청취 "번역기보다 좋다"), 언어 자동 판별(en/ja/ko). 비용·서버·Redis 0 (2026-08-23)
+- [ ] **[SHOULD]** 백로그: 한자만 있는 텍스트는 중국어여도 ja로 판별(덱 언어 필드가 정답) / 재생 실패·음성 없음 시 사용자 안내
 - [ ] **[SHOULD]** 설정 화면 생기면 음성 선택 드롭다운 (기기마다 목소리가 달라서)
 - [ ] **[STRETCH]** 공개 서비스 단계: 공식 Google Cloud TTS로 `speak()` 구현 교체 (무료 구간·결제 계정 — 당시 요금표 확인)
 - ~~비공식 Google Translate endpoint / Redis 캐싱~~ — 철회 (약관·차단 위험, 구조 결함)

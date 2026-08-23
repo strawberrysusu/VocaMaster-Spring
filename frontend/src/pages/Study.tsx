@@ -121,16 +121,18 @@ export default function Study() {
               <div className="progress-fill" style={{ width: `${(idx / total) * 100}%` }} />
             </div>
 
-            <button className="study-card" onClick={() => setRevealed(true)}>
-              <span className="study-word">
-                {queue[idx].front} <SpeakButton text={queue[idx].front} size="lg" />
-              </span>
-              {revealed ? (
-                <span className="study-answer">{queue[idx].back}</span>
-              ) : (
-                <span className="study-hint">카드를 눌러 뜻 확인</span>
-              )}
-            </button>
+            {/* 🔊는 카드 button의 '형제' — 안에 넣으면 button 중첩(HTML 위반) + Enter/Space가 카드 뒤집기로 전파 */}
+            <div className="study-card-wrap">
+              <button className="study-card" onClick={() => setRevealed(true)}>
+                <span className="study-word">{queue[idx].front}</span>
+                {revealed ? (
+                  <span className="study-answer">{queue[idx].back}</span>
+                ) : (
+                  <span className="study-hint">카드를 눌러 뜻 확인</span>
+                )}
+              </button>
+              <SpeakButton text={queue[idx].front} size="lg" className="study-speak" />
+            </div>
 
             {revealed ? (
               <div className="answer-buttons">

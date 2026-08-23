@@ -1,6 +1,6 @@
-// 브라우저 내장 TTS (ADR-017 개정, 2026-08-23): 서버·Redis·외부 API 없음.
-// 데스크톱 Chrome엔 "Google US English" 같은 구글 네트워크 음성이, Edge엔 Microsoft Natural 음성이 내장돼 있어
-// 비용 0·약관 문제 0으로 구글 계열 목소리를 쓴다. 공개 서비스로 커지면 speak() 한 곳만 공식 Cloud TTS로 교체.
+// 브라우저 내장 TTS (ADR-017 개정, 2026-08-23): 서버·Redis·외부 API 없음 — "기기 의존" 음성.
+// Chrome은 "Google US English"(구글 네트워크 음성), Edge는 "Microsoft … Online (Natural)"(Azure 신경망)을 내장 —
+// 비용 0·약관 문제 0. 단 기기마다 목소리가 다르고 동일 음성은 보장 안 됨. 공개 서비스로 커지면 speak() 한 곳만 공식 API로 교체.
 
 const VOICE_PRIORITY = ['Google', 'Natural', 'Microsoft'] // 이름에 포함되면 우선 (앞일수록 우선)
 

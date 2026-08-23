@@ -1015,3 +1015,16 @@ button:disabled {
   transform: scale(1.12);
   outline: none;
 }
+
+/* 🔊를 학습 카드 밖 형제로 띄우기 (button 중첩 금지) */
+.study-card-wrap {
+  position: relative;
+}
+
+.study-speak {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  margin: 0;
+  opacity: 0.7;
+}
