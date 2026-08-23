@@ -30,7 +30,8 @@ import java.util.*;
 public class QuizService {
 
     private static final int DEFAULT_TOTAL = 10;
-    private static final int MAX_CHOICES = 4;
+    private static final int MAX_CHOICES = 4;        // 세션 API (React 퀴즈)
+    private static final int LEGACY_CHOICES = 5;     // 구형 단건 API (Mustache) — 기존 계약 유지
 
     private final QuizAttemptRepository quizAttemptRepository;
     private final QuizSessionRepository quizSessionRepository;
@@ -72,17 +73,13 @@ public class QuizService {
         Collections.shuffle(shuffled);
         Card questionCard = shuffled.get(0);
 
-        List<Card> wrongCards = shuffled.subList(1, Math.min(5, shuffled.size()));
 
         String question = direction.isFrontToBack() ? questionCard.getFront() : questionCard.getBack();
         String correctAnswer = direction.isFrontToBack() ? questionCard.getBack() : questionCard.getFront();
 
-        List<String> choices = new ArrayList<>();
-        choices.add(correctAnswer);
-        for (Card c : wrongCards) {
-            choices.add(direction.isFrontToBack() ? c.getBack() : c.getFront());
-        }
-        Collections.shuffle(choices);
+        // 구형 단건 API(Mustache 화면용) — 선택지 중복 제거도 세션 API와 같은 자(buildChoices/normalizeAnswer)로.
+        // React 퀴즈(세션 API)가 이 경로를 대체하므로 deprecated 후보 (체크리스트 기록, 2026-08-23)
+        List<String> choices = buildChoices(cards, questionCard, correctAnswer, direction, LEGACY_CHOICES);   // 구형은 5지선다 유지
 
         return QuizQuestionResponse.builder()
                 .cardId(questionCard.getId())
@@ -289,6 +286,13 @@ public class QuizService {
     }
 
     // 정답 + 오답지 (중복 제거) → 셔플
+    // URL의 deckId와 세션의 덱이 다르면 거부 — 예전엔 path deckId를 무시해 덱 A 세션을 덱 B 주소로 제출할 수 있었다 (계약 위반, Codex 검산)
+    private static void assertSessionDeck(QuizSession session, Long deckId) {
+        if (deckId != null && !session.getDeck().getId().equals(deckId)) {
+            throw new BadRequestException("이 덱의 세션이 아닙니다");
+        }
+    }
+
     /** "이번 오답 다시" 출제 풀 — 원본 세션의 소유자·덱을 검증하고, 답했는데 틀린(isCorrect=false) 카드만 */
     private List<Card> wrongCardsOfSession(Long sourceSessionId, Long deckId, Long userId) {
         QuizSession source = quizSessionRepository.findById(sourceSessionId)
@@ -361,14 +365,16 @@ public class QuizService {
      * 세션 내 한 문제 답 제출. 마지막 문제면 세션 자동 종료.
      */
     @Transactional
-    public SubmitToSessionResponse submitAnswerToSession(Long sessionId, Long userId,
+    public SubmitToSessionResponse submitAnswerToSession(Long deckId, Long sessionId, Long userId,
                                                           SubmitToSessionRequest req) {
-        // 1) 세션 검증 + 소유자 확인 + 종료 여부
-        QuizSession session = quizSessionRepository.findById(sessionId)
+        // 1) 세션 행 X 잠금 → 같은 세션의 동시 제출 직렬화 (확인→저장→종료판정 사이 끼어들기 차단)
+        //    + 소유자 + URL deckId 일치(계약) + 종료 여부
+        QuizSession session = quizSessionRepository.findWithLockById(sessionId)
                 .orElseThrow(() -> new NotFoundException("세션을 찾을 수 없습니다"));
         if (!session.getUser().getId().equals(userId)) {
             throw new ForbiddenException("본인 세션이 아닙니다");
         }
+        assertSessionDeck(session, deckId);
         if (session.getEndedAt() != null) {
             throw new BadRequestException("이미 종료된 세션입니다");
         }
@@ -413,13 +419,14 @@ public class QuizService {
      * 세션 요약 조회 — 정답률, 시간, 문제별 결과.
      * 안 푼 문제의 정답은 NULL로 반환 (정답 노출 방지 — Pause/Resume도 자연스럽게 지원).
      */
-    public SessionSummaryResponse getSummary(Long sessionId, Long userId) {
+    public SessionSummaryResponse getSummary(Long deckId, Long sessionId, Long userId) {
         // 1) 세션 검증
         QuizSession session = quizSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("세션을 찾을 수 없습니다"));
         if (!session.getUser().getId().equals(userId)) {
             throw new ForbiddenException("본인 세션이 아닙니다");
         }
+        assertSessionDeck(session, deckId);
 
         // 2) 문제 N개 조회 (출제 순서대로)
         List<QuizQuestion> questions = quizQuestionRepository

@@ -30,7 +30,7 @@ public class QuizSessionController {
             @PathVariable Long deckId,
             @PathVariable Long sessionId,
             @Valid @RequestBody SubmitToSessionRequest req) {
-        return quizService.submitAnswerToSession(sessionId, CurrentUser.getId(), req);
+        return quizService.submitAnswerToSession(deckId, sessionId, CurrentUser.getId(), req);
     }
 
     @GetMapping("/{sessionId}/summary")
@@ -38,6 +38,6 @@ public class QuizSessionController {
     public SessionSummaryResponse summary(
             @PathVariable Long deckId,
             @PathVariable Long sessionId) {
-        return quizService.getSummary(sessionId, CurrentUser.getId());
+        return quizService.getSummary(deckId, sessionId, CurrentUser.getId());
     }
 }

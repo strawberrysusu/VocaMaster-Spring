@@ -30,7 +30,7 @@ public class TypingSessionController {
             @PathVariable Long deckId,
             @PathVariable Long sessionId,
             @Valid @RequestBody SubmitTypedAnswerRequest req) {
-        return typingService.submitTypedAnswer(sessionId, CurrentUser.getId(), req);
+        return typingService.submitTypedAnswer(deckId, sessionId, CurrentUser.getId(), req);
     }
 
     @GetMapping("/{sessionId}/summary")
@@ -38,6 +38,6 @@ public class TypingSessionController {
     public TypingSessionSummaryResponse summary(
             @PathVariable Long deckId,
             @PathVariable Long sessionId) {
-        return typingService.getSummary(sessionId, CurrentUser.getId());
+        return typingService.getSummary(deckId, sessionId, CurrentUser.getId());
     }
 }

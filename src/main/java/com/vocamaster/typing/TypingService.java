@@ -123,14 +123,15 @@ public class TypingService {
      * 세션 내 한 문제 답 제출. 채점 정책 = trim + ignoreCase + 쉼표 복수 정답 (ADR-026 결정 B).
      */
     @Transactional
-    public SubmitTypedAnswerResponse submitTypedAnswer(Long sessionId, Long userId,
+    public SubmitTypedAnswerResponse submitTypedAnswer(Long deckId, Long sessionId, Long userId,
                                                        SubmitTypedAnswerRequest req) {
-        // 1) 세션 검증 + 소유자 + 종료 여부
-        TypingSession session = typingSessionRepository.findById(sessionId)
+        // 1) 세션 행 X 잠금 → 같은 세션의 동시 제출 직렬화 + 소유자 + URL deckId 일치 + 종료 여부 (Codex 검산 2026-08-23)
+        TypingSession session = typingSessionRepository.findWithLockById(sessionId)
                 .orElseThrow(() -> new NotFoundException("세션을 찾을 수 없습니다"));
         if (!session.getUser().getId().equals(userId)) {
             throw new ForbiddenException("본인 세션이 아닙니다");
         }
+        assertSessionDeck(session, deckId);
         if (session.getEndedAt() != null) {
             throw new BadRequestException("이미 종료된 세션입니다");
         }
@@ -174,12 +175,13 @@ public class TypingService {
     /**
      * 세션 요약 조회 — 안 푼 문제의 정답은 NULL (정답 노출 방지).
      */
-    public TypingSessionSummaryResponse getSummary(Long sessionId, Long userId) {
+    public TypingSessionSummaryResponse getSummary(Long deckId, Long sessionId, Long userId) {
         TypingSession session = typingSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("세션을 찾을 수 없습니다"));
         if (!session.getUser().getId().equals(userId)) {
             throw new ForbiddenException("본인 세션이 아닙니다");
         }
+        assertSessionDeck(session, deckId);
 
         List<TypingQuestion> questions = typingQuestionRepository
                 .findBySessionIdOrderByQuestionOrderAsc(sessionId);
@@ -212,6 +214,13 @@ public class TypingService {
                 .endedAt(session.getEndedAt())
                 .questions(results)
                 .build();
+    }
+
+    // URL의 deckId와 세션의 덱이 다르면 거부 (예전엔 path deckId 무시 — 계약 위반)
+    private static void assertSessionDeck(TypingSession session, Long deckId) {
+        if (deckId != null && !session.getDeck().getId().equals(deckId)) {
+            throw new BadRequestException("이 덱의 세션이 아닙니다");
+        }
     }
 
     /** "이번 오답 다시" 출제 풀 — 원본 세션의 소유자·덱 검증 후, 답했는데 틀린(isCorrect=false) 카드만 */

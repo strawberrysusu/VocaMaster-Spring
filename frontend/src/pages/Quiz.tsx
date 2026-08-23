@@ -156,10 +156,10 @@ export default function Quiz() {
             <div className="setup-row">
               <span className="setup-label">방향</span>
               <div className="sort-tabs">
-                <button className={direction === 'front_to_back' ? 'active' : ''} onClick={() => setDirection('front_to_back')}>
+                <button className={direction === 'front_to_back' ? 'active' : ''} disabled={busy} onClick={() => setDirection('front_to_back')}>
                   단어 → 뜻
                 </button>
-                <button className={direction === 'back_to_front' ? 'active' : ''} onClick={() => setDirection('back_to_front')}>
+                <button className={direction === 'back_to_front' ? 'active' : ''} disabled={busy} onClick={() => setDirection('back_to_front')}>
                   뜻 → 단어
                 </button>
               </div>
@@ -168,7 +168,7 @@ export default function Quiz() {
               <span className="setup-label">문제 수</span>
               <div className="sort-tabs">
                 {[5, 10, 20].map((n) => (
-                  <button key={n} className={count === n ? 'active' : ''} onClick={() => setCount(n)}>
+                  <button key={n} className={count === n ? 'active' : ''} disabled={busy} onClick={() => setCount(n)}>
                     {n}
                   </button>
                 ))}
@@ -177,8 +177,8 @@ export default function Quiz() {
             <div className="setup-row">
               <span className="setup-label">범위</span>
               <div className="sort-tabs">
-                <button className={!wrongOnly ? 'active' : ''} onClick={() => setWrongOnly(false)}>전체</button>
-                <button className={wrongOnly ? 'active' : ''} onClick={() => setWrongOnly(true)}>오답만</button>
+                <button className={!wrongOnly ? 'active' : ''} disabled={busy} onClick={() => setWrongOnly(false)}>전체</button>
+                <button className={wrongOnly ? 'active' : ''} disabled={busy} onClick={() => setWrongOnly(true)}>오답만</button>
               </div>
             </div>
             <button className="cta" style={{ marginTop: 8 }} disabled={busy} onClick={() => start()}>

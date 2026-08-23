@@ -94,6 +94,7 @@ export default function Typing() {
         body: JSON.stringify({ questionId: q.questionId, typedAnswer: typed }),
       })
       setResult(res)
+      setTyped(res.typedAnswer)   // 서버가 채점한 그 문자열로 화면을 맞춤 (응답 대기 중 입력이 바뀌어도 어긋나지 않게)
       if (res.correct) setCorrectCount((n) => n + 1)
     } catch (e) {
       setError((e as Error).message)
@@ -142,10 +143,10 @@ export default function Typing() {
             <div className="setup-row">
               <span className="setup-label">방향</span>
               <div className="sort-tabs">
-                <button className={direction === 'front_to_back' ? 'active' : ''} onClick={() => setDirection('front_to_back')}>
+                <button className={direction === 'front_to_back' ? 'active' : ''} disabled={busy} onClick={() => setDirection('front_to_back')}>
                   단어 보고 뜻 쓰기
                 </button>
-                <button className={direction === 'back_to_front' ? 'active' : ''} onClick={() => setDirection('back_to_front')}>
+                <button className={direction === 'back_to_front' ? 'active' : ''} disabled={busy} onClick={() => setDirection('back_to_front')}>
                   뜻 보고 단어 쓰기
                 </button>
               </div>
@@ -154,15 +155,15 @@ export default function Typing() {
               <span className="setup-label">문제 수</span>
               <div className="sort-tabs">
                 {[5, 10, 20].map((n) => (
-                  <button key={n} className={count === n ? 'active' : ''} onClick={() => setCount(n)}>{n}</button>
+                  <button key={n} className={count === n ? 'active' : ''} disabled={busy} onClick={() => setCount(n)}>{n}</button>
                 ))}
               </div>
             </div>
             <div className="setup-row">
               <span className="setup-label">범위</span>
               <div className="sort-tabs">
-                <button className={!wrongOnly ? 'active' : ''} onClick={() => setWrongOnly(false)}>전체</button>
-                <button className={wrongOnly ? 'active' : ''} onClick={() => setWrongOnly(true)}>오답만</button>
+                <button className={!wrongOnly ? 'active' : ''} disabled={busy} onClick={() => setWrongOnly(false)}>전체</button>
+                <button className={wrongOnly ? 'active' : ''} disabled={busy} onClick={() => setWrongOnly(true)}>오답만</button>
               </div>
             </div>
             <button className="cta" style={{ marginTop: 8 }} disabled={busy} onClick={() => start()}>
@@ -195,8 +196,13 @@ export default function Typing() {
                   className={`typing-input ${result ? (result.correct ? 'ok' : 'ng') : ''}`}
                   value={typed}
                   onChange={(e) => setTyped(e.target.value)}
+                  onKeyDown={(e) => {
+                    // 일본어·한국어 IME: 변환 확정 Enter는 '조합 중'이라 제출로 치지 않는다 (keyCode 229 = 구형 브라우저 신호)
+                    if (e.key === 'Enter' && (e.nativeEvent.isComposing || e.keyCode === 229)) e.preventDefault()
+                  }}
                   placeholder="정답 입력 후 Enter"
-                  readOnly={!!result}
+                  readOnly={!!result || busy}
+                  maxLength={500}
                   autoComplete="off"
                   autoCapitalize="off"
                   spellCheck={false}

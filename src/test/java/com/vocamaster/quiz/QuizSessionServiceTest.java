@@ -141,7 +141,7 @@ class QuizSessionServiceTest extends AbstractIntegrationTest {
         req.setQuestionId(q.getQuestionId());
         req.setSelectedAnswer("  " + correct.toUpperCase() + "  ");        // 공백 + 대소문자 변형
 
-        SubmitToSessionResponse res = quizService.submitAnswerToSession(start.getSessionId(), user.getId(), req);
+        SubmitToSessionResponse res = quizService.submitAnswerToSession(deck.getId(), start.getSessionId(), user.getId(), req);
         assertTrue(res.isCorrect(), "공백/대소문자 무시하고 정답 처리되어야");
     }
 
@@ -161,7 +161,7 @@ class QuizSessionServiceTest extends AbstractIntegrationTest {
             SubmitToSessionRequest req = new SubmitToSessionRequest();
             req.setQuestionId(qDto.getQuestionId());
             req.setSelectedAnswer(q.getCorrectAnswer());
-            quizService.submitAnswerToSession(start.getSessionId(), user.getId(), req);
+            quizService.submitAnswerToSession(deck.getId(), start.getSessionId(), user.getId(), req);
         }
 
         em.flush();
@@ -186,10 +186,10 @@ class QuizSessionServiceTest extends AbstractIntegrationTest {
         req.setQuestionId(qDto.getQuestionId());
         req.setSelectedAnswer("anything");
 
-        quizService.submitAnswerToSession(start.getSessionId(), user.getId(), req);  // 첫 제출 OK
+        quizService.submitAnswerToSession(deck.getId(), start.getSessionId(), user.getId(), req);  // 첫 제출 OK
 
         assertThrows(BadRequestException.class, () ->
-                quizService.submitAnswerToSession(start.getSessionId(), user.getId(), req),
+                quizService.submitAnswerToSession(deck.getId(), start.getSessionId(), user.getId(), req),
                 "재제출은 BadRequest");
     }
 
@@ -209,11 +209,11 @@ class QuizSessionServiceTest extends AbstractIntegrationTest {
         SubmitToSessionRequest req = new SubmitToSessionRequest();
         req.setQuestionId(first.getQuestionId());
         req.setSelectedAnswer(firstQ.getCorrectAnswer());
-        quizService.submitAnswerToSession(start.getSessionId(), user.getId(), req);   // 첫 문제만 풀기
+        quizService.submitAnswerToSession(deck.getId(), start.getSessionId(), user.getId(), req);   // 첫 문제만 풀기
 
         em.flush();
         em.clear();
-        SessionSummaryResponse summary = quizService.getSummary(start.getSessionId(), user.getId());
+        SessionSummaryResponse summary = quizService.getSummary(deck.getId(), start.getSessionId(), user.getId());
 
         for (SessionSummaryResponse.QuestionResult r : summary.getQuestions()) {
             if (r.getQuestionId().equals(first.getQuestionId())) {
@@ -243,7 +243,7 @@ class QuizSessionServiceTest extends AbstractIntegrationTest {
             SubmitToSessionRequest req = new SubmitToSessionRequest();
             req.setQuestionId(q.getQuestionId());
             req.setSelectedAnswer(pick);
-            quizService.submitAnswerToSession(start.getSessionId(), user.getId(), req);
+            quizService.submitAnswerToSession(deck.getId(), start.getSessionId(), user.getId(), req);
         }
         return wrongQuestionText;
     }
@@ -348,7 +348,7 @@ class QuizSessionServiceTest extends AbstractIntegrationTest {
         SubmitToSessionRequest req = new SubmitToSessionRequest();
         req.setQuestionId(appleQ.getQuestionId());
         req.setSelectedAnswer("  APPLE ");
-        assertTrue(quizService.submitAnswerToSession(res.getSessionId(), user.getId(), req).isCorrect());
+        assertTrue(quizService.submitAnswerToSession(deck.getId(), res.getSessionId(), user.getId(), req).isCorrect());
     }
 
     @Test

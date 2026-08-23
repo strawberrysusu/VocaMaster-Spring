@@ -108,7 +108,7 @@ class TypingServiceTest extends AbstractIntegrationTest {
 
         // "  apple  " 입력 — 양 끝 공백 + 소문자 — 정답 처리되어야
         SubmitTypedAnswerResponse res = typingService.submitTypedAnswer(
-                start.getSessionId(), user.getId(), submitReq(appleQ.getId(), "  apple  "));
+                deck.getId(), start.getSessionId(), user.getId(), submitReq(appleQ.getId(), "  apple  "));
 
         assertTrue(res.isCorrect(), "trim + ignoreCase 정답 처리되어야");
     }
@@ -131,7 +131,7 @@ class TypingServiceTest extends AbstractIntegrationTest {
 
         // 두 번째 후보 "능금" 입력해도 정답
         SubmitTypedAnswerResponse res = typingService.submitTypedAnswer(
-                start.getSessionId(), user.getId(), submitReq(appleQ.getId(), "능금"));
+                deck.getId(), start.getSessionId(), user.getId(), submitReq(appleQ.getId(), "능금"));
 
         assertTrue(res.isCorrect(), "쉼표 복수 정답 중 하나 맞히면 정답");
     }
@@ -149,7 +149,7 @@ class TypingServiceTest extends AbstractIntegrationTest {
         Long firstQ = start.getQuestions().get(0).getQuestionId();
 
         SubmitTypedAnswerResponse res = typingService.submitTypedAnswer(
-                start.getSessionId(), user.getId(), submitReq(firstQ, "   "));
+                deck.getId(), start.getSessionId(), user.getId(), submitReq(firstQ, "   "));
 
         assertFalse(res.isCorrect(), "공백만 입력은 오답");
     }
@@ -166,7 +166,7 @@ class TypingServiceTest extends AbstractIntegrationTest {
         StartTypingSessionResponse start = typingService.startSession(deck.getId(), user.getId(), startReq(3));
         for (StartTypingSessionResponse.QuestionDto qDto : start.getQuestions()) {
             TypingQuestion q = typingQuestionRepository.findById(qDto.getQuestionId()).orElseThrow();
-            typingService.submitTypedAnswer(start.getSessionId(), user.getId(),
+            typingService.submitTypedAnswer(deck.getId(), start.getSessionId(), user.getId(),
                     submitReq(qDto.getQuestionId(), q.getCorrectAnswer()));
         }
 
@@ -188,10 +188,10 @@ class TypingServiceTest extends AbstractIntegrationTest {
         StartTypingSessionResponse start = typingService.startSession(deck.getId(), user.getId(), startReq(3));
         Long firstQ = start.getQuestions().get(0).getQuestionId();
 
-        typingService.submitTypedAnswer(start.getSessionId(), user.getId(), submitReq(firstQ, "anything"));
+        typingService.submitTypedAnswer(deck.getId(), start.getSessionId(), user.getId(), submitReq(firstQ, "anything"));
 
         assertThrows(BadRequestException.class, () ->
-                typingService.submitTypedAnswer(start.getSessionId(), user.getId(), submitReq(firstQ, "again")),
+                typingService.submitTypedAnswer(deck.getId(), start.getSessionId(), user.getId(), submitReq(firstQ, "again")),
                 "재제출은 BadRequest");
     }
 
@@ -207,12 +207,12 @@ class TypingServiceTest extends AbstractIntegrationTest {
         StartTypingSessionResponse start = typingService.startSession(deck.getId(), user.getId(), startReq(3));
         StartTypingSessionResponse.QuestionDto first = start.getQuestions().get(0);
         TypingQuestion firstQ = typingQuestionRepository.findById(first.getQuestionId()).orElseThrow();
-        typingService.submitTypedAnswer(start.getSessionId(), user.getId(),
+        typingService.submitTypedAnswer(deck.getId(), start.getSessionId(), user.getId(),
                 submitReq(first.getQuestionId(), firstQ.getCorrectAnswer()));
 
         em.flush();
         em.clear();
-        TypingSessionSummaryResponse summary = typingService.getSummary(start.getSessionId(), user.getId());
+        TypingSessionSummaryResponse summary = typingService.getSummary(deck.getId(), start.getSessionId(), user.getId());
 
         for (TypingSessionSummaryResponse.QuestionResult r : summary.getQuestions()) {
             if (r.getQuestionId().equals(first.getQuestionId())) {
@@ -235,7 +235,7 @@ class TypingServiceTest extends AbstractIntegrationTest {
         // 1차 세션 — 첫 카드만 일부러 오답
         StartTypingSessionResponse first = typingService.startSession(deck.getId(), user.getId(), startReq(2));
         StartTypingSessionResponse.QuestionDto firstQ = first.getQuestions().get(0);
-        typingService.submitTypedAnswer(first.getSessionId(), user.getId(),
+        typingService.submitTypedAnswer(deck.getId(), first.getSessionId(), user.getId(),
                 submitReq(firstQ.getQuestionId(), "intentionally-wrong"));
 
         em.flush();
@@ -270,7 +270,7 @@ class TypingServiceTest extends AbstractIntegrationTest {
             req.setQuestionId(q.getQuestionId());
             req.setTypedAnswer(i == 0 ? "totally-wrong" : correct);
             if (i == 0) wrongQuestion = q.getQuestion();
-            typingService.submitTypedAnswer(first.getSessionId(), user.getId(), req);
+            typingService.submitTypedAnswer(deck.getId(), first.getSessionId(), user.getId(), req);
         }
 
         StartTypingSessionRequest retry = startReq(10);
@@ -290,7 +290,7 @@ class TypingServiceTest extends AbstractIntegrationTest {
         SubmitTypedAnswerRequest wrong = new SubmitTypedAnswerRequest();
         wrong.setQuestionId(q.getQuestionId());
         wrong.setTypedAnswer("nope");
-        typingService.submitTypedAnswer(mine.getSessionId(), user.getId(), wrong);
+        typingService.submitTypedAnswer(deck.getId(), mine.getSessionId(), user.getId(), wrong);
 
         User other = userRepository.save(User.builder()
                 .email("other-typing@test.com").password("encoded").nickname("남").build());

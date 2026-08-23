@@ -152,7 +152,7 @@ class WrongNoteServiceTest extends AbstractIntegrationTest {
         com.vocamaster.quiz.dto.SubmitToSessionRequest submit = new com.vocamaster.quiz.dto.SubmitToSessionRequest();
         submit.setQuestionId(q.getQuestionId());
         submit.setSelectedAnswer(wrongPick);
-        quizService.submitAnswerToSession(session.getSessionId(), user.getId(), submit);
+        quizService.submitAnswerToSession(deck.getId(), session.getSessionId(), user.getId(), submit);
         em.flush();
 
         var res = wrongNoteService.getWrongNotes(deck.getId(), user.getId(), 0);
