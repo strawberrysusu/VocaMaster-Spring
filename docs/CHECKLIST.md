@@ -627,7 +627,7 @@
 ### 🆕 추가 아이디어
 - [ ] MockMvc 컨트롤러 슬라이스 테스트 도입 — 400 계약(빈 visibility / 오타 enum) 자동 검증. 지금은 Jackson+`@Valid` 프레임워크 보증에 의존 (프로젝트에 MockMvc 전례 없음 — 도입 자체가 별도 결정)
   - 도입 시 함께: 동일 유저 더블탭의 UNIQUE 충돌 → 실제 컨트롤러 catch → currentState 복구 경로 **결정적** 검증 (현 테스트는 최종 상태 멱등만 보증, 충돌 경로 강제는 아님 — Codex 검산 2026-08-11)
-- [ ] **React 후속 백로그 (2026-08-14, Codex 재검산 — 8/19 ②③④ 완료·likedByMe/mine/공개 카드 API/상세 화면/UNLISTED 비로그인 열람/무효토큰 401)**: ① Explore 로딩 상태·페이지네이션(현재 30개 상한) ⓪ 목록의 cardCount는 여전히 덱마다 count 1번(N+1 잔존 — likedByMe만 IN으로 해결됨, 다음 정리 후보) ⑤ Gradle bootJar에 frontend build 연결(CI/clean clone 대비 — 지금은 bat이 담당) ⑥ ~~통계 화면용 API~~ 완료 8/23 ⑦ OSIV 명시 off + 스프링 기본 계정 소음 정리 ⑧ bat이 서버 준비 후 브라우저 열기 ⑨ ~~Card에 읽기(reading) 필드~~ **완료 8/23 (V14)** — 생성·수정·복사·3칸 가져오기(단어|읽기|뜻)·학습·퀴즈·타이핑·목록 표시, 🔊는 읽기 우선. 채점엔 미사용(옵션 후보) ⑩ 퀴즈 자동 넘김·덱 그리드 열 수 등 목업 옵션들은 설정 화면 생길 때 함께 ⑪ **구형 Mustache 퀴즈(/quiz/generate·submit, 5지선다) deprecated 예정** — React 세션 퀴즈가 대체. 선택지 정규화는 같은 buildChoices로 맞춰둠(8/23). 제거는 Mustache 화면 전체 정리 때 한 번에
+- [ ] **React 후속 백로그 (2026-08-14, Codex 재검산 — 8/19 ②③④ 완료·likedByMe/mine/공개 카드 API/상세 화면/UNLISTED 비로그인 열람/무효토큰 401)**: ① Explore 로딩 상태·페이지네이션(현재 30개 상한) ⓪ 목록의 cardCount는 여전히 덱마다 count 1번(N+1 잔존 — likedByMe만 IN으로 해결됨, 다음 정리 후보) ⑤ Gradle bootJar에 frontend build 연결(CI/clean clone 대비 — 지금은 bat이 담당) ⑥ ~~통계 화면용 API~~ 완료 8/23 ⑦ OSIV 명시 off + 스프링 기본 계정 소음 정리 ⑧ bat이 서버 준비 후 브라우저 열기 ⑨ ~~Card에 읽기(reading) 필드~~ **완료 8/23 (V14)** — 생성·수정·복사·3칸 가져오기(단어|읽기|뜻)·학습·퀴즈·타이핑·목록 표시, 🔊는 읽기 우선. 채점엔 미사용(옵션 후보) ⑩ ~~목업 옵션들~~ 설정 화면으로 완료 8/23 ⑪ **구형 Mustache 퀴즈(/quiz/generate·submit, 5지선다) deprecated 예정** — React 세션 퀴즈가 대체. 선택지 정규화는 같은 buildChoices로 맞춰둠(8/23). 제거는 Mustache 화면 전체 정리 때 한 번에
 - [ ] 익명 요청 거부를 401로 통일 — SecurityConfig에 authenticationEntryPoint 미설정이라 현재 실측 403 (PublicDeckHttpTest가 박제). 프론트가 "로그인 필요"와 "권한 없음"을 구별하려면 401 + ErrorResponse JSON이 맞음
 
 ---
@@ -698,7 +698,7 @@ review:summary:{userId}:{date}  TTL 5분
 **⚛️ React 도입 (ADR-016, Phase 5 이후 시작)**
 - [ ] **[MUST]** React + TypeScript + Vite 프로젝트 셋업 (NewsPick 스택과 동일)
 - [ ] **[MUST]** Spring 빌드에 React 결과물 번들 (`src/main/resources/static/react/`)
-- [x] **[MUST]** 핵심 화면 — 학습·덱·탐색(8/14~19) + **퀴즈(8/23: 설정→4지선다→즉시 정오→요약·오답만 다시, 숫자키 1~4)**. + **타이핑(8/23: 입력창·Enter 흐름·이번 오답 다시)**. + **통계(8/23: GET /stats/overview — 28일 활동·연속·누적·라이트너·덱별 진행률, GROUP BY 집계)**. React 핵심 화면 MUST 전부 완료 — 설정만 남음(담을 기능 생기면)
+- [x] **[MUST]** 핵심 화면 — 학습·덱·탐색(8/14~19) + **퀴즈(8/23: 설정→4지선다→즉시 정오→요약·오답만 다시, 숫자키 1~4)**. + **타이핑(8/23: 입력창·Enter 흐름·이번 오답 다시)**. + **통계(8/23: GET /stats/overview — 28일 활동·연속·누적·라이트너·덱별 진행률, GROUP BY 집계)**. + **설정(8/23: 테마 색·음성 선택·퀴즈 자동 넘김·덱 열 수·계정 — localStorage)**. **React 화면 전부 완료**
 - [ ] **[MUST]** httpOnly Cookie + access token 자동 갱신 인터셉터
 - [ ] **[MUST]** TTS 버튼 통합 (위 항목과 결합)
 - [ ] **[SHOULD]** README에 "Mustache + React 공존 이유" 명시 (ADR-016 참조)

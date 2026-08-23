@@ -410,7 +410,7 @@ input {
 /* ── 덱 카드 ── */
 .deck-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--deck-cols, 3), 1fr);   /* 설정의 덱 열 수 */
   gap: 16px;
 }
 
@@ -1381,4 +1381,65 @@ button:disabled {
   .stats-grid4 {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ── 설정 ── */
+.settings-section {
+  margin-bottom: 16px;
+}
+
+.settings-section h2 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.swatches {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 99px;
+  border: 3px solid transparent;
+  box-shadow: 0 0 0 1px var(--border);
+  transition: transform 0.12s ease;
+}
+
+.swatch.on {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--ink-2);
+  transform: scale(1.08);
+}
+
+.voice-select {
+  flex: 1;
+  max-width: 420px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.toggle-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--a);
 }

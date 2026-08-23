@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
+import { loadSettings } from '../lib/settings'
 
 // 백엔드(Phase 2 퀴즈 세션 API) 계약 — direction은 소문자 'front_to_back' | 'back_to_front' (Direction.from)
 type Direction = 'front_to_back' | 'back_to_front'
@@ -94,6 +95,10 @@ export default function Quiz() {
       })
       setPicked(res)
       if (res.correct) setCorrectCount((n) => n + 1)
+      if (loadSettings().quizAutoAdvance) {
+        // 설정: 답하면 1초 뒤 자동 다음 — 최신 next를 ref로 호출 (타이머가 옛 클로저를 잡지 않게)
+        window.setTimeout(() => nextRef.current(), 1000)
+      }
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -102,7 +107,7 @@ export default function Quiz() {
   }
 
   async function next() {
-    if (!session) return
+    if (!session || !picked) return   // 답한 상태에서만 — 자동 넘김 타이머와 수동 Enter가 겹쳐도 한 번만 진행
     if (idx + 1 < session.questions.length) {
       setIdx(idx + 1)
       setPicked(null)
@@ -114,6 +119,9 @@ export default function Quiz() {
       setError((e as Error).message)
     }
   }
+
+  const nextRef = useRef(next)
+  nextRef.current = next
 
   // 키보드: 1~4 선택, Enter/Space 다음
   useEffect(() => {

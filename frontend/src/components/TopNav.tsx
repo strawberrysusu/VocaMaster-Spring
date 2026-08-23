@@ -33,9 +33,8 @@ export default function TopNav({ streak }: { streak?: number }) {
           <Link to="/" className={pathname === '/' ? 'active' : ''}>홈</Link>
           <Link to="/decks" className={pathname.startsWith('/decks') ? 'active' : ''}>내 덱</Link>
           <Link to="/explore" className={pathname.startsWith('/explore') ? 'active' : ''}>탐색</Link>
-          {/* 설정 — 담을 기능(테마 색·음성 선택·퀴즈 자동 넘김) 생기면 */}
           <Link to="/stats" className={pathname.startsWith('/stats') ? 'active' : ''}>통계</Link>
-          <Link to="/soon/설정" className="soon">설정</Link>
+          <Link to="/settings" className={pathname.startsWith('/settings') ? 'active' : ''}>설정</Link>
         </nav>
         {streak !== undefined && streak > 0 && (
           <div className="streak-pill">

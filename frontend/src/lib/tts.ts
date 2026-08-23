@@ -2,7 +2,9 @@
 // Chrome은 "Google US English"(구글 네트워크 음성), Edge는 "Microsoft … Online (Natural)"(Azure 신경망)을 내장 —
 // 비용 0·약관 문제 0. 단 기기마다 목소리가 다르고 동일 음성은 보장 안 됨. 공개 서비스로 커지면 speak() 한 곳만 공식 API로 교체.
 
-const VOICE_PRIORITY = ['Google', 'Natural', 'Microsoft'] // 이름에 포함되면 우선 (앞일수록 우선)
+import { voicePreference } from './settings'
+
+const VOICE_PRIORITY = ['Google', 'Natural', 'Microsoft'] // 이름에 포함되면 우선 (앞일수록 우선) — 설정에서 고른 음성이 최우선
 
 let voicesCache: SpeechSynthesisVoice[] = []
 
@@ -29,9 +31,20 @@ export function detectLang(text: string): string {
   return 'en-US'
 }
 
+// 설정 화면용 — 언어별 사용 가능한 음성 목록
+export function voicesFor(lang: string): SpeechSynthesisVoice[] {
+  const base = lang.slice(0, 2)
+  return loadVoices().filter((v) => v.lang.toLowerCase().startsWith(base))
+}
+
 function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
   const base = lang.slice(0, 2)
   const candidates = loadVoices().filter((v) => v.lang.toLowerCase().startsWith(base))
+  const preferred = voicePreference(lang)                       // 설정에서 고른 음성이 있으면 그것부터
+  if (preferred) {
+    const hit = candidates.find((v) => v.name === preferred)
+    if (hit) return hit
+  }
   for (const key of VOICE_PRIORITY) {
     const hit = candidates.find((v) => v.name.includes(key))
     if (hit) return hit
