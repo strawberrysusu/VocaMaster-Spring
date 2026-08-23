@@ -9,6 +9,7 @@ import Explore from './pages/Explore'
 import PublicDeckDetail from './pages/PublicDeckDetail'
 import Quiz from './pages/Quiz'
 import Typing from './pages/Typing'
+import ImportCards from './pages/ImportCards'
 import ComingSoon from './pages/ComingSoon'
 import { getToken } from './api/client'
 
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/" element={<RequireAuth><Home /></RequireAuth>} />
         <Route path="/decks" element={<RequireAuth><Decks /></RequireAuth>} />
         <Route path="/decks/:id" element={<RequireAuth><DeckDetail /></RequireAuth>} />
+        <Route path="/decks/:id/import" element={<RequireAuth><ImportCards /></RequireAuth>} />
         <Route path="/study" element={<RequireAuth><Study /></RequireAuth>} />
         <Route path="/quiz/:deckId" element={<RequireAuth><Quiz /></RequireAuth>} />
         <Route path="/typing/:deckId" element={<RequireAuth><Typing /></RequireAuth>} />

@@ -108,6 +108,9 @@ export default function DeckDetail() {
             {adding ? '추가 중...' : '추가'}
           </button>
         </div>
+        <p className="muted" style={{ margin: '-8px 0 18px', fontSize: 12.5 }}>
+          여러 장을 한 번에? <Link to={`/decks/${id}/import`} style={{ color: 'var(--a)', fontWeight: 600 }}>일괄 가져오기 →</Link>
+        </p>
 
         {error && <p className="error" role="alert">{error}</p>}
 

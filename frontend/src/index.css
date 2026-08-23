@@ -1274,3 +1274,23 @@ button:disabled {
 .create-row .reading-input {
   flex: 0 1 220px;
 }
+
+/* ── 일괄 가져오기 ── */
+.import-text {
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: #fcfcfd;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  resize: vertical;
+  outline: none;
+}
+
+.import-text:focus {
+  border-color: var(--a);
+  background: #fff;
+}
