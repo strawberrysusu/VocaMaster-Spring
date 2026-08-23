@@ -55,16 +55,19 @@ export default function Quiz() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  async function start(opts?: { wrongOnly?: boolean }) {
+  // 두 가지 '오답'을 분리 (Codex 검산 2026-08-23):
+  //  - 설정 화면의 '오답만'      = 누적 오답 (서버가 세션 장부 + 구형 장부를 합쳐 봄)
+  //  - 결과 화면의 '이번 오답 다시' = 방금 끝난 세션(sourceSessionId)에서 틀린 카드만
+  async function start(opts?: { sourceSessionId?: number }) {
     if (busy) return
     setBusy(true)
     setError('')
-    setSummary(null)
     try {
-      const res = await api<StartResp>(`/decks/${deckId}/quiz-sessions`, {
-        method: 'POST',
-        body: JSON.stringify({ direction, total: count, wrongOnly: opts?.wrongOnly ?? wrongOnly }),
-      })
+      const body = opts?.sourceSessionId
+        ? { direction, total: count, sourceSessionId: opts.sourceSessionId }
+        : { direction, total: count, wrongOnly }
+      const res = await api<StartResp>(`/decks/${deckId}/quiz-sessions`, { method: 'POST', body: JSON.stringify(body) })
+      setSummary(null)   // 성공한 뒤에만 요약을 치운다 — 실패하면 결과 화면 유지
       setSession(res)
       setIdx(0)
       setPicked(null)
@@ -178,7 +181,7 @@ export default function Quiz() {
             <button className="cta" style={{ marginTop: 8 }} disabled={busy} onClick={() => start()}>
               {busy ? '준비 중...' : '시작'}
             </button>
-            <p className="muted" style={{ fontSize: 12.5 }}>카드가 5장 미만이면 선택지가 줄어들어요 (최소 2장)</p>
+            <p className="muted" style={{ fontSize: 12.5 }}>덱에 카드가 5장 미만이면 선택지가 줄어들어요 (최소 2장). '오답만'은 지금까지 틀린 카드 전체예요</p>
           </div>
         )}
 
@@ -247,10 +250,12 @@ export default function Quiz() {
               <Link to={`/decks/${deckId}`} className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>
                 덱으로
               </Link>
-              {summary.wrong > 0 ? (
-                <button className="answer-yes" onClick={() => start({ wrongOnly: true })}>오답만 다시</button>
+              {summary.wrong > 0 && session ? (
+                <button className="answer-yes" disabled={busy} onClick={() => start({ sourceSessionId: session.sessionId })}>
+                  이번 오답 다시 ({summary.wrong})
+                </button>
               ) : (
-                <button className="answer-yes" onClick={() => start()}>한 번 더</button>
+                <button className="answer-yes" disabled={busy} onClick={() => start()}>한 번 더</button>
               )}
             </div>
           </div>

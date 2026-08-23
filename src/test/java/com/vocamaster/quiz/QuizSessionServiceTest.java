@@ -3,6 +3,7 @@ package com.vocamaster.quiz;
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.common.exception.BadRequestException;
+import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
 import com.vocamaster.quiz.dto.*;
@@ -221,5 +222,95 @@ class QuizSessionServiceTest extends AbstractIntegrationTest {
                 assertNull(r.getCorrectAnswer(), "안 푼 문제는 정답 NULL");
             }
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 7. "이번 오답 다시" — sourceSessionId (Codex 검산 2026-08-23: 장부 불일치 수리)
+    // ─────────────────────────────────────────────────────────────
+
+    /** 첫 문제를 일부러 틀리고 나머지는 맞힌 뒤, 틀린 카드의 문제 텍스트를 돌려준다 */
+    private String answerFirstWrongRestRight(StartSessionResponse start) {
+        String wrongQuestionText = null;
+        for (int i = 0; i < start.getQuestions().size(); i++) {
+            StartSessionResponse.QuestionDto q = start.getQuestions().get(i);
+            QuizQuestion question = quizQuestionRepository.findById(q.getQuestionId()).orElseThrow();
+            String correct = question.getCorrectAnswer();
+            String pick = correct;
+            if (i == 0) {
+                pick = q.getChoices().stream().filter(c -> !c.equals(correct)).findFirst().orElseThrow();
+                wrongQuestionText = q.getQuestion();
+            }
+            SubmitToSessionRequest req = new SubmitToSessionRequest();
+            req.setQuestionId(q.getQuestionId());
+            req.setSelectedAnswer(pick);
+            quizService.submitAnswerToSession(start.getSessionId(), user.getId(), req);
+        }
+        return wrongQuestionText;
+    }
+
+    @Test
+    @DisplayName("이번 오답 다시 — 오답이 1장뿐이어도 재시험 가능, 선택지는 덱 전체에서")
+    void retryFromSession_singleWrongCard_includesIt() {
+        for (int i = 0; i < 6; i++) addCard("front" + i, "back" + i);
+        em.flush();
+        StartSessionResponse first = quizService.startSession(deck.getId(), user.getId(), startReq(6));
+        String wrongText = answerFirstWrongRestRight(first);
+
+        StartSessionRequest retry = startReq(10);
+        retry.setSourceSessionId(first.getSessionId());
+        StartSessionResponse second = quizService.startSession(deck.getId(), user.getId(), retry);
+
+        assertEquals(1, second.getTotal(), "틀린 카드 1장만 출제");
+        assertEquals(wrongText, second.getQuestions().get(0).getQuestion(), "방금 틀린 그 카드");
+        assertTrue(second.getQuestions().get(0).getChoices().size() >= 2,
+                "출제 풀이 1장이어도 오답지는 덱 전체에서 — 예전 구조면 '최소 2개' 400");
+    }
+
+    @Test
+    @DisplayName("누적 오답(wrongOnly)도 세션 장부의 오답을 본다 — quiz_attempts만 보던 불일치 수리")
+    void wrongOnly_seesSessionWrongs() {
+        for (int i = 0; i < 6; i++) addCard("front" + i, "back" + i);
+        em.flush();
+        StartSessionResponse first = quizService.startSession(deck.getId(), user.getId(), startReq(6));
+        String wrongText = answerFirstWrongRestRight(first);
+
+        StartSessionRequest req = startReq(10);
+        req.setWrongOnly(true);
+        StartSessionResponse res = quizService.startSession(deck.getId(), user.getId(), req);
+
+        assertEquals(1, res.getTotal());
+        assertEquals(wrongText, res.getQuestions().get(0).getQuestion());
+    }
+
+    @Test
+    @DisplayName("남의 sourceSessionId는 403 — 세션 소유자 검증")
+    void retryFromSession_othersSession_forbidden() {
+        for (int i = 0; i < 3; i++) addCard("front" + i, "back" + i);
+        em.flush();
+        StartSessionResponse mine = quizService.startSession(deck.getId(), user.getId(), startReq(3));
+        answerFirstWrongRestRight(mine);
+
+        User other = userRepository.save(User.builder()
+                .email("other-quiz@test.com").password("encoded").nickname("남").build());
+        Deck othersDeck = deckRepository.save(Deck.builder().title("남의 덱").user(other).build());
+        cardRepository.save(Card.builder().front("x").back("y").deck(othersDeck).build());
+        cardRepository.save(Card.builder().front("p").back("q").deck(othersDeck).build());
+        em.flush();
+
+        StartSessionRequest retry = startReq(5);
+        retry.setSourceSessionId(mine.getSessionId());
+        assertThrows(ForbiddenException.class,
+                () -> quizService.startSession(othersDeck.getId(), other.getId(), retry));
+    }
+
+    @Test
+    @DisplayName("total이 0 이하면 400")
+    void startSession_totalZero_badRequest() {
+        for (int i = 0; i < 3; i++) addCard("front" + i, "back" + i);
+        em.flush();
+        assertThrows(BadRequestException.class,
+                () -> quizService.startSession(deck.getId(), user.getId(), startReq(0)));
+        assertThrows(BadRequestException.class,
+                () -> quizService.startSession(deck.getId(), user.getId(), startReq(-3)));
     }
 }

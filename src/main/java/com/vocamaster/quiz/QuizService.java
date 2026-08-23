@@ -191,10 +191,27 @@ public class QuizService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다"));
 
-        // 1) 카드 풀 결정 (전체 / 오답만 / 즐겨찾기만)
+        if (req.getTotal() != null && req.getTotal() <= 0) {
+            throw new BadRequestException("total은 1 이상이어야 합니다. 입력값: " + req.getTotal());
+        }
+
+        // 1) 풀 두 개를 분리 (Codex 검산 2026-08-23):
+        //    - distractorPool(오답지 재료) = 덱 전체 → 2장 이상이면 오답지를 만들 수 있다
+        //    - questionPool(출제 대상)     = 전체 / 이번 세션 오답 / 누적 오답 / 즐겨찾기 → 1장이어도 출제 가능
+        //    예전엔 둘이 같은 풀이라 '오답 1장'이면 재시험 자체가 불가능했다
+        List<Card> distractorPool = cardRepository.findByDeckId(deckId);
+        if (distractorPool.size() < 2) {
+            throw new BadRequestException(
+                    "퀴즈에는 덱에 카드가 최소 2개 필요합니다. 현재 " + distractorPool.size() + "개");
+        }
+
         List<Card> pool;
-        if (Boolean.TRUE.equals(req.getWrongOnly())) {
-            List<Long> wrongIds = quizAttemptRepository.findWrongCardIds(deckId, userId);
+        if (req.getSourceSessionId() != null) {
+            pool = wrongCardsOfSession(req.getSourceSessionId(), deckId, userId);
+        } else if (Boolean.TRUE.equals(req.getWrongOnly())) {
+            // 누적 오답 = 세션 장부(quiz_questions) ∪ 구형 단건 장부(quiz_attempts) — 두 장부 불일치 수리
+            Set<Long> wrongIds = new LinkedHashSet<>(quizQuestionRepository.findWrongCardIds(deckId, userId));
+            wrongIds.addAll(quizAttemptRepository.findWrongCardIds(deckId, userId));
             if (wrongIds.isEmpty()) throw new BadRequestException("오답 카드가 없습니다");
             pool = cardRepository.findAllById(wrongIds).stream()
                     .filter(c -> c.getDeck().getId().equals(deckId))
@@ -202,19 +219,16 @@ public class QuizService {
         } else if (Boolean.TRUE.equals(req.getStarredOnly())) {
             pool = cardRepository.findByDeckIdAndStarredTrue(deckId);
         } else {
-            pool = cardRepository.findByDeckId(deckId);
+            pool = distractorPool;
         }
-
-        // 2) 최소 카드 수 검증 (오답지 만들려면 2개 이상)
-        if (pool.size() < 2) {
-            throw new BadRequestException(
-                    "퀴즈에 사용 가능한 카드가 최소 2개 필요합니다. 현재 " + pool.size() + "개");
+        if (pool.isEmpty()) {
+            throw new BadRequestException("출제할 카드가 없습니다");
         }
 
         Direction direction = Direction.from(req.getDirection());
         int requestedTotal = (req.getTotal() == null) ? DEFAULT_TOTAL : req.getTotal();
-        int total = Math.min(requestedTotal, pool.size());          // 카드 부족하면 그만큼만
-        int choiceCount = Math.min(MAX_CHOICES, pool.size());       // 5개 미만이면 2~4지선다 fallback
+        int total = Math.min(requestedTotal, pool.size());                  // 카드 부족하면 그만큼만
+        int choiceCount = Math.min(MAX_CHOICES, distractorPool.size());     // 덱이 5장 미만이면 2~4지선다 fallback
 
         // 3) 세션 row 저장 (startedAt은 @CreationTimestamp 자동)
         QuizSession session = quizSessionRepository.save(QuizSession.builder()
@@ -236,7 +250,7 @@ public class QuizService {
             String questionText = direction.isFrontToBack() ? qc.getFront() : qc.getBack();
             String correctAnswer = direction.isFrontToBack() ? qc.getBack() : qc.getFront();
 
-            List<String> choices = buildChoices(pool, qc, correctAnswer, direction, choiceCount);
+            List<String> choices = buildChoices(distractorPool, qc, correctAnswer, direction, choiceCount);
 
             QuizQuestion q = quizQuestionRepository.save(QuizQuestion.builder()
                     .session(session)
@@ -264,6 +278,24 @@ public class QuizService {
     }
 
     // 정답 + 오답지 (중복 제거) → 셔플
+    /** "이번 오답 다시" 출제 풀 — 원본 세션의 소유자·덱을 검증하고, 답했는데 틀린(isCorrect=false) 카드만 */
+    private List<Card> wrongCardsOfSession(Long sourceSessionId, Long deckId, Long userId) {
+        QuizSession source = quizSessionRepository.findById(sourceSessionId)
+                .orElseThrow(() -> new NotFoundException("세션을 찾을 수 없습니다"));
+        if (!source.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("본인 세션이 아닙니다");
+        }
+        if (!source.getDeck().getId().equals(deckId)) {
+            throw new BadRequestException("다른 덱의 세션입니다");
+        }
+        Map<Long, Card> byCard = new LinkedHashMap<>();
+        for (QuizQuestion q : quizQuestionRepository.findBySessionIdOrderByQuestionOrderAsc(sourceSessionId)) {
+            if (Boolean.FALSE.equals(q.getIsCorrect())) byCard.putIfAbsent(q.getCard().getId(), q.getCard());
+        }
+        if (byCard.isEmpty()) throw new BadRequestException("이번 세션에 오답이 없습니다");
+        return new ArrayList<>(byCard.values());
+    }
+
     private List<String> buildChoices(List<Card> pool, Card questionCard, String correctAnswer,
                                        Direction direction, int choiceCount) {
         List<Card> wrongPool = new ArrayList<>(pool);
