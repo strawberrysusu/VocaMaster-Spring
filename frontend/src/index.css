@@ -1294,3 +1294,91 @@ button:disabled {
   border-color: var(--a);
   background: #fff;
 }
+
+/* ── 통계 ── */
+.stats-grid4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.activity-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 96px;
+}
+
+.activity-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.activity-bar {
+  width: 100%;
+  border-radius: 4px 4px 2px 2px;
+  background: #ececf2;
+}
+
+.activity-bar.on {
+  background: var(--a);
+}
+
+.activity-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.deck-progress {
+  padding: 12px 0 2px;
+  border-bottom: 1px solid #f4f4f8;
+}
+
+.deck-progress:last-child {
+  border-bottom: 0;
+}
+
+.deck-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.deck-progress-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.deck-progress .progress-track {
+  position: relative;
+  height: 8px;
+  margin-bottom: 10px;
+}
+
+.deck-progress .progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.deck-progress .progress-fill.started {
+  background: #c9c9ea;
+}
+
+.deck-progress .progress-fill.mastered {
+  background: var(--a);
+}
+
+@media (max-width: 768px) {
+  .stats-grid4 {
+    grid-template-columns: 1fr 1fr;
+  }
+}

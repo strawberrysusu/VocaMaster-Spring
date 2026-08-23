@@ -1,5 +1,9 @@
 package com.vocamaster.stats;
 
+import com.vocamaster.card.CardRepository;
+import com.vocamaster.deck.DeckRepository;
+import com.vocamaster.review.CardProgressRepository;
+import com.vocamaster.stats.dto.StatsOverviewResponse;
 import com.vocamaster.study.event.StudyRecordedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -8,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +58,67 @@ public class StatsService {
         return dailyUserStatRepository.findByUserIdAndStatDate(userId, LocalDate.now(KST))
                 .map(DailyUserStat::getStudyCount)
                 .orElse(0);
+    }
+
+    // ── 통계 화면 (2026-08-23) ──
+    static final int OVERVIEW_DAYS = 28;     // 최근 4주
+    static final int MASTERED_BOX = 5;       // 박스 5 이상 = 14일+ 간격 = "숙달" (기준 바꾸려면 여기 하나)
+
+    private final DeckRepository deckRepository;
+    private final CardRepository cardRepository;
+    private final CardProgressRepository cardProgressRepository;
+
+    @Transactional(readOnly = true)
+    public StatsOverviewResponse getOverview(Long userId) {
+        LocalDate today = LocalDate.now(KST);
+        LocalDate from = today.minusDays(OVERVIEW_DAYS - 1);
+
+        // 1) 최근 28일 — 행이 없는 날은 0으로 채워 차트가 빈칸까지 그리게
+        Map<LocalDate, Integer> byDate = dailyUserStatRepository
+                .findByUserIdAndStatDateBetweenOrderByStatDateAsc(userId, from, today).stream()
+                .collect(Collectors.toMap(DailyUserStat::getStatDate, DailyUserStat::getStudyCount));
+        List<StatsOverviewResponse.DayActivity> days = new ArrayList<>();
+        for (LocalDate d = from; !d.isAfter(today); d = d.plusDays(1)) {
+            days.add(new StatsOverviewResponse.DayActivity(d, byDate.getOrDefault(d, 0)));
+        }
+
+        // 2) 누적 집계 한 방
+        Object[] agg = dailyUserStatRepository.aggregate(userId).get(0);
+        long totalStudy = ((Number) agg[0]).longValue();
+        int bestStreak = ((Number) agg[1]).intValue();
+        long activeDays = ((Number) agg[2]).longValue();
+
+        // 3) 덱별 진행률 — 카드 수·진행 수 둘 다 GROUP BY로 받아 메모리에서 합침
+        Map<Long, Long> cardCounts = new HashMap<>();
+        for (Object[] row : cardRepository.countByDeckForUser(userId)) {
+            cardCounts.put((Long) row[0], ((Number) row[1]).longValue());
+        }
+        Map<Long, long[]> progress = new HashMap<>();
+        for (Object[] row : cardProgressRepository.progressByDeck(userId, MASTERED_BOX)) {
+            progress.put((Long) row[0], new long[]{((Number) row[1]).longValue(), ((Number) row[2]).longValue()});
+        }
+        List<StatsOverviewResponse.DeckProgress> decks = deckRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(d -> {
+                    long[] p = progress.getOrDefault(d.getId(), new long[]{0, 0});
+                    return StatsOverviewResponse.DeckProgress.builder()
+                            .deckId(d.getId())
+                            .title(d.getTitle())
+                            .cardCount(cardCounts.getOrDefault(d.getId(), 0L))
+                            .started(p[0])
+                            .mastered(p[1])
+                            .build();
+                })
+                .toList();
+
+        return StatsOverviewResponse.builder()
+                .days(days)
+                .streak(getDisplayStreak(userId))
+                .bestStreak(bestStreak)
+                .totalStudy(totalStudy)
+                .activeDays(activeDays)
+                .boxes(cardProgressRepository.countByBoxLevel(userId))
+                .decks(decks)
+                .build();
     }
 
     // 표시용 streak (A 정책): 오늘 줄 있으면 오늘 값, 없으면 "어제까지의 연속"을 오늘 하루 유예로 보여줌.

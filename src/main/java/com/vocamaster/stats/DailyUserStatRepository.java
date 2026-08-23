@@ -6,11 +6,20 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface DailyUserStatRepository extends JpaRepository<DailyUserStat, Long> {
 
     Optional<DailyUserStat> findByUserIdAndStatDate(Long userId, LocalDate statDate);
+
+    // 통계 화면 — 기간 내 일별 행 (빈 날은 서비스가 0으로 채움)
+    List<DailyUserStat> findByUserIdAndStatDateBetweenOrderByStatDateAsc(Long userId, LocalDate from, LocalDate to);
+
+    // 통계 화면 — 누적 집계 한 방: [총 학습 수, 최고 연속, 활동일 수]
+    @Query("select coalesce(sum(s.studyCount), 0), coalesce(max(s.streak), 0), count(s) " +
+           "from DailyUserStat s where s.user.id = :userId")
+    List<Object[]> aggregate(@Param("userId") Long userId);   // 단일 행도 List로 — Object[] 반환형은 행이 한 겹 더 싸여 ClassCast (실측)
 
     // (제거됨 2026-08-22) 0행 매치 UPDATE로 '오늘 줄 있나' 탐색하던 incrementStudyCount —
     // InnoDB 갭 락 데드락의 원인. 이제 upsertTodayRow 한 방이 두 경우를 모두 처리한다.

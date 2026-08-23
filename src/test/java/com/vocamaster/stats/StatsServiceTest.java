@@ -119,4 +119,45 @@ class StatsServiceTest extends AbstractIntegrationTest {
                 .streak(streak)
                 .build());
     }
+
+    // ── 통계 화면 overview (2026-08-23) ──
+    @Autowired private com.vocamaster.deck.DeckRepository deckRepository;
+    @Autowired private com.vocamaster.card.CardRepository cardRepository;
+    @Autowired private com.vocamaster.review.CardProgressRepository cardProgressRepository;
+
+    @Test
+    @DisplayName("overview — 28일 0 채움·누적 집계·덱별 진행률(시작/숙달)이 GROUP BY 결과와 일치")
+    void overview_aggregatesCorrectly() {
+        saveStat(TODAY.minusDays(40), 9, 1);      // 창 밖 — days엔 없고 누적엔 포함
+        saveStat(TODAY.minusDays(2), 4, 1);
+        saveStat(TODAY.minusDays(1), 6, 2);
+        saveStat(TODAY, 3, 3);
+
+        var deck = deckRepository.save(com.vocamaster.deck.Deck.builder().title("통계 덱").user(user).build());
+        var c1 = cardRepository.save(com.vocamaster.card.Card.builder().front("a").back("1").deck(deck).build());
+        var c2 = cardRepository.save(com.vocamaster.card.Card.builder().front("b").back("2").deck(deck).build());
+        cardRepository.save(com.vocamaster.card.Card.builder().front("c").back("3").deck(deck).build());   // 아직 안 본 카드
+        var now = java.time.LocalDateTime.now();
+        cardProgressRepository.save(com.vocamaster.review.CardProgress.builder()
+                .user(user).card(c1).boxLevel(2).correctStreak(1).wrongCount(0).nextReviewAt(now).build());
+        cardProgressRepository.save(com.vocamaster.review.CardProgress.builder()
+                .user(user).card(c2).boxLevel(6).correctStreak(5).wrongCount(0).nextReviewAt(now).build());
+
+        var res = statsService.getOverview(user.getId());
+
+        assertEquals(StatsService.OVERVIEW_DAYS, res.getDays().size(), "빈 날도 0으로 28칸");
+        assertEquals(TODAY, res.getDays().get(res.getDays().size() - 1).getDate(), "마지막 칸이 오늘");
+        assertEquals(3, res.getDays().get(res.getDays().size() - 1).getStudyCount());
+        assertEquals(0, res.getDays().get(0).getStudyCount(), "27일 전은 행 없음 → 0");
+        assertEquals(9 + 4 + 6 + 3, res.getTotalStudy(), "누적은 창 밖(40일 전)도 포함");
+        assertEquals(3, res.getBestStreak());
+        assertEquals(4, res.getActiveDays());
+        assertEquals(3, res.getStreak(), "오늘 줄 있으면 오늘 streak");
+
+        var d = res.getDecks().stream().filter(x -> x.getDeckId().equals(deck.getId())).findFirst().orElseThrow();
+        assertEquals(3, d.getCardCount());
+        assertEquals(2, d.getStarted(), "진행 기록 있는 카드 2장");
+        assertEquals(1, d.getMastered(), "박스 5 이상 1장");
+        assertTrue(res.getBoxes().stream().anyMatch(b -> b.getBox() == 6 && b.getCount() == 1));
+    }
 }

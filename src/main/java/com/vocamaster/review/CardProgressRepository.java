@@ -50,4 +50,13 @@ public interface CardProgressRepository extends JpaRepository<CardProgress, Long
             group by p.boxLevel
             """)
     List<BoxCountResponse> countByBoxLevel(@Param("userId") Long userId);
+
+    // 통계 화면 — 덱별 [deckId, 시작한 카드 수, 숙달(박스 >= :masteredBox) 수] GROUP BY 한 방 (덱마다 count 도는 N+1 회피)
+    @Query("""
+            select c.deck.id, count(p), sum(case when p.boxLevel >= :masteredBox then 1 else 0 end)
+            from CardProgress p join p.card c
+            where p.user.id = :userId
+            group by c.deck.id
+            """)
+    List<Object[]> progressByDeck(@Param("userId") Long userId, @Param("masteredBox") int masteredBox);
 }

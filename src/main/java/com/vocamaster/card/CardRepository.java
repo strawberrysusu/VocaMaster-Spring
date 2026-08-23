@@ -16,6 +16,10 @@ public interface CardRepository extends JpaRepository<Card, Long> {
     long countByDeckId(Long deckId);
     long countByDeckIdAndStarredTrue(Long deckId);
 
+    // 통계 화면 — 내 덱 전체의 [deckId, 카드 수] GROUP BY 한 방
+    @Query("select c.deck.id, count(c) from Card c where c.deck.user.id = :userId group by c.deck.id")
+    List<Object[]> countByDeckForUser(@Param("userId") Long userId);
+
     @Query("SELECT c FROM Card c WHERE c.deck.id = :deckId " +
     "AND (:keyword IS NULL OR LOWER(c.front) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
     "                       OR LOWER(c.back) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
