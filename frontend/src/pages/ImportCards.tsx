@@ -41,13 +41,19 @@ export default function ImportCards() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  // 미리보기한 '그 입력'을 스냅샷으로 고정 — 요청 중 입력을 바꾸면 A를 확인하고 B를 등록하는 사고 (Codex 감사)
+  const [snapshot, setSnapshot] = useState<{ text: string; separator: string } | null>(null)
+
   async function doPreview() {
     if (busy || !text.trim()) return
     setBusy(true)
     setError('')
     setResult(null)
+    const snap = { text, separator }
     try {
-      setPreview(await api<PreviewResp>('/import/preview', { method: 'POST', body: JSON.stringify({ text, separator }) }))
+      const res = await api<PreviewResp>('/import/preview', { method: 'POST', body: JSON.stringify(snap) })
+      setSnapshot(snap)
+      setPreview(res)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -55,13 +61,16 @@ export default function ImportCards() {
     }
   }
 
+  const previewStale = !!snapshot && (snapshot.text !== text || snapshot.separator !== separator)
+
   async function doImport() {
-    if (busy || !preview || preview.cards.length === 0) return
+    if (busy || !preview || !snapshot || previewStale || preview.cards.length === 0) return
     setBusy(true)
     setError('')
     try {
-      setResult(await api<ImportResp>(`/decks/${id}/import`, { method: 'POST', body: JSON.stringify({ text, separator }) }))
+      setResult(await api<ImportResp>(`/decks/${id}/import`, { method: 'POST', body: JSON.stringify(snapshot) }))   // 스냅샷 그대로
       setPreview(null)
+      setSnapshot(null)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -137,8 +146,8 @@ export default function ImportCards() {
               <button className="answer-no" disabled={busy || !text.trim()} onClick={doPreview}>
                 미리보기 ({lineCount}줄)
               </button>
-              <button className="answer-yes" disabled={busy || !preview || preview.cards.length === 0} onClick={doImport}>
-                {preview ? `${preview.cards.length}장 등록` : '먼저 미리보기'}
+              <button className="answer-yes" disabled={busy || !preview || previewStale || preview.cards.length === 0} onClick={doImport}>
+                {preview && !previewStale ? `${preview.cards.length}장 등록` : '먼저 미리보기'}
               </button>
             </div>
           </div>

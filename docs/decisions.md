@@ -1459,6 +1459,33 @@ Phase 4 완료 기준 데모("인기 목록 반영 시연")에 필요한 마지�
 
 ---
 
+## ADR-040: 삭제 정책 = CASCADE + 안정화 묶음 (Codex 전수 감사)
+
+**상태:** 채택 (2026-08-23)
+**범위:** V15(학습 이력 FK 12개 CASCADE), `Deck @DynamicUpdate`, 가져오기 검증, 전역 400/409, Gradle↔React 연결, bat 실패 중단, 프론트 경계 5건
+
+**배경 — 전수 감사의 결론:** "기능끼리 만나는 경계"에서 나온 버그들. 새 기능 전에 1~2세션 안정화.
+
+**결정 1 — 삭제 정책: 학습 이력은 카드·덱과 생사를 같이한다 (DB CASCADE)**
+- 전엔 12개 FK 전부 RESTRICT → 한 번이라도 학습한 카드/덱 삭제가 500
+- 대안: (a) soft delete — 이력 보존되지만 모든 조회에 `deleted_at` 필터, 현 규모엔 과함 (b) 이력 있으면 삭제 거부(409) — 단어장 앱에서 "못 지움"은 사용자 적대적 (c) **CASCADE** — Quizlet 방식, deck_likes/deck_study_days(V12·V13)와 같은 판단의 확장
+- 한계: 진행 중 세션의 카드를 지우면 그 세션 문제 수가 줄어듦 (허용)
+
+**결정 2 — 덱 메타 저장은 바뀐 컬럼만 (`@DynamicUpdate`)**
+- 제목 수정이 like/copy/study_count를 "읽었을 때 값"으로 같이 UPDATE → 그 사이 원자적 +1이 증발. 테스트: 수정 트랜잭션 안에서 REQUIRES_NEW로 +1 → 커밋 후 1 유지
+
+**결정 3 — 가져오기 3구멍**: split limit 제거(4칸은 실패), DB 길이(255/200) 초과는 미리보기 실패 줄, 프론트는 미리보기 **스냅샷**을 등록 (입력이 바뀌면 등록 버튼 잠김)
+
+**결정 4 — 전역 응답 계약**: `MethodArgumentTypeMismatch` → 400 (`?page=abc`), `DataIntegrityViolation` → 409 (첫 복습 동시 2건 등 unique 레이스의 패배 쪽). 500은 "서버 잘못"에만
+
+**결정 5 — 빌드 경계**: `processResources → frontendBuild(npm run build)` 연결, 입력/출력 선언으로 up-to-date. bat은 빌드 실패 시 옛 jar 실행 금지(`errorlevel`)
+
+**프론트 경계**: 퀴즈·타이핑 진행바 = 답한 수 기준 / 자동 넘김 타이머는 문제 바뀌면 취소 / 탐색 옛 응답 무시(effect alive 플래그) / 로그인 fetch 실패 메시지
+
+**감사에서 남긴 것 (백로그)**: 비밀번호 변경·탈퇴 후 access token 최대 1시간 유효(ADR 수용 트레이드오프 — 공개 전 정책 명시), Redis ZSET 동점 순서·깨진 id fail-open, 구형 플래시카드 세션 중복 제출, 구형 덱 통계가 신형 퀴즈 미집계, 운영 DB URL useSSL, README 갱신, 프론트 자동 테스트 부재
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

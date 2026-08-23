@@ -27,6 +27,8 @@ public class ImportService {
     private final CardRepository cardRepository;
     private final DeckService deckService;
     private static final int MAX_LINES= 1000;
+    private static final int MAX_TEXT = 255;      // cards.front/back VARCHAR(255)
+    private static final int MAX_READING = 200;   // cards.reading VARCHAR(200)
     private static final List<String> DEFAULT_SEPARATOR_CANDIDATES = List.of("\t", "|", ":", ",", "-");
     private static final String DEFAULT_SEPARATOR = "-";
 
@@ -96,18 +98,24 @@ public class ImportService {
             String line = lines[i].trim();
             if (line.isEmpty()) continue;
 
-            // 2칸 = 단어 | 뜻, 3칸 = 단어 | 읽기 | 뜻 (읽기는 요미가나, V14). 4칸 이상은 3번째 이후를 뜻으로 합치지 않고 실패 처리
-            String[] parts = line.split(Pattern.quote(sep), 3);
-            if (parts.length == 2 && !parts[0].trim().isEmpty() && !parts[1].trim().isEmpty()) {
-                cards.add(Map.of("front", parts[0].trim(), "back", parts[1].trim()));
-            } else if (parts.length == 3 && !parts[0].trim().isEmpty() && !parts[2].trim().isEmpty()) {
-                Map<String, String> card = new HashMap<>();
-                card.put("front", parts[0].trim());
-                card.put("back", parts[2].trim());
-                if (!parts[1].trim().isEmpty()) card.put("reading", parts[1].trim());
-                cards.add(card);
-            } else {
+            // 2칸 = 단어 | 뜻, 3칸 = 단어 | 읽기 | 뜻 (읽기는 요미가나, V14).
+            // limit 없이 split — 예전 split(…, 3)은 a|b|c|d를 [a, b, "c|d"]로 합쳐 '4칸 실패' 약속을 안 지켰다 (Codex 감사)
+            String[] parts = line.split(Pattern.quote(sep), -1);
+            String front = parts[0].trim();
+            String back = parts.length >= 2 ? parts[parts.length - 1].trim() : "";
+            String reading = parts.length == 3 ? parts[1].trim() : "";
+            boolean shapeOk = (parts.length == 2 || parts.length == 3) && !front.isEmpty() && !back.isEmpty();
+            if (!shapeOk) {
                 failed.add(Map.of("line", i + 1, "content", line));
+            } else if (front.length() > MAX_TEXT || back.length() > MAX_TEXT || reading.length() > MAX_READING) {
+                // DB 컬럼(255/200)보다 길면 등록 시 500·전체 롤백 — 미리보기 단계에서 실패 줄로 (Codex 감사)
+                failed.add(Map.of("line", i + 1, "content", line + "  (너무 김: 단어·뜻 " + MAX_TEXT + "자, 읽기 " + MAX_READING + "자 이내)"));
+            } else {
+                Map<String, String> card = new HashMap<>();
+                card.put("front", front);
+                card.put("back", back);
+                if (!reading.isEmpty()) card.put("reading", reading);
+                cards.add(card);
             }
         }
         return new ParseResult(cards, failed);

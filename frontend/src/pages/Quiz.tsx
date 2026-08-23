@@ -97,7 +97,8 @@ export default function Quiz() {
       if (res.correct) setCorrectCount((n) => n + 1)
       if (loadSettings().quizAutoAdvance) {
         // 설정: 답하면 1초 뒤 자동 다음 — 최신 next를 ref로 호출 (타이머가 옛 클로저를 잡지 않게)
-        window.setTimeout(() => nextRef.current(), 1000)
+        if (advanceTimer.current) window.clearTimeout(advanceTimer.current)   // 이전 문제의 타이머가 이번 피드백을 일찍 넘기지 않게
+        advanceTimer.current = window.setTimeout(() => nextRef.current(), 1000)
       }
     } catch (e) {
       setError((e as Error).message)
@@ -108,6 +109,7 @@ export default function Quiz() {
 
   async function next() {
     if (!session || !picked) return   // 답한 상태에서만 — 자동 넘김 타이머와 수동 Enter가 겹쳐도 한 번만 진행
+    if (advanceTimer.current) { window.clearTimeout(advanceTimer.current); advanceTimer.current = null }
     if (idx + 1 < session.questions.length) {
       setIdx(idx + 1)
       setPicked(null)
@@ -120,6 +122,7 @@ export default function Quiz() {
     }
   }
 
+  const advanceTimer = useRef<number | null>(null)
   const nextRef = useRef(next)
   nextRef.current = next
 
@@ -201,7 +204,7 @@ export default function Quiz() {
         {session && q && !summary && (
           <>
             <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={idx}>
-              <div className="progress-fill" style={{ width: `${(idx / total) * 100}%` }} />
+              <div className="progress-fill" style={{ width: `${((idx + (picked ? 1 : 0)) / total) * 100}%` }} />
             </div>
             <div className="quiz-card">
               <p className="quiz-kicker">{direction === 'front_to_back' ? '이 단어의 뜻은?' : '이 뜻의 단어는?'}</p>

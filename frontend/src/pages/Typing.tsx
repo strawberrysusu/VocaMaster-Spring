@@ -177,7 +177,7 @@ export default function Typing() {
         {session && q && !summary && (
           <>
             <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={idx}>
-              <div className="progress-fill" style={{ width: `${(idx / total) * 100}%` }} />
+              <div className="progress-fill" style={{ width: `${((idx + (result ? 1 : 0)) / total) * 100}%` }} />
             </div>
             <div className="quiz-card">
               <p className="quiz-kicker">{direction === 'front_to_back' ? '이 단어의 뜻을 입력하세요' : '이 뜻의 단어를 입력하세요'}</p>

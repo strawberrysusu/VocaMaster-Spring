@@ -36,6 +36,9 @@ export default function Login() {
       }
       setToken(data.accessToken)
       navigate(from, { replace: true })
+    } catch {
+      // fetch 자체가 실패(네트워크·서버 다운)하면 res.ok 분기에 못 들어와 아무 표시도 없던 구멍 (Codex 감사)
+      setError('서버에 연결할 수 없어요 — 바탕화면의 VocaMaster 아이콘으로 서버를 켠 뒤 다시 시도하세요')
     } finally {
       setSubmitting(false)
     }

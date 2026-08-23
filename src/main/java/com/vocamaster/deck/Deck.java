@@ -7,6 +7,7 @@ import com.vocamaster.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -15,6 +16,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "decks")
+// @DynamicUpdate: 바뀐 컬럼만 UPDATE. 없으면 제목 수정이 copy/like/study_count까지 "읽었을 때 값"으로 같이 써서,
+// 그 사이 원자적 +1 된 카운터가 증발한다 (Codex 전수 감사 2026-08-23 — 카운터 덮어쓰기)
+@DynamicUpdate
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder

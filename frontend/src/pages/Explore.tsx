@@ -19,9 +19,11 @@ export default function Explore() {
     setDecks(null)
     const params = new URLSearchParams({ sort, size: '30' })
     if (query.trim()) params.set('keyword', query.trim())
+    let alive = true   // 빠르게 검색·정렬을 바꾸면 늦게 도착한 옛 응답이 새 결과를 덮는다 — 이 effect가 살아있을 때만 반영
     api<PageResp<PublicDeck>>(`/public/decks?${params}`)
-      .then((p) => setDecks(p.content))
-      .catch((e) => setError(e.message))
+      .then((p) => { if (alive) setDecks(p.content) })
+      .catch((e) => { if (alive) setError(e.message) })
+    return () => { alive = false }
   }, [query, sort])
 
   async function toggleLike(deck: PublicDeck) {

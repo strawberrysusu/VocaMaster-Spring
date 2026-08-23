@@ -142,4 +142,20 @@ class ImportServiceTest extends AbstractIntegrationTest {
         assertNull(byFront.get("会う").getReading(), "가운데 칸이 비면 읽기 없음");
         assertEquals("만나다", byFront.get("会う").getBack());
     }
+
+    @Test
+    @DisplayName("4칸 이상은 실패 줄, DB 길이(255/200) 초과도 실패 줄 — 500·전체 롤백 대신 미리보기에서 걸러냄 (Codex 감사)")
+    void importCards_rejectsFourColumnsAndTooLong() {
+        String longBack = "x".repeat(256);
+        String longReading = "か".repeat(201);
+        ImportRequest req = new ImportRequest();
+        req.setText("a | b | c | d\n" + "word | " + longBack + "\n" + "語 | " + longReading + " | 뜻\n" + "ok | fine");
+        req.setSeparator("|");
+
+        ImportResponse result = importService.importCards(deck.getId(), user.getId(), req);
+
+        assertEquals(1, result.getImported(), "정상 줄 1개만");
+        assertEquals(3, result.getFailedCount(), "4칸·뜻 256자·읽기 201자");
+        assertEquals(1, cardRepository.countByDeckId(deck.getId()));
+    }
 }

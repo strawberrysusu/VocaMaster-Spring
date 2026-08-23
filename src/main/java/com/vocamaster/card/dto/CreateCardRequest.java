@@ -9,9 +9,11 @@ import lombok.Setter;
 public class CreateCardRequest {
 
     @NotBlank
+    @Size(max = 255)
     private String front;
 
     @NotBlank
+    @Size(max = 255)
     private String back;
     @Size(max = 200)
     private String reading;         // 읽기(요미가나) — 선택

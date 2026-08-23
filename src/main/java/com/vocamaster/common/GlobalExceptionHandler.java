@@ -87,6 +87,23 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(400, "BAD_REQUEST", "요청 본문(JSON)을 읽을 수 없습니다"));
     }
 
+    // ?page=abc 처럼 타입이 안 맞는 파라미터 — 서버 잘못이 아니라 요청 잘못 (실서버 재현: 500이 나가던 것, Codex 감사)
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(400, "BAD_REQUEST", "파라미터 형식이 올바르지 않습니다: " + ex.getName()));
+    }
+
+    // unique 제약 충돌 등 — "같은 요청이 동시에 두 번" 레이스의 패배 쪽. 500이 아니라 409로, 클라이언트는 재시도/재조회
+    // (예: 첫 복습 답변 2건 동시 → card_progress (user, card) unique). 좋아요처럼 현재 상태로 복구하는 곳은 각자 catch
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        log.warn("데이터 무결성 충돌 — 동시 요청 레이스 가능성: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(409, "CONFLICT", "같은 요청이 동시에 처리되었습니다. 다시 시도해 주세요"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnExpected(Exception ex) {
         // 예상 못 한 예외가 조용히 묻히면 원인 추적 불가 — 반드시 스택트레이스 로깅
