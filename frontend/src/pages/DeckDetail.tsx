@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { fetchAllCards, type CardDto } from '../api/cards'
 import TopNav from '../components/TopNav'
@@ -15,6 +15,7 @@ interface Deck {
 
 export default function DeckDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [deck, setDeck] = useState<Deck | null>(null)
   const [cards, setCards] = useState<CardDto[]>([])
   const [front, setFront] = useState('')
@@ -48,12 +49,44 @@ export default function DeckDetail() {
     }
   }
 
+  async function toggleStar(cardId: number) {
+    try {
+      await api(`/cards/${cardId}/star`, { method: 'PATCH' })
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  // 삭제 = 학습 이력까지 함께 사라짐 (ADR-040 CASCADE) — 되돌릴 수 없으니 확인창
+  async function removeCard(cardId: number, frontText: string) {
+    if (!window.confirm(`"${frontText}" 카드를 삭제할까요?\n이 카드의 학습 기록도 함께 사라져요.`)) return
+    try {
+      await api(`/cards/${cardId}`, { method: 'DELETE' })
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  async function removeDeck() {
+    if (!deck) return
+    if (!window.confirm(`덱 "${deck.title}"을(를) 삭제할까요?\n카드 ${cards.length}장과 학습·퀴즈·타이핑 기록이 전부 사라져요.`)) return
+    try {
+      await api(`/decks/${id}`, { method: 'DELETE' })
+      navigate('/decks', { replace: true })
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   return (
     <>
       <TopNav />
       <div className="shell">
-        <p style={{ margin: '0 0 14px' }}>
+        <p style={{ margin: '0 0 14px', display: 'flex', justifyContent: 'space-between' }}>
           <Link to="/decks" className="hero-secondary">← 내 덱</Link>
+          <button className="danger-link" onClick={removeDeck}>덱 삭제</button>
         </p>
 
         <div className="page-head">
@@ -120,7 +153,14 @@ export default function DeckDetail() {
               <span className="word-idx">{i + 1}</span>
               <span className="word-front">{c.reading && <span className="reading-inline">{c.reading}</span>}{c.front} <SpeakButton text={c.reading || c.front} /></span>
               <span className="word-back">{c.back}</span>
-              {c.starred && <span title="별표 카드">⭐</span>}
+              <div className="row-actions">
+                <button className={`star-btn ${c.starred ? 'on' : ''}`} title={c.starred ? '별표 해제' : '별표'} aria-pressed={c.starred} onClick={() => toggleStar(c.id)}>
+                  ★
+                </button>
+                <button className="del-btn" title="카드 삭제" aria-label={`${c.front} 삭제`} onClick={() => removeCard(c.id, c.front)}>
+                  🗑
+                </button>
+              </div>
             </div>
           ))}
           {cards.length === 0 && (

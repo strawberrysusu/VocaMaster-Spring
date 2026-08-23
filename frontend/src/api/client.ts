@@ -56,6 +56,7 @@ export async function api<T>(path: string, options: RequestInit = {}, retried = 
     const body = await res.json().catch(() => null)
     throw new Error(body?.message ?? `요청 실패 (HTTP ${res.status})`)
   }
-  if (res.status === 204) return undefined as T
-  return res.json()
+  // 204 또는 200+빈 본문(삭제 등) — res.json()은 빈 본문에서 터진다
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
