@@ -1209,3 +1209,46 @@ button:disabled {
     padding: 24px 20px;
   }
 }
+
+/* ── 타이핑 ── */
+.typing-form {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.typing-input {
+  flex: 1;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: #fcfcfd;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink-2);
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.typing-input:focus {
+  border-color: var(--a);
+  background: #fff;
+}
+
+.typing-input.ok {
+  border-color: #2f9e6b;
+  background: #eef9f3;
+  color: #1f7a50;
+}
+
+.typing-input.ng {
+  border-color: #d45a72;
+  background: #fdf1f4;
+  color: #b0485c;
+  text-decoration: line-through;
+}
+
+@media (max-width: 640px) {
+  .typing-form {
+    flex-direction: column;
+  }
+}

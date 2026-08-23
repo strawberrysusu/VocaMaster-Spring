@@ -253,4 +253,60 @@ class TypingServiceTest extends AbstractIntegrationTest {
         assertEquals(1, retry.getTotal(), "오답 카드 1장만 풀");
         assertEquals(1, retry.getQuestions().size());
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // "이번 오답 다시" — sourceSessionId (퀴즈와 같은 패턴, 2026-08-23)
+    // ─────────────────────────────────────────────────────────────
+    @Test
+    @DisplayName("이번 오답 다시 — 방금 세션에서 틀린 카드만, 1장이어도 가능")
+    void retryFromSession_onlyWrongOfThatSession() {
+        for (int i = 0; i < 4; i++) addCard("t" + i, "ans" + i);
+        StartTypingSessionResponse first = typingService.startSession(deck.getId(), user.getId(), startReq(4));
+        String wrongQuestion = null;
+        for (int i = 0; i < first.getQuestions().size(); i++) {
+            var q = first.getQuestions().get(i);
+            String correct = typingQuestionRepository.findById(q.getQuestionId()).orElseThrow().getCorrectAnswer();
+            SubmitTypedAnswerRequest req = new SubmitTypedAnswerRequest();
+            req.setQuestionId(q.getQuestionId());
+            req.setTypedAnswer(i == 0 ? "totally-wrong" : correct);
+            if (i == 0) wrongQuestion = q.getQuestion();
+            typingService.submitTypedAnswer(first.getSessionId(), user.getId(), req);
+        }
+
+        StartTypingSessionRequest retry = startReq(10);
+        retry.setSourceSessionId(first.getSessionId());
+        StartTypingSessionResponse second = typingService.startSession(deck.getId(), user.getId(), retry);
+
+        assertEquals(1, second.getTotal());
+        assertEquals(wrongQuestion, second.getQuestions().get(0).getQuestion());
+    }
+
+    @Test
+    @DisplayName("남의 sourceSessionId는 403, 같은 사용자 다른 덱은 400, total 0은 400")
+    void retryFromSession_guards() {
+        for (int i = 0; i < 2; i++) addCard("g" + i, "h" + i);
+        StartTypingSessionResponse mine = typingService.startSession(deck.getId(), user.getId(), startReq(2));
+        var q = mine.getQuestions().get(0);
+        SubmitTypedAnswerRequest wrong = new SubmitTypedAnswerRequest();
+        wrong.setQuestionId(q.getQuestionId());
+        wrong.setTypedAnswer("nope");
+        typingService.submitTypedAnswer(mine.getSessionId(), user.getId(), wrong);
+
+        User other = userRepository.save(User.builder()
+                .email("other-typing@test.com").password("encoded").nickname("남").build());
+        Deck othersDeck = deckRepository.save(Deck.builder().title("남의 덱").user(other).build());
+        cardRepository.save(Card.builder().front("x").back("y").deck(othersDeck).build());
+        StartTypingSessionRequest retry = startReq(5);
+        retry.setSourceSessionId(mine.getSessionId());
+        assertThrows(com.vocamaster.common.exception.ForbiddenException.class,
+                () -> typingService.startSession(othersDeck.getId(), other.getId(), retry));
+
+        Deck myOtherDeck = deckRepository.save(Deck.builder().title("내 다른 덱").user(user).build());
+        cardRepository.save(Card.builder().front("m").back("n").deck(myOtherDeck).build());
+        assertThrows(BadRequestException.class,
+                () -> typingService.startSession(myOtherDeck.getId(), user.getId(), retry));
+
+        assertThrows(BadRequestException.class,
+                () -> typingService.startSession(deck.getId(), user.getId(), startReq(0)));
+    }
 }

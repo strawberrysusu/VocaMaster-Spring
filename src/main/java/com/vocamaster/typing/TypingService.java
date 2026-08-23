@@ -43,9 +43,15 @@ public class TypingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다"));
 
-        // 1) 카드 풀 결정 (전체 / 오답만 / 즐겨찾기만)
+        if (req.getTotal() != null && req.getTotal() <= 0) {
+            throw new BadRequestException("total은 1 이상이어야 합니다. 입력값: " + req.getTotal());
+        }
+
+        // 1) 카드 풀 결정 (이번 세션 오답 / 누적 오답 / 즐겨찾기 / 전체)
         List<Card> pool;
-        if (Boolean.TRUE.equals(req.getWrongOnly())) {
+        if (req.getSourceSessionId() != null) {
+            pool = wrongCardsOfSession(req.getSourceSessionId(), deckId, userId);   // 퀴즈와 같은 패턴 (2026-08-23)
+        } else if (Boolean.TRUE.equals(req.getWrongOnly())) {
             // ADR-028 부수 결정: Typing 오답만 재타이핑 (전체 기간 = EPOCH)
             List<Long> wrongIds = typingQuestionRepository
                     .findWrongCardIdsByDeckIdAndUserIdSince(deckId, userId, EPOCH);
@@ -206,6 +212,20 @@ public class TypingService {
                 .endedAt(session.getEndedAt())
                 .questions(results)
                 .build();
+    }
+
+    /** "이번 오답 다시" 출제 풀 — 원본 세션의 소유자·덱 검증 후, 답했는데 틀린(isCorrect=false) 카드만 */
+    private List<Card> wrongCardsOfSession(Long sourceSessionId, Long deckId, Long userId) {
+        TypingSession source = typingSessionRepository.findById(sourceSessionId)
+                .orElseThrow(() -> new NotFoundException("세션을 찾을 수 없습니다"));
+        if (!source.getUser().getId().equals(userId)) throw new ForbiddenException("본인 세션이 아닙니다");
+        if (!source.getDeck().getId().equals(deckId)) throw new BadRequestException("다른 덱의 세션입니다");
+        Map<Long, Card> byCard = new LinkedHashMap<>();
+        for (TypingQuestion q : typingQuestionRepository.findBySessionIdOrderByQuestionOrderAsc(sourceSessionId)) {
+            if (Boolean.FALSE.equals(q.getIsCorrect())) byCard.putIfAbsent(q.getCard().getId(), q.getCard());
+        }
+        if (byCard.isEmpty()) throw new BadRequestException("이번 세션에 오답이 없습니다");
+        return new ArrayList<>(byCard.values());
     }
 
     /**

@@ -72,7 +72,11 @@ export default function DeckDetail() {
             ) : (
               <button className="mode-stub" disabled title="퀴즈는 카드 2장부터 (오답지가 필요해요)">퀴즈</button>
             )}
-            <button className="mode-stub" title="다음 시공 화면">타이핑</button>
+            {cards.length >= 1 ? (
+              <Link to={`/typing/${id}`} className="mode-btn">타이핑</Link>
+            ) : (
+              <button className="mode-stub" disabled title="카드를 먼저 추가하세요">타이핑</button>
+            )}
           </div>
         </div>
 

@@ -698,7 +698,7 @@ review:summary:{userId}:{date}  TTL 5분
 **⚛️ React 도입 (ADR-016, Phase 5 이후 시작)**
 - [ ] **[MUST]** React + TypeScript + Vite 프로젝트 셋업 (NewsPick 스택과 동일)
 - [ ] **[MUST]** Spring 빌드에 React 결과물 번들 (`src/main/resources/static/react/`)
-- [x] **[MUST]** 핵심 화면 — 학습·덱·탐색(8/14~19) + **퀴즈(8/23: 설정→4지선다→즉시 정오→요약·오답만 다시, 숫자키 1~4)**. 남은 것: 타이핑·통계(API 필요)
+- [x] **[MUST]** 핵심 화면 — 학습·덱·탐색(8/14~19) + **퀴즈(8/23: 설정→4지선다→즉시 정오→요약·오답만 다시, 숫자키 1~4)**. + **타이핑(8/23: 입력창·Enter 흐름·이번 오답 다시)**. 남은 것: 통계(API 필요)
 - [ ] **[MUST]** httpOnly Cookie + access token 자동 갱신 인터셉터
 - [ ] **[MUST]** TTS 버튼 통합 (위 항목과 결합)
 - [ ] **[SHOULD]** README에 "Mustache + React 공존 이유" 명시 (ADR-016 참조)
