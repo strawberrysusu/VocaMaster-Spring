@@ -7,6 +7,7 @@ import DeckDetail from './pages/DeckDetail'
 import Study from './pages/Study'
 import Explore from './pages/Explore'
 import PublicDeckDetail from './pages/PublicDeckDetail'
+import Quiz from './pages/Quiz'
 import ComingSoon from './pages/ComingSoon'
 import { getToken } from './api/client'
 
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/decks" element={<RequireAuth><Decks /></RequireAuth>} />
         <Route path="/decks/:id" element={<RequireAuth><DeckDetail /></RequireAuth>} />
         <Route path="/study" element={<RequireAuth><Study /></RequireAuth>} />
+        <Route path="/quiz/:deckId" element={<RequireAuth><Quiz /></RequireAuth>} />
         <Route path="/explore" element={<RequireAuth><Explore /></RequireAuth>} />
         {/* 공개 덱 상세는 비로그인 열람 허용 — UNLISTED "링크 받은 사람은 본다"(ADR-030)와 일치.
             좋아요·복사는 눌렀을 때 로그인으로 유도 (화면 안에서 처리) */}

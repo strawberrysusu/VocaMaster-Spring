@@ -67,7 +67,7 @@ export default function DeckDetail() {
             ) : (
               <button className="btn-primary" disabled title="카드를 먼저 추가하세요">복습 학습 (Leitner)</button>
             )}
-            <button className="mode-stub" title="다음 시공 화면">퀴즈</button>
+            <Link to={`/quiz/${id}`} className="mode-btn">퀴즈</Link>
             <button className="mode-stub" title="다음 시공 화면">타이핑</button>
           </div>
         </div>
