@@ -991,3 +991,27 @@ button:disabled {
 .title-link:hover .title {
   color: var(--a);
 }
+
+/* ── 🔊 발음 듣기 (브라우저 TTS) ── */
+.speak-btn {
+  display: inline-block;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.55;
+  margin-left: 4px;
+  vertical-align: middle;
+  user-select: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.speak-btn.lg {
+  font-size: 22px;
+  margin-left: 10px;
+}
+
+.speak-btn:hover,
+.speak-btn:focus-visible {
+  opacity: 1;
+  transform: scale(1.12);
+  outline: none;
+}

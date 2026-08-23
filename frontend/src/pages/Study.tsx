@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { fetchAllCards } from '../api/cards'
 import TopNav from '../components/TopNav'
+import SpeakButton from '../components/SpeakButton'
 
 interface StudyCard {
   cardId: number
@@ -121,7 +122,9 @@ export default function Study() {
             </div>
 
             <button className="study-card" onClick={() => setRevealed(true)}>
-              <span className="study-word">{queue[idx].front}</span>
+              <span className="study-word">
+                {queue[idx].front} <SpeakButton text={queue[idx].front} size="lg" />
+              </span>
               {revealed ? (
                 <span className="study-answer">{queue[idx].back}</span>
               ) : (

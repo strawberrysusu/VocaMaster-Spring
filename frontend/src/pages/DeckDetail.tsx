@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { fetchAllCards, type CardDto } from '../api/cards'
 import TopNav from '../components/TopNav'
+import SpeakButton from '../components/SpeakButton'
 
 interface Deck {
   id: number
@@ -96,7 +97,7 @@ export default function DeckDetail() {
           {cards.map((c, i) => (
             <div key={c.id} className="word-row">
               <span className="word-idx">{i + 1}</span>
-              <span className="word-front">{c.front}</span>
+              <span className="word-front">{c.front} <SpeakButton text={c.front} /></span>
               <span className="word-back">{c.back}</span>
               {c.starred && <span title="별표 카드">⭐</span>}
             </div>

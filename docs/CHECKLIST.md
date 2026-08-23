@@ -688,12 +688,11 @@ review:summary:{userId}:{date}  TTL 5분
 
 ### 🆕 추가 아이디어
 
-**🔊 TTS — 영어 발음 듣기 (ADR-017, A → C 진화)**
-- [ ] **[MUST]** React 프론트에서 비공식 Google Translate endpoint 호출 (A):
-  `https://translate.google.com/translate_tts?ie=UTF-8&q={text}&tl=en&client=tw-ob`
-- [ ] **[MUST]** 단어 텍스트 → Redis 캐싱 (C, 같은 단어 재사용)
-- [ ] **[SHOULD]** Rate limit 모니터링 (호출 폭증 시 알림 또는 fallback)
-- [ ] **[STRETCH]** 트래픽 늘면 Google Cloud TTS (공식) 전환 계획 문서화
+**🔊 TTS — 발음 듣기 (ADR-017 개정 2026-08-23: 브라우저 내장 speechSynthesis)**
+- [x] **[MUST]** `lib/tts.ts` `speak()` + 🔊 `SpeakButton` — 학습 카드(큰 버튼)·덱 상세·공개 상세 단어 행. 구글/Natural 음성 우선, 언어 자동 판별(en/ja/ko). 비용·서버·Redis 0 (2026-08-23)
+- [ ] **[SHOULD]** 설정 화면 생기면 음성 선택 드롭다운 (기기마다 목소리가 달라서)
+- [ ] **[STRETCH]** 공개 서비스 단계: 공식 Google Cloud TTS로 `speak()` 구현 교체 (무료 구간·결제 계정 — 당시 요금표 확인)
+- ~~비공식 Google Translate endpoint / Redis 캐싱~~ — 철회 (약관·차단 위험, 구조 결함)
 
 **⚛️ React 도입 (ADR-016, Phase 5 이후 시작)**
 - [ ] **[MUST]** React + TypeScript + Vite 프로젝트 셋업 (NewsPick 스택과 동일)
