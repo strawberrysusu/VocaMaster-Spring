@@ -5,6 +5,7 @@ import com.vocamaster.card.CardRepository;
 import com.vocamaster.card.dto.CardResponse;
 import com.vocamaster.deck.DeckService;
 import com.vocamaster.quiz.QuizAttemptRepository;
+import com.vocamaster.quiz.QuizQuestionRepository;
 import com.vocamaster.study.StudyRecordRepository;
 import com.vocamaster.typing.TypingQuestionRepository;
 import com.vocamaster.wrongnote.dto.WrongNoteResponse;
@@ -28,6 +29,7 @@ public class WrongNoteService {
     private static final LocalDateTime EPOCH = LocalDateTime.of(1970, 1, 1, 0, 0);
 
     private final QuizAttemptRepository quizAttemptRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
     private final TypingQuestionRepository typingQuestionRepository;
     private final StudyRecordRepository studyRecordRepository;
     private final CardRepository cardRepository;
@@ -41,7 +43,10 @@ public class WrongNoteService {
         LocalDateTime since = days > 0 ? LocalDateTime.now().minusDays(days) : EPOCH;
 
         // 3) 3 모드 오답 카드 ID 수집 (각 Repository JPQL이 deckId/userId 검증)
-        List<Long> quizIds      = quizAttemptRepository.findWrongCardIdsSince(deckId, userId, since);
+        //    퀴즈는 장부가 둘 — 세션(quiz_questions) + 구형 단건(quiz_attempts) — 합쳐야 '통합' (Codex 검산 2026-08-23)
+        Set<Long> quizIdSet = new LinkedHashSet<>(quizQuestionRepository.findWrongCardIdsSince(deckId, userId, since));
+        quizIdSet.addAll(quizAttemptRepository.findWrongCardIdsSince(deckId, userId, since));
+        List<Long> quizIds      = new ArrayList<>(quizIdSet);
         List<Long> typingIds    = typingQuestionRepository.findWrongCardIdsByDeckIdAndUserIdSince(deckId, userId, since);
         List<Long> flashcardIds = studyRecordRepository.findUnknownCardIdsByDeckIdAndUserIdSince(deckId, userId, since);
 

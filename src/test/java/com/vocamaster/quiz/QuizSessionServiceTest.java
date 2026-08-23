@@ -304,6 +304,71 @@ class QuizSessionServiceTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("같은 사용자라도 다른 덱의 sourceSessionId는 400 — 덱 일치 검증")
+    void retryFromSession_otherDeckOfSameUser_rejected() {
+        for (int i = 0; i < 3; i++) addCard("front" + i, "back" + i);
+        Deck otherDeck = deckRepository.save(Deck.builder().title("다른 덱").user(user).build());
+        cardRepository.save(Card.builder().front("o1").back("p1").deck(otherDeck).build());
+        cardRepository.save(Card.builder().front("o2").back("p2").deck(otherDeck).build());
+        em.flush();
+        StartSessionResponse mine = quizService.startSession(deck.getId(), user.getId(), startReq(3));
+        answerFirstWrongRestRight(mine);
+
+        StartSessionRequest retry = startReq(5);
+        retry.setSourceSessionId(mine.getSessionId());
+        assertThrows(BadRequestException.class,
+                () -> quizService.startSession(otherDeck.getId(), user.getId(), retry), "내 세션이지만 다른 덱");
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 8. 선택지 중복 기준 = 채점 기준 (trim + lowercase) — Codex 검산 2026-08-23
+    // ─────────────────────────────────────────────────────────────
+    @Test
+    @DisplayName("Apple/apple·앞뒤 공백은 같은 답 — 선택지에 한 번만, 채점도 같은 자로")
+    void choices_dedupeByNormalizedAnswer() {
+        addCard("w1", "Apple");
+        addCard("w2", "apple");
+        addCard("w3", "  apple  ");
+        addCard("w4", "Banana");
+        addCard("w5", "cherry");
+        em.flush();
+
+        StartSessionResponse res = quizService.startSession(deck.getId(), user.getId(), startReq(5));
+        for (StartSessionResponse.QuestionDto q : res.getQuestions()) {
+            long distinctNormalized = q.getChoices().stream()
+                    .map(c -> c.trim().toLowerCase(java.util.Locale.ROOT)).distinct().count();
+            assertEquals(q.getChoices().size(), distinctNormalized, "정규화해서 같은 답이 두 번 나오면 안 됨: " + q.getChoices());
+            assertTrue(q.getChoices().size() <= 3, "답 종류가 3개(apple/banana/cherry)라 선택지도 최대 3");
+        }
+
+        // 채점: "  APPLE " 제출도 apple 카드면 정답
+        StartSessionResponse.QuestionDto appleQ = res.getQuestions().stream()
+                .filter(q -> q.getQuestion().startsWith("w1") || q.getQuestion().startsWith("w2") || q.getQuestion().startsWith("w3"))
+                .findFirst().orElseThrow();
+        SubmitToSessionRequest req = new SubmitToSessionRequest();
+        req.setQuestionId(appleQ.getQuestionId());
+        req.setSelectedAnswer("  APPLE ");
+        assertTrue(quizService.submitAnswerToSession(res.getSessionId(), user.getId(), req).isCorrect());
+    }
+
+    @Test
+    @DisplayName("뜻이 전부 같은 덱은 단어→뜻 방향에서 400 (답 종류 1개) — 카드 수가 아니라 답 종류가 기준")
+    void allSameMeaning_badRequest_inThatDirection() {
+        addCard("apple", "과일");
+        addCard("banana", "과일");
+        addCard("cherry", " 과일 ");
+        em.flush();
+
+        assertThrows(BadRequestException.class,
+                () -> quizService.startSession(deck.getId(), user.getId(), startReq(3)), "단어→뜻: 답이 '과일' 하나뿐");
+
+        StartSessionRequest reverse = startReq(3);
+        reverse.setDirection("back_to_front");   // 뜻→단어: 답은 apple/banana/cherry 3종 → 가능
+        StartSessionResponse res = quizService.startSession(deck.getId(), user.getId(), reverse);
+        assertEquals(3, res.getTotal());
+    }
+
+    @Test
     @DisplayName("total이 0 이하면 400")
     void startSession_totalZero_badRequest() {
         for (int i = 0; i < 3; i++) addCard("front" + i, "back" + i);

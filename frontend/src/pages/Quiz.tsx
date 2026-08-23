@@ -7,6 +7,9 @@ import SpeakButton from '../components/SpeakButton'
 // 백엔드(Phase 2 퀴즈 세션 API) 계약 — direction은 소문자 'front_to_back' | 'back_to_front' (Direction.from)
 type Direction = 'front_to_back' | 'back_to_front'
 
+// 답 비교 기준 = 서버 QuizService.normalizeAnswer와 동일 (trim + lowercase)
+const norm = (s: string) => s.trim().toLowerCase()
+
 interface Question {
   questionId: number
   questionOrder: number
@@ -200,8 +203,9 @@ export default function Quiz() {
                 {q.choices.map((c, i) => {
                   let cls = 'choice'
                   if (picked) {
-                    if (c === picked.correctAnswer) cls += ' correct'
-                    else if (c === picked.selectedAnswer) cls += ' wrong'
+                    // 서버 채점과 같은 자(trim + lowercase)로 비교 — 대소문자·공백만 다른 답이 엇갈려 칠해지지 않게
+                    if (norm(c) === norm(picked.correctAnswer)) cls += ' correct'
+                    else if (norm(c) === norm(picked.selectedAnswer)) cls += ' wrong'
                     else cls += ' dim'
                   }
                   return (

@@ -39,6 +39,8 @@ class WrongNoteServiceTest extends AbstractIntegrationTest {
     @Autowired private DeckRepository deckRepository;
     @Autowired private CardRepository cardRepository;
     @Autowired private QuizAttemptRepository quizAttemptRepository;
+    @Autowired private com.vocamaster.quiz.QuizService quizService;
+    @Autowired private com.vocamaster.quiz.QuizQuestionRepository quizQuestionRepository;
     @Autowired private TypingSessionRepository typingSessionRepository;
     @Autowired private TypingQuestionRepository typingQuestionRepository;
     @Autowired private StudySessionRepository studySessionRepository;
@@ -134,5 +136,29 @@ class WrongNoteServiceTest extends AbstractIntegrationTest {
         Set<Long> combinedIds = res.getCombined().stream().map(c -> c.getId()).collect(Collectors.toSet());
         assertEquals(Set.of(cardA.getId(), cardB.getId(), cardC.getId(), cardD.getId()), combinedIds);
         assertFalse(combinedIds.contains(cardE.getId()), "E는 오답 없음 → combined에 X");
+    }
+
+    @Test
+    @DisplayName("세션 퀴즈(quiz_questions)의 오답도 통합 오답노트에 잡힌다 — 구형 quiz_attempts만 보던 구멍 (Codex 검산 2026-08-23)")
+    void sessionQuizWrong_appearsInWrongNote() {
+        // 세션 시작 → 첫 문제를 일부러 틀림 (quiz_attempts에는 아무것도 안 쌓임)
+        com.vocamaster.quiz.dto.StartSessionRequest start = new com.vocamaster.quiz.dto.StartSessionRequest();
+        start.setDirection("front_to_back");
+        start.setTotal(5);
+        var session = quizService.startSession(deck.getId(), user.getId(), start);
+        var q = session.getQuestions().get(0);
+        String correct = quizQuestionRepository.findById(q.getQuestionId()).orElseThrow().getCorrectAnswer();
+        String wrongPick = q.getChoices().stream().filter(c -> !c.equals(correct)).findFirst().orElseThrow();
+        com.vocamaster.quiz.dto.SubmitToSessionRequest submit = new com.vocamaster.quiz.dto.SubmitToSessionRequest();
+        submit.setQuestionId(q.getQuestionId());
+        submit.setSelectedAnswer(wrongPick);
+        quizService.submitAnswerToSession(session.getSessionId(), user.getId(), submit);
+        em.flush();
+
+        var res = wrongNoteService.getWrongNotes(deck.getId(), user.getId(), 0);
+        Set<Long> quizIds = res.getQuiz().stream().map(c -> c.getId()).collect(Collectors.toSet());
+        Long wrongCardId = quizQuestionRepository.findById(q.getQuestionId()).orElseThrow().getCard().getId();
+        assertTrue(quizIds.contains(wrongCardId), "세션에서 틀린 카드가 오답노트 quiz 항목에 있어야");
+        assertTrue(res.getCombined().stream().anyMatch(c -> c.getId().equals(wrongCardId)), "combined에도");
     }
 }

@@ -106,7 +106,7 @@ public class QuizService {
 
         Direction dir = Direction.from(req.getDirection());
         String correctAnswer = dir.isFrontToBack() ? card.getBack() : card.getFront();
-        boolean isCorrect = req.getSelectedAnswer().trim().equals(correctAnswer.trim());
+        boolean isCorrect = normalizeAnswer(req.getSelectedAnswer()).equals(normalizeAnswer(correctAnswer));   // 세션 채점과 같은 자
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다"));
@@ -226,9 +226,20 @@ public class QuizService {
         }
 
         Direction direction = Direction.from(req.getDirection());
+
+        // 이 방향에서 '서로 다른 답'이 2개 미만이면 오답지를 만들 수 없다 — 카드 수가 아니라 답의 종류가 기준
+        // (뜻이 전부 "과일"인 덱: 카드 5장이어도 단어→뜻 방향은 선택지가 정답 하나뿐)
+        long distinctAnswers = distractorPool.stream()
+                .map(c -> normalizeAnswer(answerOf(c, direction)))
+                .distinct().count();
+        if (distinctAnswers < 2) {
+            throw new BadRequestException("이 방향에서는 서로 다른 답이 2개 미만이라 선택지를 만들 수 없습니다 (답 종류 "
+                    + distinctAnswers + "개)");
+        }
+
         int requestedTotal = (req.getTotal() == null) ? DEFAULT_TOTAL : req.getTotal();
-        int total = Math.min(requestedTotal, pool.size());                  // 카드 부족하면 그만큼만
-        int choiceCount = Math.min(MAX_CHOICES, distractorPool.size());     // 덱이 5장 미만이면 2~4지선다 fallback
+        int total = Math.min(requestedTotal, pool.size());                       // 카드 부족하면 그만큼만
+        int choiceCount = (int) Math.min(MAX_CHOICES, distinctAnswers);         // 답 종류가 5개 미만이면 2~4지선다 fallback
 
         // 3) 세션 row 저장 (startedAt은 @CreationTimestamp 자동)
         QuizSession session = quizSessionRepository.save(QuizSession.builder()
@@ -248,7 +259,7 @@ public class QuizService {
         for (int i = 0; i < questionCards.size(); i++) {
             Card qc = questionCards.get(i);
             String questionText = direction.isFrontToBack() ? qc.getFront() : qc.getBack();
-            String correctAnswer = direction.isFrontToBack() ? qc.getBack() : qc.getFront();
+            String correctAnswer = answerOf(qc, direction);
 
             List<String> choices = buildChoices(distractorPool, qc, correctAnswer, direction, choiceCount);
 
@@ -296,6 +307,19 @@ public class QuizService {
         return new ArrayList<>(byCard.values());
     }
 
+    /**
+     * 답 비교의 단일 기준 — 선택지 중복 제거·채점·(프런트 색 표시)가 전부 이 자로 잰다.
+     * 예전엔 선택지는 원문 그대로, 채점은 trim+대소문자 무시로 달라서 "Apple"/"apple"이 둘 다 선택지에 나오고
+     * 둘 다 정답 처리되는 틈이 있었다 (Codex 검산 2026-08-23).
+     */
+    static String normalizeAnswer(String s) {
+        return s == null ? "" : s.trim().toLowerCase(Locale.ROOT);
+    }
+
+    static String answerOf(Card c, Direction d) {
+        return d.isFrontToBack() ? c.getBack() : c.getFront();
+    }
+
     private List<String> buildChoices(List<Card> pool, Card questionCard, String correctAnswer,
                                        Direction direction, int choiceCount) {
         List<Card> wrongPool = new ArrayList<>(pool);
@@ -303,13 +327,13 @@ public class QuizService {
         Collections.shuffle(wrongPool);
 
         Set<String> seen = new HashSet<>();
-        seen.add(correctAnswer);
+        seen.add(normalizeAnswer(correctAnswer));
         List<String> choices = new ArrayList<>();
-        choices.add(correctAnswer);
+        choices.add(correctAnswer.trim());
         for (Card w : wrongPool) {
-            String wrongAns = direction.isFrontToBack() ? w.getBack() : w.getFront();
-            if (seen.add(wrongAns)) {                               // 같은 답 중복 차단
-                choices.add(wrongAns);
+            String wrongAns = answerOf(w, direction);
+            if (seen.add(normalizeAnswer(wrongAns))) {              // 정규화 기준으로 중복 차단 (채점과 동일 자)
+                choices.add(wrongAns.trim());
                 if (choices.size() >= choiceCount) break;
             }
         }
@@ -360,8 +384,8 @@ public class QuizService {
         }
 
         // 3) 정답 비교 — 정규화 (공백 + 대소문자 무시)
-        String normalized = req.getSelectedAnswer() == null ? "" : req.getSelectedAnswer().trim();
-        boolean isCorrect = normalized.equalsIgnoreCase(question.getCorrectAnswer().trim());
+        String normalized = req.getSelectedAnswer() == null ? "" : req.getSelectedAnswer().trim();   // 저장용(표시 원문, 공백만 정리)
+        boolean isCorrect = normalizeAnswer(normalized).equals(normalizeAnswer(question.getCorrectAnswer())); // 채점은 단일 기준
 
         // 4) 문제 row UPDATE (영속 컨텍스트에서 자동 flush)
         question.setSelectedAnswer(normalized);
