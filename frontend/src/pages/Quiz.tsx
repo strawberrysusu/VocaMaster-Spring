@@ -259,7 +259,7 @@ export default function Quiz() {
                 </div>
               )}
             </div>
-            <p className="muted" style={{ textAlign: 'center', fontSize: 12.5 }}>숫자 키 1~4로 고를 수 있어요</p>
+            <p className="muted" style={{ textAlign: 'center', fontSize: 12.5 }}>숫자 키 1~6으로 고를 수 있어요</p>
           </>
         )}
 
