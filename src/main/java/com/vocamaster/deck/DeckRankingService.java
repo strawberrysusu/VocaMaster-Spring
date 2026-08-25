@@ -11,6 +11,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -60,7 +61,20 @@ public class DeckRankingService {
             long start = (long) page * size;
             Set<String> ids = redis.opsForZSet().reverseRange(KEY, start, start + size - 1);
             if (ids == null) return null;
-            return ids.stream().map(Long::valueOf).toList();
+            List<Long> parsed = new ArrayList<>(ids.size());
+            for (String raw : ids) {
+                try {
+                    parsed.add(Long.valueOf(raw));
+                } catch (NumberFormatException e) {
+                    // 숫자 아닌 멤버가 섞임 = 캐시 손상. NumberFormatException은 DataAccessException이 아니라
+                    // 아래 catch를 뚫고 500이 되던 fail-open 구멍 (Codex 감사) → 자가 치유(삭제 → 다음 조회가 재구축) 후 DB로
+                    log.warn("랭킹 캐시 손상(멤버 '{}') — 키 삭제 후 DB 정렬로 대체 (fail-open)", raw);
+                    redis.delete(KEY);
+                    redis.delete(READY_KEY);
+                    return null;
+                }
+            }
+            return parsed;
         } catch (DataAccessException e) {
             log.warn("랭킹 캐시 조회 실패 — DB 정렬로 대체 (fail-open)", e);
             return null;
@@ -88,7 +102,19 @@ public class DeckRankingService {
 
     /** 점수 공식의 자바 쪽 단일 지점 — 재구축·공개 전환이 모두 이걸 쓴다 (JPQL 쪽과 ★ 교차 참조) */
     static double score(Deck d) {
-        return d.getLikeCount() * LIKE_WEIGHT + d.getCopyCount() * COPY_WEIGHT + d.getStudyCount() * STUDY_WEIGHT;
+        return d.getLikeCount() * LIKE_WEIGHT + d.getCopyCount() * COPY_WEIGHT + d.getStudyCount() * STUDY_WEIGHT
+                + tieBreaker(d.getId());
+    }
+
+    /**
+     * 동점 정렬을 DB(`createdAt desc, id desc`)와 일치시키는 소수부 (Codex 감사 2026-08-25).
+     * ZSET 동점은 멤버 문자열 사전순이라 "9"가 "10"보다 뒤로 가는 등 DB와 어긋났다.
+     * id는 AUTO_INCREMENT라 'id 큰 쪽 = 최신' — id/1e12를 점수에 실으면 동점에서 최신이 위.
+     * 정수 가중치 증분(ZINCRBY ±5·±3·±1)은 소수부를 건드리지 않아 기존 훅은 무변경.
+     * (한계: 재구축·공개 전환을 안 거친 멤버가 증분만으로 생기면 소수부가 없다 — PUBLIC 가드상 정상 경로에선 없음)
+     */
+    private static double tieBreaker(long id) {
+        return id / 1e12;
     }
 
     /** PRIVATE/UNLISTED → PUBLIC 전환: 현재 DB 카운트 기준 점수로 등재.

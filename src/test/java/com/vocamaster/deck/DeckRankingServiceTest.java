@@ -114,7 +114,7 @@ class DeckRankingServiceTest extends AbstractIntegrationTest {
 
         List<Long> ids = rankingService.topDeckIds(0, 50);
         assertEquals(a.getId(), ids.get(0), "10+5=15 > 12");
-        assertEquals(15.0, redis.opsForZSet().score(DeckRankingService.KEY, String.valueOf(a.getId())));
+        assertEquals(15.0, redis.opsForZSet().score(DeckRankingService.KEY, String.valueOf(a.getId())), 1e-6);   // 소수부 = tie-breaker
     }
 
     @Test
@@ -152,11 +152,46 @@ class DeckRankingServiceTest extends AbstractIntegrationTest {
         rankingService.topDeckIds(0, 50);                       // 재구축
 
         deckService.updateVisibility(hidden.getId(), owner.getId(), DeckVisibility.PUBLIC);
-        assertEquals(8.0, redis.opsForZSet().score(DeckRankingService.KEY, String.valueOf(hidden.getId())),
-                "like1×5 + copy1×3 = 8점으로 등재");
+        assertEquals(8.0, redis.opsForZSet().score(DeckRankingService.KEY, String.valueOf(hidden.getId())), 1e-6,
+                "like1×5 + copy1×3 = 8점으로 등재 (소수부 = tie-breaker)");
 
         deckService.updateVisibility(b.getId(), owner.getId(), DeckVisibility.PRIVATE);
         assertNull(redis.opsForZSet().score(DeckRankingService.KEY, String.valueOf(b.getId())),
                 "PUBLIC 이탈은 즉시 ZREM");
+    }
+
+    @Test
+    @DisplayName("동점 정렬 = DB와 동일(최신 우선) — tie-breaker 소수부. 예전엔 멤버 문자열 사전순이라 어긋남 (Codex 감사)")
+    void tieOrder_matchesDb_newestFirst() {
+        // c(0점)보다 나중에 만든 0점 덱 — id가 더 큼 = DB 규칙(createdAt desc, id desc)상 위
+        Deck newer = deckRepository.save(Deck.builder().title("rankNewer " + System.nanoTime())
+                .visibility(DeckVisibility.PUBLIC).user(owner).build());
+        try {
+            List<Long> ids = rankingService.topDeckIds(0, 500);
+
+            int newerPos = ids.indexOf(newer.getId());
+            int cPos = ids.indexOf(c.getId());
+            assertTrue(newerPos >= 0 && cPos >= 0, "둘 다 순위표에 있어야");
+            assertTrue(newerPos < cPos, "동점(0점)이면 최신(id 큰 쪽)이 위 — DB 정렬과 동일해야");
+        } finally {
+            deckRepository.deleteById(newer.getId());
+        }
+    }
+
+    @Test
+    @DisplayName("숫자 아닌 멤버가 섞이면 — 500이 아니라 DB 폴백(null) + 자가 치유(키 삭제 → 다음 조회 재구축)")
+    void corruptedMember_failsOpenAndSelfHeals() {
+        rankingService.topDeckIds(0, 50);                                             // 재구축 → ready
+        redis.opsForZSet().add(DeckRankingService.KEY, "corrupted-not-a-number", 999_999);   // 손상 주입
+
+        List<Long> ids = assertDoesNotThrow(() -> rankingService.topDeckIds(0, 50),
+                "NumberFormatException이 새어 나가면 인기 목록 전체가 500");
+        assertNull(ids, "손상 감지 → DB 폴백");
+        assertNotEquals(Boolean.TRUE, redis.hasKey(DeckRankingService.KEY), "자가 치유: 본체 삭제");
+        assertNotEquals(Boolean.TRUE, redis.hasKey(DeckRankingService.READY_KEY), "ready 표지도 삭제");
+
+        List<Long> next = rankingService.topDeckIds(0, 50);
+        assertNotNull(next, "다음 조회는 재구축된 깨끗한 캐시");
+        assertTrue(next.contains(b.getId()));
     }
 }

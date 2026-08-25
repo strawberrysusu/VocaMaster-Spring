@@ -125,16 +125,16 @@ class DeckStudyRankingRedisTest extends AbstractIntegrationTest {
     void publicTarget_incrementsAfterCommit() {
         Deck root = newRoot(DeckVisibility.PUBLIC);
         rankingService.topDeckIds(0, 50);
-        assertEquals(0.0, score(root), "재구축 직후 0점 멤버");
+        assertEquals(0.0, score(root), 1e-6, "재구축 직후 0점 멤버 (소수부는 동점 tie-breaker — id/1e12)");
 
         Long copyId = deckService.copy(root.getId(), learner.getId()).getId();
-        assertEquals(3.0, score(root), "복사 +3");
+        assertEquals(3.0, score(root), 1e-6, "복사 +3");
 
         statsService.recordStudy(learner.getId(), copyId);
-        assertEquals(4.0, score(root), "학습 +1 (REQUIRES_NEW 커밋 후)");
+        assertEquals(4.0, score(root), 1e-6, "학습 +1 (REQUIRES_NEW 커밋 후)");
 
         statsService.recordStudy(learner.getId(), copyId);
-        assertEquals(4.0, score(root), "같은 날 재학습은 Redis에도 +0");
+        assertEquals(4.0, score(root), 1e-6, "같은 날 재학습은 Redis에도 +0");
     }
 
     @Test
@@ -143,7 +143,7 @@ class DeckStudyRankingRedisTest extends AbstractIntegrationTest {
         Deck root = newRoot(DeckVisibility.PUBLIC);
         rankingService.topDeckIds(0, 50);
         Long copyId = deckService.copy(root.getId(), learner.getId()).getId();
-        assertEquals(3.0, score(root), "전제: 복사 +3");
+        assertEquals(3.0, score(root), 1e-6, "전제: 복사 +3");
 
         new TransactionTemplate(txManager).execute(status -> {
             statsService.recordStudy(learner.getId(), copyId);
@@ -151,7 +151,7 @@ class DeckStudyRankingRedisTest extends AbstractIntegrationTest {
             return null;
         });
 
-        assertEquals(3.0, score(root), "롤백이면 +1 없음 — 즉시 실행 리스너였다면 4.0");
+        assertEquals(3.0, score(root), 1e-6, "롤백이면 +1 없음 — 즉시 실행 리스너였다면 4.0");
         assertEquals(0, deckRepository.findById(root.getId()).orElseThrow().getStudyCount(), "DB도 0");
     }
 
@@ -165,6 +165,6 @@ class DeckStudyRankingRedisTest extends AbstractIntegrationTest {
         assertNull(score(root), "전제: 아직 비공개라 멤버 없음");
 
         deckService.updateVisibility(root.getId(), owner.getId(), DeckVisibility.PUBLIC);
-        assertEquals(4.0, score(root), "예전 공식(like·copy만)이면 3.0 — study 항 누락 버그");
+        assertEquals(4.0, score(root), 1e-6, "예전 공식(like·copy만)이면 3.0 — study 항 누락 버그");
     }
 }
