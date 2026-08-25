@@ -6,6 +6,16 @@ spring:
     suffix: .mustache
     charset: UTF-8
 
+  # OSIV off — DB 커넥션을 뷰 렌더까지 붙들지 않는다 (Phase 7 ② 보안 게이트).
+  # 서비스 계층이 트랜잭션 안에서 필요한 걸 다 조회하는 설계라 뷰의 lazy 로딩 의존이 없음
+  jpa:
+    open-in-view: false
+
+  # JWT 전용 인증이라 스프링의 자동 생성 기본 계정(generated password 로그)은 노이즈만 됨
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
 jwt:
   access-expiration: 3600000      # 1시간 (밀리초)
   refresh-expiration: 1209600000  # 14일 (밀리초)

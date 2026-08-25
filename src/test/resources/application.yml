@@ -2,6 +2,7 @@ spring:
   # datasource: ← AbstractIntegrationTest의 @ServiceConnection이 동적 주입 (Testcontainers, ADR-025)
 
   jpa:
+    open-in-view: false           # main과 짝 맞춤 — 테스트도 OSIV 없는 운영 조건으로 돈다
     hibernate:
       ddl-auto: validate          # Flyway가 스키마 관리, JPA는 검증만 (운영과 동일)
     show-sql: true
@@ -12,6 +13,11 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+  # main과 짝 맞춤 — 기본 계정 자동 구성 제외
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 
   # main의 Redis 키와 짝 맞춤 (알려진 함정: main에만 키 추가 시 PropertyPlaceholder 폭발).
   # Redis가 필요한 테스트는 Testcontainers로 host/port를 덮어씀 — 기본값은 '연결 실패' 경로 검증용

@@ -21,6 +21,13 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
+# 운영에서 API 명세 비공개 (Phase 7 ② 보안 게이트) — 엔드포인트 자체가 등록 안 돼 404
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 ratelimit:
   login:
     enabled: true
