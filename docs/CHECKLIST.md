@@ -11,10 +11,10 @@
 |---|---|
 | **진행 중인 Phase** | **Phase 5 완전 졸업 🎓 (2026-08-12 — 시작과 졸업이 같은 날)** · Phase 4 졸업(08-11) |
 | **이번 주 집중** | **week note 복구** (Phase 4·5 면접 원고 — 세션의 완성 문장 세트를 자기 손으로) → 주말 폐쇄훈련 #3 3회차 → 주3(8/17~) 행정 |
-| **전체 진행도** | Phase 0~3 ✅ / Phase 4 ✅ / Phase 5 ✅ / **Phase 6 Spring Event ✅ (8/23 졸업, Kafka STRETCH 미정)** / Phase 7~8 대기 |
-| **다음 마일스톤** | 개강(8/27) — week-16 원고화 후 개강 후 리듬 재확정. Phase 7(배포)은 Kafka 결정 뒤 |
+| **전체 진행도** | Phase 0~6 ✅ (Kafka는 A안 '안 함' 결정) / **Phase 7 진행 중 — ① CI ✅ ② 보안 게이트 ✅ (8/25)** |
+| **다음 마일스톤** | 개강(8/27) D-2 — Phase 7 ③ Dockerfile부터. 개강 후 저녁 1h 리듬 재확정 |
 | **신규 ADR** | ADR-016~039 — … / **좋아요: unique 멱등** / **인기 정렬: like×5+copy×3, study 항 제외** — `docs/decisions.md` |
-| **▶ 다음 액션 (resume)** | **2026-08-23 마감: Phase 6 졸업 + React 11화면 완성 + 안정화 1~5 (커밋 22, 테스트 127→160, ADR-040)**. 화면: 홈·덱·학습·퀴즈·타이핑·탐색·공개상세·통계·설정·가져오기·로그인 + 🔊TTS·요미가나·삭제/별표. **다음 세션 첫 일감 = README 갱신** (현재 Phase 3·70테스트·Mustache 기준으로 낡음): ① 사용자가 '만드는 이유' 3~4줄 직접 작성(Quizlet 유료화·매일 쓰려고·일/영) ② 스크린샷 3~4장 `docs/images/`(홈·학습·퀴즈·통계) ③ 기술 하이라이트를 '왜'로(존재 숨김 404·원자적 UPDATE+FK 데드락·캐시 일관성·이벤트 결합 해소·갭 락) ④ 실행 방법 `/app/`·구조 frontend/ ⑤ 로드맵 현행화. 그 다음: Codex 감사 잔여(Redis 동점 정렬·깨진 id fail-open·구형 API·토큰 1h 정책 명시) → week-16 면접 Q 4차 인출(8/25~) → **Phase 7 사전 설명(배포 위치 결정: AWS 유료 vs Oracle Always Free)**. 개강 8/27 후 저녁 1h 리듬 재확정 |
+| **▶ 다음 액션 (resume)** | **2026-08-25 마감: README 실물화 + week-16 4차 인출 + Phase 7 ① CI ② 보안 게이트 + Boot 3.5.16 상향 (테스트 169, ADR-041·042)**. ②의 실물: prod에서 springdoc 완전 비활성(404) / `ProdSafetyGuard`(레포에 공개된 dev·test 시크릿 재사용, 32바이트 미만 → 부팅 거부) / `ProdProfileTest`(prod 컨텍스트를 CI마다 실부팅 — 환경변수 4종 해석·Swagger 닫힘·Redis 없이 fail-open 부팅) / OSIV off / 기본 계정 자동구성 제외. 의존성: Boot 3.3.0(OSS 지원 종료 라인) → 3.5.16 + springdoc 2.8.17 + jjwt 0.12.7 — 사상자 전수 1건(Hibernate 6.6의 '삭제된 엔티티 참조' flush 단속 — 테스트에 영속성 컨텍스트 경계 `em.clear` 재현으로 수리, 운영 무관). dev 스모크는 8081 bootRun으로 7종 실측(8080 실서버 무접촉 룰 준수). **다음 세션 첫 일감 = Phase 7 ③ 멀티스테이지 Dockerfile** (Oracle A1이 ARM이라 arm64 고려, jar는 이미 React 포함) → ④ app+MySQL+Redis Compose+healthcheck 로컬 검증 → ⑤ Oracle 인스턴스(화면 단위 안내 약속) |
 > **🎓 Phase 4 완전 졸업 (2026-08-11)** — 실서버 HTTP 데모(검색→복사→좋아요→popular 1위 반영→400/403) + 구두 3문 통과. 1주 만에 Phase 통째 완료(계획은 '개강 전 절반'). ADR-030~033, 테스트 105+, 면접 1급 재료: FK 데드락 실화(ADR-031)·잠금 순서 3회 학습·조작 방지 3계열(복사 제외/좋아요 1회 캡/학습 보류). 다음: ① **week note 복구** (최고가 밀린 항목 — Phase 4 노트에 데드락 스토리) ② 주말 폐쇄훈련 #3 3회차 (빈칸 채우기, Codex 닫기 체크) ③ **Phase 5 Redis 진입** (사전 설명부터. 인기 정렬 filesort → ZSET 전환이 첫 동기). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 / 데모 서버 아직 켜져 있으면 gradle bootRun 태스크 종료 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
 ---
@@ -780,8 +780,15 @@ review:summary:{userId}:{date}  TTL 5분
 > **목표:** "실제로 띄워놓고 다른 사람이 쓸 수 있는" 상태.
 > **모드:** ⚪ C (NewsPick 구조 학습) → 🔵 B (옮기기)
 
+### 🔒 공개 배포 전 보안 게이트 (ADR-042)
+- [x] **[MUST]** prod에서 Swagger 완전 비공개 — springdoc 비활성(엔드포인트 미등록→404), dev는 그대로 ✅ 8/25
+- [x] **[MUST]** `ProdSafetyGuard` — 레포에 공개된 dev/test 시크릿 재사용·32바이트 미만이면 부팅 거부 (fail-fast) ✅ 8/25
+- [x] **[MUST]** `ProdProfileTest` — prod 컨텍스트 배포 리허설을 CI에 상주 (환경변수 4종·Swagger 닫힘·Redis 없이 부팅) ✅ 8/25
+- [x] **[MUST]** 의존성 현행화 — Boot 3.3.0(지원 종료) → 3.5.16, springdoc 2.8.17, jjwt 0.12.7. 사상자 1건 수리 ✅ 8/25
+- [x] **[SHOULD]** OSIV off + 자동 생성 기본 계정 제외 ✅ 8/25
+
 ### 🐳 Docker
-- [ ] **[MUST]** `Dockerfile` 멀티스테이지 빌드
+- [ ] **[MUST]** `Dockerfile` 멀티스테이지 빌드 (Oracle A1 = ARM/arm64 고려)
 - [ ] **[MUST]** `docker-compose.yml` (로컬 기본: app + mysql + redis)
 - [ ] **[MUST]** `docker-compose.prod.yml` (운영: + nginx)
 - [ ] **[MUST]** 헬스체크 설정
