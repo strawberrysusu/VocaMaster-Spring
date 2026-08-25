@@ -1544,6 +1544,30 @@ ARM(arm64) 도커 빌드 경험이 이력서 거리.
 
 ---
 
+## ADR-043: Phase 7 ③ 멀티스테이지 Dockerfile — node → JDK → JRE 3단
+
+**상태:** 채택 (2026-08-25)
+**범위:** 배포 산출물 포장 (Compose·배포는 ④·⑤에서)
+
+**컨텍스트:** "어느 컴퓨터에서든 명령 한 줄"이 되려면 Node·JDK·Gradle이 전부 이미지 안에서 해결돼야 한다. 단, 그 도구들이 **최종 이미지에 남으면 안 된다** — 용량과 공격 표면.
+
+**결정: 3단 멀티스테이지**
+1. `node:20-alpine` — React 번들만 만들고 버려짐 (CI와 같은 Node 20)
+2. `eclipse-temurin:17-jdk` — jar만 만들고 버려짐. 1단 산출을 받아 `-PskipFrontend`로 Gradle의 npm 단계 생략 (기존 스위치 재사용 — Docker 때문에 빌드 스크립트를 안 고침)
+3. `eclipse-temurin:17-jre` — 실행기 + jar뿐인 최종 이미지
+
+**대안:** (a) 로컬/CI에서 jar 만들고 COPY만 — 이미지가 만든 사람 환경에 의존, "레포만 있으면 빌드"가 깨짐 ❌ (b) 단일 스테이지에 node+JDK 설치 — 빌드 도구·소스가 최종 이미지에 통째로 실림 ❌ (c) **3단 분리** ✅
+
+**보안 이어달리기 (ADR-042의 연장):**
+- `USER appuser` 비root — 컨테이너가 뚫려도 root가 아니게
+- `ENV SPRING_PROFILES_ACTIVE=prod` — **배포 산출물의 기본은 운영 모드**. "서버에서 깜빡하고 dev로 뜨는" 사고를 이미지 차원에서 봉쇄, 시크릿 검증은 ProdSafetyGuard가 이어받음
+
+**기타:** 베이스 3종 모두 멀티아치(amd64/arm64 — Oracle A1 대응), `--mount=type=cache`로 재빌드 시 Gradle 재다운로드 방지, `.dockerignore`로 컨텍스트 다이어트(.git·node_modules·로컬 프론트 산출물 제외 — 이미지 안 산출만 사용해 재현성 확보), 힙 `MaxRAMPercentage=75`(컨테이너 limit 기준), 로그 시각 KST
+
+**트레이드오프:** 이미지 빌드에서 테스트 제외 — 테스트는 CI(169개) 담당, 이미지 빌드는 포장만. 헬스체크는 Compose(④)에서
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

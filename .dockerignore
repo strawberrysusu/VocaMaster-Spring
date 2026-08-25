@@ -1,0 +1,18 @@
+# 빌드 컨텍스트 다이어트 — 데몬에 보낼 필요 없는 것들 (없으면 .git·node_modules까지 통째로 전송)
+.git
+.gradle
+.idea
+build
+out
+frontend/node_modules
+docs
+*.md
+*.bat
+.github
+.claude
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# 로컬에서 빌드된 프론트 산출물 — 이미지 안에서는 1단계(node) 산출만 쓴다 (재현성)
+src/main/resources/static/app
