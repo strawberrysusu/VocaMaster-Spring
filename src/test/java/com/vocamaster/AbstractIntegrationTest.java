@@ -12,7 +12,7 @@ import org.testcontainers.containers.MySQLContainer;
  *
  * - MySQL 8 컨테이너를 *클래스 로딩 시 1회* 수동 start → 모든 테스트가 공유
  * - {@code @DynamicPropertySource}로 datasource 명시 주입 (전통 패턴, 호환성 ↑)
- * - {@code @ServiceConnection} 미사용 — Spring Boot 3.3.0 + Testcontainers 1.21.3 모듈 충돌 회피
+ * - {@code @ServiceConnection} 미사용 — Boot 3.3 시절 모듈 충돌로 전통 패턴 채택, 이후에도 유지 (동작 동일)
  * - Flyway가 실제 마이그레이션 실행 → 운영과 동일 스키마 검증
  */
 @SpringBootTest

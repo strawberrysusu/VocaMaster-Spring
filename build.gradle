@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.3.0'
+    id 'org.springframework.boot' version '3.5.16'   // 3.3.x는 OSS 지원 종료(보안 패치 중단) → 패치가 나오는 3.5 최신으로 (Phase 7 ②)
     id 'io.spring.dependency-management' version '1.1.5'
 }
 
@@ -9,11 +9,6 @@ version = '0.0.1-SNAPSHOT'
 
 java {
     sourceCompatibility = '17'
-}
-
-// Spring Boot 3.3 기본 Testcontainers(1.19.8)는 Docker 29 호환성 미보장 — 1.21.x로 상향
-ext {
-    set('testcontainers.version', '1.21.3')
 }
 
 configurations {
@@ -41,15 +36,15 @@ dependencies {
     implementation 'org.flywaydb:flyway-mysql'
 
     // JWT
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.7'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.7'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.7'
 
     // Redis (Phase 5) — Lettuce 기반 (starter 기본), rate limit / 랭킹 / 캐시
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     // Swagger
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'   // Boot 3.4/3.5 호환 라인
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -67,7 +62,7 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
-    failFast = true                     // 첫 fail 즉시 중단 (디버깅 시간 단축)
+    failFast = !project.hasProperty('noFailFast')   // 기본: 첫 fail 즉시 중단. -PnoFailFast = 전체 명단 수집(의존성 상향 등)
 }
 
 // ── React 번들을 jar에 묶기 (Codex 전수 감사 2026-08-23) ──

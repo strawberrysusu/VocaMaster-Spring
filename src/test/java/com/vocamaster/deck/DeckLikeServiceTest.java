@@ -5,6 +5,7 @@ import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.dto.LikeResponse;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ class DeckLikeServiceTest extends AbstractIntegrationTest {
     @Autowired private DeckService deckService;
     @Autowired private DeckRepository deckRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private EntityManager em;
 
     private User owner;
     private User liker;
@@ -115,6 +117,11 @@ class DeckLikeServiceTest extends AbstractIntegrationTest {
     @DisplayName("좋아요 달린 덱 삭제 성공 — DB CASCADE가 좋아요 행도 제거 (V12 회귀)")
     void removeDeck_withLikes_cascades() {
         deckLikeService.like(publicDeck.getId(), liker.getId());
+        // 운영에선 '좋아요'와 '삭제'가 서로 다른 요청 = 다른 영속성 컨텍스트 — 그 경계를 재현.
+        // 안 끊고 이어 붙이면 메모리의 DeckLike가 '삭제된 덱'을 계속 참조하는데,
+        // Hibernate 6.6부터 flush가 이런 참조를 단속한다 (Boot 3.5 상향 때 발각, 운영 경로는 무관)
+        em.flush();
+        em.clear();
 
         // V12 이전엔 여기서 FK 위반 500 (deck_likes가 덱을 참조 중이라 부모 삭제 거부)
         deckService.remove(publicDeck.getId(), owner.getId());
