@@ -1486,6 +1486,31 @@ Phase 4 완료 기준 데모("인기 목록 반영 시연")에 필요한 마지�
 
 ---
 
+## ADR-041: Phase 7 배포지 — Oracle Cloud Always Free 우선, Lightsail 예비
+
+**상태:** 채택 (2026-08-25)
+**범위:** Phase 7 전체의 기반 결정
+
+**결정:** **Oracle Cloud Always Free (Ampere A1 Flex, Seoul)** 를 1순위로. 인스턴스 확보 실패·유휴 회수가 반복되면 **AWS Lightsail 2GB(월 ~$12)** 로 이전.
+
+**팩트 (2026-08-25 공식 문서 실측 — 초기엔 4 OCPU/24GB로 잘못 알았던 것을 정정):**
+- A1 Flex Always Free = 월 1,500 OCPU시간 + 9,000 GB시간 = **상시 2 OCPU / 12GB RAM**
+- 유휴 회수: 7일간 CPU p95·네트워크·메모리 **전부** 20% 미만일 때만 — 매일 실사용이라 해당 없음
+- 리스크: 무료 인스턴스 자리 확보가 리전 사정에 따라 며칠 걸릴 수 있음
+
+**대안:** AWS EC2/Lightsail(월 1~2만 원 — 사용자의 명시적 비용 부담 + NewsPick에서 이미 경험) /
+국내 무료(네이버 Micro 1GB·Cloudtype 1GB 매일 중지 — DB 포함 상시 서비스 불가)
+
+**부수 이득:** 2/12면 VocaMaster(앱+MySQL+Redis) 외에 NewsPick 재배포까지 한 서버(nginx 리버스 프록시) 가능.
+ARM(arm64) 도커 빌드 경험이 이력서 거리.
+
+**진행 순서 (클라우드는 마지막 — 로컬에서 검증 가능한 것부터):**
+① GitHub Actions CI(test+build) → ② 공개 전 보안 게이트(prod 프로필 강제·Swagger 차단·시크릿 환경변수·의존성 업데이트)
+→ ③ 멀티스테이지 Dockerfile → ④ app+MySQL+Redis Compose+healthcheck (로컬 검증) → ⑤ Oracle 인스턴스 확보·배포
+→ ⑥ DB 볼륨·백업 → ⑦ nginx·HTTPS → ⑧ k6 측정(Redis 전후 p50/p95/p99) → ⑨ 구형 Mustache 제거는 배포 성공 후
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)
