@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
-import { loadSettings } from '../lib/settings'
+import { loadSettings, saveSettings } from '../lib/settings'
 
 // 백엔드(Phase 2 퀴즈 세션 API) 계약 — direction은 소문자 'front_to_back' | 'back_to_front' (Direction.from)
 type Direction = 'front_to_back' | 'back_to_front'
@@ -51,6 +51,7 @@ export default function Quiz() {
   const [direction, setDirection] = useState<Direction>('front_to_back')
   const [count, setCount] = useState(10)
   const [wrongOnly, setWrongOnly] = useState(false)
+  const [choices, setChoices] = useState<4 | 5 | 6>(() => loadSettings().quizChoices)   // 선택지 수 — 설정에 기억
 
   const [session, setSession] = useState<StartResp | null>(null)
   const [idx, setIdx] = useState(0)
@@ -69,8 +70,8 @@ export default function Quiz() {
     setError('')
     try {
       const body = opts?.sourceSessionId
-        ? { direction, total: count, sourceSessionId: opts.sourceSessionId }
-        : { direction, total: count, wrongOnly }
+        ? { direction, total: count, choiceCount: choices, sourceSessionId: opts.sourceSessionId }
+        : { direction, total: count, choiceCount: choices, wrongOnly }
       const res = await api<StartResp>(`/decks/${deckId}/quiz-sessions`, { method: 'POST', body: JSON.stringify(body) })
       setSummary(null)   // 성공한 뒤에만 요약을 치운다 — 실패하면 결과 화면 유지
       setSession(res)
@@ -131,7 +132,7 @@ export default function Quiz() {
     function onKey(e: KeyboardEvent) {
       if (!session || summary) return
       const q = session.questions[idx]
-      if (!picked && /^[1-4]$/.test(e.key) && q.choices[Number(e.key) - 1] !== undefined) {
+      if (!picked && /^[1-6]$/.test(e.key) && q.choices[Number(e.key) - 1] !== undefined) {
         choose(q.choices[Number(e.key) - 1])
       } else if (picked && (e.key === 'Enter' || e.key === ' ')) {
         e.preventDefault()
@@ -164,7 +165,7 @@ export default function Quiz() {
         {!session && (
           <div className="quiz-setup">
             <h2>퀴즈</h2>
-            <p className="muted">4지선다 · 틀린 문제는 기록돼서 나중에 오답만 다시 풀 수 있어요</p>
+            <p className="muted">4~6지선다 · 틀린 문제는 기록돼서 나중에 오답만 다시 풀 수 있어요</p>
             <div className="setup-row">
               <span className="setup-label">방향</span>
               <div className="sort-tabs">
@@ -187,6 +188,24 @@ export default function Quiz() {
               </div>
             </div>
             <div className="setup-row">
+              <span className="setup-label">선택지</span>
+              <div className="sort-tabs">
+                {([4, 5, 6] as const).map((n) => (
+                  <button
+                    key={n}
+                    className={choices === n ? 'active' : ''}
+                    disabled={busy}
+                    onClick={() => {
+                      setChoices(n)
+                      saveSettings({ ...loadSettings(), quizChoices: n })   // 다음에도 기억
+                    }}
+                  >
+                    {n}지선다
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="setup-row">
               <span className="setup-label">범위</span>
               <div className="sort-tabs">
                 <button className={!wrongOnly ? 'active' : ''} disabled={busy} onClick={() => setWrongOnly(false)}>전체</button>
@@ -196,7 +215,7 @@ export default function Quiz() {
             <button className="cta" style={{ marginTop: 8 }} disabled={busy} onClick={() => start()}>
               {busy ? '준비 중...' : '시작'}
             </button>
-            <p className="muted" style={{ fontSize: 12.5 }}>덱에 카드가 5장 미만이면 선택지가 줄어들어요 (최소 2장). '오답만'은 지금까지 틀린 카드 전체예요</p>
+            <p className="muted" style={{ fontSize: 12.5 }}>덱의 서로 다른 답이 모자라면 선택지가 그만큼만 나와요 (최소 2). '오답만'은 지금까지 틀린 카드 전체예요</p>
           </div>
         )}
 

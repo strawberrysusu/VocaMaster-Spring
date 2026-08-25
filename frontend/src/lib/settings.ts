@@ -14,12 +14,13 @@ export interface Settings {
   accent: AccentKey
   deckColumns: 2 | 3 | 4
   quizAutoAdvance: boolean
+  quizChoices: 4 | 5 | 6         // 퀴즈 선택지 수 (한국 시험 스타일 5지, 최대 6지)
   voices: Partial<Record<'en' | 'ja' | 'ko', string>>   // 언어별 선호 음성 이름 (없으면 tts.ts 우선순위 규칙)
 }
 
 const KEY = 'vm.settings'
 
-const DEFAULTS: Settings = { accent: 'indigo', deckColumns: 3, quizAutoAdvance: false, voices: {} }
+const DEFAULTS: Settings = { accent: 'indigo', deckColumns: 3, quizAutoAdvance: false, quizChoices: 4, voices: {} }
 
 export function loadSettings(): Settings {
   try {

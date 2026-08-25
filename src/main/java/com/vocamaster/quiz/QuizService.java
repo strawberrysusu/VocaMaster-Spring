@@ -30,7 +30,9 @@ import java.util.*;
 public class QuizService {
 
     private static final int DEFAULT_TOTAL = 10;
-    private static final int MAX_CHOICES = 4;        // 세션 API (React 퀴즈)
+    private static final int DEFAULT_CHOICES = 4;    // 세션 API (React 퀴즈) 기본값
+    private static final int MIN_CHOICES = 2;
+    private static final int MAX_CHOICES = 6;        // 사용자 선택 상한 (2026-08-25 요청: 한국 시험 스타일 5지, 최대 6지)
     private static final int LEGACY_CHOICES = 5;     // 구형 단건 API (Mustache) — 기존 계약 유지
 
     private final QuizAttemptRepository quizAttemptRepository;
@@ -236,7 +238,11 @@ public class QuizService {
 
         int requestedTotal = (req.getTotal() == null) ? DEFAULT_TOTAL : req.getTotal();
         int total = Math.min(requestedTotal, pool.size());                       // 카드 부족하면 그만큼만
-        int choiceCount = (int) Math.min(MAX_CHOICES, distinctAnswers);         // 답 종류가 5개 미만이면 2~4지선다 fallback
+        int requestedChoices = req.getChoiceCount() == null ? DEFAULT_CHOICES : req.getChoiceCount();
+        if (requestedChoices < MIN_CHOICES || requestedChoices > MAX_CHOICES) {
+            throw new BadRequestException("choiceCount는 " + MIN_CHOICES + "~" + MAX_CHOICES + " 사이여야 합니다. 입력값: " + requestedChoices);
+        }
+        int choiceCount = (int) Math.min(requestedChoices, distinctAnswers);    // 답 종류가 모자라면 그만큼만 (fallback)
 
         // 3) 세션 row 저장 (startedAt은 @CreationTimestamp 자동)
         QuizSession session = quizSessionRepository.save(QuizSession.builder()

@@ -369,6 +369,30 @@ class QuizSessionServiceTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("선택지 수 2~6 선택 가능 — 6지선다, 답 종류 모자라면 fallback, 범위 밖은 400 (2026-08-25 사용자 요청)")
+    void startSession_choiceCountConfigurable() {
+        for (int i = 0; i < 8; i++) addCard("cc" + i, "ans" + i);
+        em.flush();
+
+        StartSessionRequest six = startReq(3);
+        six.setChoiceCount(6);
+        StartSessionResponse res = quizService.startSession(deck.getId(), user.getId(), six);
+        for (StartSessionResponse.QuestionDto q : res.getQuestions()) {
+            assertEquals(6, q.getChoices().size(), "답 종류 8개 → 요청한 6지선다 그대로");
+        }
+
+        StartSessionRequest def = startReq(3);                       // choiceCount 미지정 → 기본 4
+        for (StartSessionResponse.QuestionDto q : quizService.startSession(deck.getId(), user.getId(), def).getQuestions()) {
+            assertEquals(4, q.getChoices().size(), "기본값 4지선다");
+        }
+
+        StartSessionRequest seven = startReq(3);
+        seven.setChoiceCount(7);
+        assertThrows(BadRequestException.class,
+                () -> quizService.startSession(deck.getId(), user.getId(), seven), "2~6 밖은 400");
+    }
+
+    @Test
     @DisplayName("total이 0 이하면 400")
     void startSession_totalZero_badRequest() {
         for (int i = 0; i < 3; i++) addCard("front" + i, "back" + i);

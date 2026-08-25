@@ -11,4 +11,5 @@ public class StartSessionRequest {
     private Boolean wrongOnly;      // 누적 오답만 — 세션(quiz_questions) + 구형 단건(quiz_attempts) 통합 기준
     private Boolean starredOnly;    // 즐겨찾기만
     private Long sourceSessionId;   // "이번 오답 다시" — 이 세션에서 틀린 카드만 출제 (소유자·덱 검증). wrongOnly보다 우선
+    private Integer choiceCount;    // 선택지 수 2~6 (null이면 4). 덱의 답 종류가 모자라면 그만큼만 (fallback)
 }
