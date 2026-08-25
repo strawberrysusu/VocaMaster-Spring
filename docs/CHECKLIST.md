@@ -793,7 +793,7 @@ review:summary:{userId}:{date}  TTL 5분
 - [ ] **[SHOULD]** 보안 헤더 (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
 
 ### 🔄 GitHub Actions CI/CD
-- [ ] **[MUST]** `.github/workflows/ci.yml` — test + build
+- [x] **[MUST]** `.github/workflows/ci.yml` — test + build ✅ 8/25. 도입 첫날 3결함 검거: ①시간대 의존 테스트(UTC 러너, -Putc 재현 스위치로 실증) ②비동기 폴링 3초 부족 ③caller-runs 테스트의 공유 실행기 간섭(전용 실행기로 격리). 5차 만에 그린 — gh CLI 인증으로 로그 직접 판독 체계 확보
 - [ ] **[SHOULD]** `.github/workflows/cd.yml` — main merge → EC2 SSH 배포
 - [ ] **[MUST]** Secrets 설정 (GH_TOKEN, EC2_KEY 등)
 
