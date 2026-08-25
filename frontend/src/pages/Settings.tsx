@@ -118,6 +118,17 @@ export default function Settings() {
               답하면 1초 뒤 자동으로 다음 문제
             </label>
           </div>
+          <div className="setup-row" style={{ marginBottom: 12 }}>
+            <span className="setup-label">선택지 수</span>
+            <div className="sort-tabs">
+              {([4, 5, 6] as const).map((n) => (
+                <button key={n} className={s.quizChoices === n ? 'active' : ''} onClick={() => update({ quizChoices: n })}>
+                  {n}지선다
+                </button>
+              ))}
+            </div>
+            <span className="muted" style={{ fontSize: 12.5 }}>퀴즈 시작 화면에서도 바꿀 수 있어요 (같은 설정)</span>
+          </div>
           <div className="setup-row">
             <span className="setup-label">덱 열 수</span>
             <div className="sort-tabs">
