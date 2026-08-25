@@ -10,7 +10,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -18,7 +17,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.test.context.TestPropertySource;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -47,7 +45,6 @@ class AsyncConfigTest extends AbstractIntegrationTest {
         public void explode() { throw new IllegalStateException("리스너 안에서 터짐"); }
     }
 
-    @Autowired @Qualifier(AsyncConfig.EVENT_EXECUTOR) private Executor executor;
     @Autowired private Boom boom;
 
     private ListAppender<ILoggingEvent> logs;
@@ -67,17 +64,30 @@ class AsyncConfigTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("큐 포화 → CallerRunsPolicy: 작업을 버리지 않고 호출 스레드가 직접 실행")
     void saturated_callerRuns_noLoss() throws Exception {
-        CountDownLatch release = new CountDownLatch(1);
-        // 1) 워커 1개 점유 + 2) 큐 1칸 점유 → 3번째는 거부 대상 → caller-runs
-        executor.execute(() -> await(release));
-        executor.execute(() -> await(release));
+        // 공유 빈이 아니라 같은 정책의 '전용' 실행기 — 공유 빈은 다른 테스트(asyncException)의 잔여 작업이
+        // 워커를 점유하고 있으면 포화 타이밍이 어긋나 간헐 실패했다 (CI 4차가 잡은 flaky, 2026-08-25)
+        org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor own =
+                new org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor();
+        own.setCorePoolSize(1);
+        own.setMaxPoolSize(1);
+        own.setQueueCapacity(1);
+        own.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+        own.initialize();
+        try {
+            CountDownLatch release = new CountDownLatch(1);
+            // 1) 워커 1개 점유 + 2) 큐 1칸 점유 → 3번째는 거부 대상 → caller-runs
+            own.execute(() -> await(release));
+            own.execute(() -> await(release));
 
-        AtomicReference<String> ranOn = new AtomicReference<>();
-        executor.execute(() -> ranOn.set(Thread.currentThread().getName()));   // 포화 상태에서 제출
+            AtomicReference<String> ranOn = new AtomicReference<>();
+            own.execute(() -> ranOn.set(Thread.currentThread().getName()));   // 포화 상태에서 제출
 
-        assertEquals(Thread.currentThread().getName(), ranOn.get(),
-                "포화 시 호출 스레드에서 '즉시' 실행됐어야 (버려졌다면 null, 워커였다면 event-*)");
-        release.countDown();
+            assertEquals(Thread.currentThread().getName(), ranOn.get(),
+                    "포화 시 호출 스레드에서 '즉시' 실행됐어야 (버려졌다면 null, 워커였다면 다른 이름)");
+            release.countDown();
+        } finally {
+            own.shutdown();
+        }
     }
 
     @Test
