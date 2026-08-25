@@ -1568,6 +1568,29 @@ ARM(arm64) 도커 빌드 경험이 이력서 거리.
 
 ---
 
+## ADR-044: Phase 7 ④ docker-compose.prod.yml — 배포 스택은 별도 파일·별도 프로젝트
+
+**상태:** 채택 (2026-08-25)
+**범위:** app + MySQL + Redis 3컨테이너 정의 (nginx는 ⑦에서 합류)
+
+**컨텍스트:** 기존 `docker-compose.yml`(redis 전용)은 bat의 일상 개발 흐름이 매일 쓴다. 배포 스택을 어디에 정의할지가 문제.
+
+**결정: `docker-compose.prod.yml` 신규 + `name: vocamaster-prod` 프로젝트 분리**
+- 대안: (a) 기존 compose 확장 — bat이 `docker compose up`을 치는 순간 앱·MySQL까지 떠서 8080 충돌 + 로컬 MySQL(3306)과 혼선 ❌ (b) compose profiles — 한 파일로 되지만 새 개념 추가, 프로필 깜빡하면 (a)와 같은 사고 ❌ (c) **파일·프로젝트 분리** — 두 스택이 서로 존재 자체를 모름 ✅
+
+**보안 (ADR-042의 연장):**
+- MySQL·Redis는 **호스트 포트 미개방** — 도커 내부 네트워크 전용, 서버에서 3306/6379가 인터넷에 안 열림
+- 앱의 DB 계정은 root가 아닌 전용 계정(`vocamaster`) — MySQL 컨테이너가 첫 기동 때 생성
+- 시크릿은 전부 `.env`(.gitignore) — 커밋되는 파일에는 자리표시만, `.env.example`이 작성 안내 (dev 시크릿을 넣으면 ProdSafetyGuard가 거부하는 것까지 한 세트)
+
+**기동 순서:** `depends_on` + condition — MySQL은 `service_healthy`(준비 완료까지 앱 대기), Redis는 `service_started`(fail-open 설계라 떠 있기만 하면 충분). 앱 healthcheck는 bash `/dev/tcp` TCP 연결(JRE 이미지에 curl 없음) — actuator 도입 시 승격.
+
+**리허설 실측 (2026-08-25, 로컬):** 처녀 볼륨에 Flyway **15판 전부 성공** → 3컨테이너 (healthy) → 가입(200)→로그인(JWT 발급)→인증 API(200) 왕복. `down -v` 후 dev 환경 무영향 확인. 앱 응답까지 30초.
+
+**기타:** app `mem_limit 2g`(이미지의 MaxRAMPercentage=75와 한 쌍 — 12GB 서버에서 NewsPick 동거 대비), 운영 Redis는 AOF 영속화 켬(재시작 시 랭킹 워밍 생략), MySQL·Redis 버전은 테스트 컨테이너와 동일 라인(운영-테스트 동등), `APP_PORT` 환경변수로 로컬 리허설(8083)과 서버(8080) 공용.
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)
