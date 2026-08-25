@@ -31,6 +31,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ReviewServiceTest extends AbstractIntegrationTest {
 
+    // 서비스의 모든 시간이 KST 고정이라 테스트도 KST — 기본 시간대 now()는 UTC 러너(CI)에서 9시간 어긋나 실패했다 (첫 CI가 잡음)
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     @Autowired private ReviewService reviewService;
     @Autowired private CardProgressRepository cardProgressRepository;
     @Autowired private DailyUserStatRepository dailyUserStatRepository;
@@ -87,9 +90,9 @@ class ReviewServiceTest extends AbstractIntegrationTest {
     void recordAnswer_correct_promotesBox() {
         reviewService.recordAnswer(user.getId(), card.getId(), true);                                // 생성(1) → 2
 
-        LocalDateTime before = LocalDateTime.now();
+        LocalDateTime before = LocalDateTime.now(KST);
         ReviewAnswerResponse res = reviewService.recordAnswer(user.getId(), card.getId(), true);     // 2 → 3
-        LocalDateTime after = LocalDateTime.now();
+        LocalDateTime after = LocalDateTime.now(KST);
 
         assertEquals(3, res.getBoxLevel());
         assertEquals(2, res.getCorrectStreak());
@@ -107,9 +110,9 @@ class ReviewServiceTest extends AbstractIntegrationTest {
         reviewService.recordAnswer(user.getId(), card.getId(), true);                                // → 2
         reviewService.recordAnswer(user.getId(), card.getId(), true);                                // → 3
 
-        LocalDateTime before = LocalDateTime.now();
+        LocalDateTime before = LocalDateTime.now(KST);
         ReviewAnswerResponse res = reviewService.recordAnswer(user.getId(), card.getId(), false);    // 틀림
-        LocalDateTime after = LocalDateTime.now();
+        LocalDateTime after = LocalDateTime.now(KST);
 
         assertEquals(1, res.getBoxLevel(), "몇 번 박스에 있었든 틀리면 무조건 1");
         assertEquals(0, res.getCorrectStreak(), "연속은 한 번 끊기면 0");
@@ -203,9 +206,9 @@ class ReviewServiceTest extends AbstractIntegrationTest {
         Card kiwi = cardRepository.save(Card.builder().front("kiwi").back("키위").deck(deck).build());
         cardRepository.save(Card.builder().front("melon").back("멜론").deck(deck).build());   // progress 없음 = 새 카드
 
-        saveProgress(user, card, 2, LocalDateTime.now().minusDays(1));      // apple — 어제부터 due
-        saveProgress(user, banana, 3, LocalDateTime.now().plusDays(1));     // 내일 예정 — 제외
-        saveProgress(user, kiwi, 1, LocalDateTime.now().minusDays(2));      // 그저께부터 due — 제일 급함
+        saveProgress(user, card, 2, LocalDateTime.now(KST).minusDays(1));      // apple — 어제부터 due
+        saveProgress(user, banana, 3, LocalDateTime.now(KST).plusDays(1));     // 내일 예정 — 제외
+        saveProgress(user, kiwi, 1, LocalDateTime.now(KST).minusDays(2));      // 그저께부터 due — 제일 급함
 
         List<DueCardResponse> due = reviewService.getDueCards(user.getId(), deck.getId());
 
@@ -221,9 +224,9 @@ class ReviewServiceTest extends AbstractIntegrationTest {
                 .email("other@test.com").password("encoded").nickname("other").build());
         Deck otherDeck = deckRepository.save(Deck.builder().title("Other Deck").user(other).build());
         Card otherCard = cardRepository.save(Card.builder().front("grape").back("포도").deck(otherDeck).build());
-        saveProgress(other, otherCard, 2, LocalDateTime.now().minusDays(1));    // 남의 due 카드
+        saveProgress(other, otherCard, 2, LocalDateTime.now(KST).minusDays(1));    // 남의 due 카드
 
-        saveProgress(user, card, 2, LocalDateTime.now().minusDays(1));          // 내 due 카드
+        saveProgress(user, card, 2, LocalDateTime.now(KST).minusDays(1));          // 내 due 카드
 
         List<DueCardResponse> due = reviewService.getDueCards(user.getId(), null);  // 전체 덱 조회
 

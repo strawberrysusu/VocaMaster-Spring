@@ -86,3 +86,10 @@ tasks.register('frontendBuild', Exec) {
     commandLine npm, 'run', 'build'
 }
 tasks.named('processResources') { dependsOn 'frontendBuild' }
+
+// CI(UTC 러너) 재현용: gradlew test -Putc — 시간대 기인 실패를 로컬에서 잡는다
+tasks.named('test') {
+    if (project.hasProperty('utc')) {
+        jvmArgs '-Duser.timezone=UTC'
+    }
+}
