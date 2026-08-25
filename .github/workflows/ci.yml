@@ -46,6 +46,15 @@ jobs:
           if ls build/test-results/test/*.xml >/dev/null 2>&1; then
             grep -h -o 'tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' build/test-results/test/*.xml \
               | awk -F'"' '{t+=$2; s+=$4; f+=$6; e+=$8} END {print "tests="t" skipped="s" failures="f" errors="e}'
+            echo "--- failed tests ---"
+            grep -l "<failure\|<error" build/test-results/test/*.xml | while read x; do
+              echo "## $x"
+              grep -o 'testcase name="[^"]*"' "$x" | head -20
+              grep -o '<failure message="[^"]*"' "$x" | head -5
+              grep -o '<error message="[^"]*"' "$x" | head -5
+            done
+          else
+            echo "no test XML — 컴파일/설정 단계 실패"
           fi
 
       - name: Upload jar

@@ -52,6 +52,11 @@ export default function Quiz() {
   const [count, setCount] = useState(10)
   const [wrongOnly, setWrongOnly] = useState(false)
   const [choices, setChoices] = useState<4 | 5 | 6>(() => loadSettings().quizChoices)   // 선택지 수 — 설정에 기억
+  const [cardCount, setCardCount] = useState<number | null>(null)   // 문제 수 상한 = 덱 카드 수
+
+  useEffect(() => {
+    api<{ cardCount: number }>(`/decks/${deckId}`).then((d) => setCardCount(d.cardCount)).catch(() => {})
+  }, [deckId])
 
   const [session, setSession] = useState<StartResp | null>(null)
   const [idx, setIdx] = useState(0)
@@ -180,11 +185,27 @@ export default function Quiz() {
             <div className="setup-row">
               <span className="setup-label">문제 수</span>
               <div className="sort-tabs">
-                {[5, 10, 20].map((n) => (
+                <input
+                  type="number"
+                  className="count-input"
+                  aria-label="문제 수"
+                  min={1}
+                  max={cardCount ?? undefined}
+                  value={count}
+                  disabled={busy}
+                  onChange={(e) => setCount(Number(e.target.value) || 0)}
+                  onBlur={() => setCount((c) => Math.min(Math.max(1, c), cardCount ?? Math.max(1, c)))}
+                />
+                {[10, 20].map((n) => (
                   <button key={n} className={count === n ? 'active' : ''} disabled={busy} onClick={() => setCount(n)}>
                     {n}
                   </button>
                 ))}
+                {cardCount !== null && cardCount > 0 && (
+                  <button className={count === cardCount ? 'active' : ''} disabled={busy} onClick={() => setCount(cardCount)}>
+                    전체 {cardCount}
+                  </button>
+                )}
               </div>
             </div>
             <div className="setup-row">

@@ -9,7 +9,7 @@
   --muted: #8a8b9c;
   --muted-2: #9b9cab;
   --border: #efeff3;
-  --bar-rest: #dfdff0;      /* 사다리 3~6박스 연보라 */
+  --bar-rest: color-mix(in srgb, var(--a) 16%, #fff);   /* 사다리 휴면 칸 — 테마색에서 자동 파생 (고정 연보라는 틸 테마와 충돌했음) */
 }
 
 * {
@@ -1370,7 +1370,7 @@ button:disabled {
 }
 
 .deck-progress .progress-fill.started {
-  background: #c9c9ea;
+  background: color-mix(in srgb, var(--a) 38%, #fff);   /* 테마색 파생 — 회색으로 보여 가독성 나쁘던 것 (사용자 지적 8/25) */
 }
 
 .deck-progress .progress-fill.mastered {
@@ -1495,4 +1495,22 @@ button:disabled {
 .danger-link:hover {
   opacity: 1;
   text-decoration: underline;
+}
+
+/* ── 문제 수 직접 입력 ── */
+.count-input {
+  width: 92px;
+  padding: 8px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: #fff;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  outline: none;
+}
+
+.count-input:focus {
+  border-color: var(--a);
 }
