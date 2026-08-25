@@ -160,7 +160,7 @@ class TodaySummaryCacheTest extends AbstractIntegrationTest {
 
     // 캐시 리스너가 @Async라 삭제는 '곧' 일어남 — 최대 3초 폴링 (보통 수 ms)
     private void awaitEvicted(String message) {
-        long deadline = System.currentTimeMillis() + 3000;
+        long deadline = System.currentTimeMillis() + 10_000;   // CI 2코어 러너는 3초를 넘길 수 있음 (flaky 실증 8/25)
         while (Boolean.TRUE.equals(stringRedis.hasKey(cacheKey())) && System.currentTimeMillis() < deadline) {
             try { Thread.sleep(20); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }

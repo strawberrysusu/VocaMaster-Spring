@@ -85,7 +85,7 @@ class AsyncConfigTest extends AbstractIntegrationTest {
     void asyncException_isLogged() throws Exception {
         boom.explode();   // 호출은 즉시 반환, 예외는 워커에서
 
-        long deadline = System.currentTimeMillis() + 3000;
+        long deadline = System.currentTimeMillis() + 10_000;   // CI 2코어 러너는 3초를 넘길 수 있음 (flaky 실증 8/25)
         while (logs.list.isEmpty() && System.currentTimeMillis() < deadline) Thread.sleep(20);
 
         assertFalse(logs.list.isEmpty(), "AsyncUncaughtExceptionHandler가 로그를 남겨야");
