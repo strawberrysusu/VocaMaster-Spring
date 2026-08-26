@@ -12,15 +12,20 @@ services:
     build: .                          # Dockerfile(ADR-043) 3단 빌드 — 기본 프로필 prod
     image: vocamaster:prod
     restart: unless-stopped
+    # 127.0.0.1 바인딩 — nginx·HTTPS(⑦) 전까지 앱을 인터넷에 직접 노출하지 않는다.
+    # 평문 HTTP로 실계정 로그인이 오가면 안 되므로, 서버 검증은 SSH 터널/내부 curl로만 (Codex 검산)
     ports:
-      - "${APP_PORT:-8080}:8080"      # 로컬 리허설은 .env에서 8083 (8080은 개발 서버가 쓰는 중)
+      - "127.0.0.1:${APP_PORT:-8080}:8080"   # 로컬 리허설은 .env에서 8083 (8080은 개발 서버가 쓰는 중)
     environment:
-      # 시크릿 값은 전부 .env에서 — git에 올라가는 이 파일에는 자리표시만 있다
+      # 시크릿 값은 전부 .env에서 — 이 파일에는 자리표시만. :?는 누락/빈 값이면 compose가 시작 전에 거부
       DB_URL: "jdbc:mysql://mysql:3306/vocamaster?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
       DB_USERNAME: vocamaster         # root가 아니라 앱 전용 계정 (ADR-042 정신)
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD가 .env에 없습니다}
       REDIS_HOST: redis               # 컨테이너 이름이 곧 DNS — 내부 네트워크에서 이름으로 찾는다
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET이 .env에 없습니다 (openssl rand -base64 48)}
+    logging:                          # 무료 서버 디스크를 로그가 다 먹지 않게 회전
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     depends_on:
       mysql:
         condition: service_healthy    # MySQL '준비 완료'까지 앱 기동 대기 (기동 레이스 제거)
@@ -39,12 +44,15 @@ services:
     restart: unless-stopped
     # 호스트 포트 미개방 — DB는 도커 내부 네트워크 전용 (서버 3306이 인터넷에 안 열림 = 공격 표면 제거)
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD가 .env에 없습니다}
       MYSQL_DATABASE: vocamaster
       MYSQL_USER: vocamaster
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD가 .env에 없습니다}
     volumes:
       - mysql-data:/var/lib/mysql     # 컨테이너를 지워도 데이터는 볼륨에 생존 (백업은 ⑥에서)
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
@@ -59,6 +67,9 @@ services:
     command: ["redis-server", "--appendonly", "yes"]   # 운영은 영속화 켬 (재시작 시 랭킹·캐시 워밍 생략)
     volumes:
       - redis-data:/data
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

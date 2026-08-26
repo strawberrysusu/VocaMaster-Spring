@@ -16,3 +16,12 @@ Dockerfile
 
 # 로컬에서 빌드된 프론트 산출물 — 이미지 안에서는 1단계(node) 산출만 쓴다 (재현성)
 src/main/resources/static/app
+
+# 시크릿은 빌드 컨텍스트에 아예 안 실린다 — 지금 Dockerfile은 개별 COPY라 이미지에 안 들어가지만,
+# 미래에 COPY . 가 생겨도 데몬으로 전송조차 안 되게 원천 차단 (Codex 검산 2026-08-26)
+.env
+.env.*
+!.env.example
+tmp/
+.codex/
+*.log

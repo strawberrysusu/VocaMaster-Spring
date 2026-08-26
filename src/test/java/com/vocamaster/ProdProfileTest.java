@@ -54,5 +54,9 @@ class ProdProfileTest {
     void swagger_isClosed() throws Exception {
         mvc.perform(get("/v3/api-docs")).andExpect(status().isNotFound());
         mvc.perform(get("/api-docs")).andExpect(status().isNotFound());
+        mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isNotFound());   // 실제 UI 경로 (Codex 검산)
+        // /swagger-ui.html은 permitAll(/swagger-ui/**)에 안 걸리는 루트 경로 — 익명에겐 인증 벽(401)이 먼저.
+        // springdoc off로 핸들러도 없으니(인증해도 404) 이중 차단. 익명 기준 실측값 401을 박제
+        mvc.perform(get("/swagger-ui.html")).andExpect(status().isUnauthorized());
     }
 }

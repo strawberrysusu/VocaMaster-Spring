@@ -627,7 +627,7 @@
 ### 🆕 추가 아이디어
 - [ ] MockMvc 컨트롤러 슬라이스 테스트 도입 — 400 계약(빈 visibility / 오타 enum) 자동 검증. 지금은 Jackson+`@Valid` 프레임워크 보증에 의존 (프로젝트에 MockMvc 전례 없음 — 도입 자체가 별도 결정)
   - 도입 시 함께: 동일 유저 더블탭의 UNIQUE 충돌 → 실제 컨트롤러 catch → currentState 복구 경로 **결정적** 검증 (현 테스트는 최종 상태 멱등만 보증, 충돌 경로 강제는 아님 — Codex 검산 2026-08-11)
-- [ ] **React 후속 백로그 (2026-08-14, Codex 재검산 — 8/19 ②③④ 완료·likedByMe/mine/공개 카드 API/상세 화면/UNLISTED 비로그인 열람/무효토큰 401)**: ① Explore 로딩 상태·페이지네이션(현재 30개 상한) ⓪ 목록의 cardCount는 여전히 덱마다 count 1번(N+1 잔존 — likedByMe만 IN으로 해결됨, 다음 정리 후보) ⑤ ~~Gradle-frontend 연결~~ 완료 8/23 (frontendBuild → processResources, bat errorlevel 중단) ⑥ ~~통계 화면용 API~~ 완료 8/23 ⑦ OSIV 명시 off + 스프링 기본 계정 소음 정리 ⑧ bat이 서버 준비 후 브라우저 열기 ⑨ ~~Card에 읽기(reading) 필드~~ **완료 8/23 (V14)** — 생성·수정·복사·3칸 가져오기(단어|읽기|뜻)·학습·퀴즈·타이핑·목록 표시, 🔊는 읽기 우선. 채점엔 미사용(옵션 후보) ⑩ ~~목업 옵션들~~ 설정 화면으로 완료 8/23 ⑫ ~~퀴즈 선택지 수 옵션~~ 완료 8/25 ⑬ **연속 재생 플레이어**(덱 단어를 N회·M초 간격·속도 조절로 쭉 읽어주기 — 순수 프론트 반나절, TTS 재활용, 오디오 파일 불필요) ⑭ **듣기 받아쓰기**(오디오 3회 → 스펠링+뜻 입력 — 타이핑 세션 재활용, 1세션, 어학원 시험 스타일) ⑮ **독해 도메인**(Passage→ReadingQuestion→풀이, 지문·문제 직접 입력 — 신규 도메인 2~3세션, 세션 패턴 3번째 재사용) ⑪ **구형 Mustache 퀴즈(/quiz/generate·submit, 5지선다) deprecated 예정** — React 세션 퀴즈가 대체. 선택지 정규화는 같은 buildChoices로 맞춰둠(8/23). 제거는 Mustache 화면 전체 정리 때 한 번에
+- [ ] **React 후속 백로그 (2026-08-14, Codex 재검산 — 8/19 ②③④ 완료·likedByMe/mine/공개 카드 API/상세 화면/UNLISTED 비로그인 열람/무효토큰 401)**: ① Explore 로딩 상태·페이지네이션(현재 30개 상한) ⓪ 목록의 cardCount는 여전히 덱마다 count 1번(N+1 잔존 — likedByMe만 IN으로 해결됨, 다음 정리 후보) ⑤ ~~Gradle-frontend 연결~~ 완료 8/23 (frontendBuild → processResources, bat errorlevel 중단) ⑥ ~~통계 화면용 API~~ 완료 8/23 ⑦ OSIV 명시 off + 스프링 기본 계정 소음 정리 ⑧ bat이 서버 준비 후 브라우저 열기 ⑨ ~~Card에 읽기(reading) 필드~~ **완료 8/23 (V14)** — 생성·수정·복사·3칸 가져오기(단어|읽기|뜻)·학습·퀴즈·타이핑·목록 표시, 🔊는 읽기 우선. 채점엔 미사용(옵션 후보) ⑩ ~~목업 옵션들~~ 설정 화면으로 완료 8/23 ⑫ ~~퀴즈 선택지 수 옵션~~ 완료 8/25 ⑬ **연속 재생 플레이어**(덱 단어를 N회·M초 간격·속도 조절로 쭉 읽어주기 — 순수 프론트 반나절, TTS 재활용, 오디오 파일 불필요) ⑭ **듣기 받아쓰기**(오디오 3회 → 스펠링+뜻 입력 — 타이핑 세션 재활용, 1세션, 어학원 시험 스타일) ⑮ **독해 도메인**(Passage→ReadingQuestion→풀이, 지문·문제 직접 입력 — 신규 도메인 2~3세션, 세션 패턴 3번째 재사용) ⑪ **구형 Mustache 퀴즈(/quiz/generate·submit, 5지선다) deprecated 예정** — React 세션 퀴즈가 대체. 선택지 정규화는 같은 buildChoices로 맞춰둠(8/23). 제거는 Mustache 화면 전체 정리 때 한 번에 ⑯ DeckDetail 별표 연타 가드(카드 id별 pending — 더블클릭 시 toggle 2번 경합, Codex 8/26) ⑰ Quiz 자동 넘김 타이머 unmount cleanup(useEffect 정리 함수 — 1초 내 화면 이탈 시 늦은 콜백) ⑱ TTS 버튼 focus-visible 링(outline:none 제거 말고 별도 링 — 키보드 접근성) ⑲ StudyService.getDeckStats 세션별 records N+1 → count/sum 집계 쿼리 전환(8/26 @Transactional 수리 때 성능은 백로그로 분리) ⑳ CI에 docker build 검증 추가 여부(현재 lint+compose config만 — 빌드 5분+ 비용 대비 검토, CD 구축 때 재결정) ㉑ 프론트 자동 테스트(숫자키·자동넘김·설정 localStorage — 백엔드 172개가 보증 못 하는 상태 흐름)
 - [ ] 익명 요청 거부를 401로 통일 — SecurityConfig에 authenticationEntryPoint 미설정이라 현재 실측 403 (PublicDeckHttpTest가 박제). 프론트가 "로그인 필요"와 "권한 없음"을 구별하려면 401 + ErrorResponse JSON이 맞음
 
 ---
@@ -801,8 +801,8 @@ review:summary:{userId}:{date}  TTL 5분
 
 ### 🔄 GitHub Actions CI/CD
 - [x] **[MUST]** `.github/workflows/ci.yml` — test + build ✅ 8/25. 도입 첫날 3결함 검거: ①시간대 의존 테스트(UTC 러너, -Putc 재현 스위치로 실증) ②비동기 폴링 3초 부족 ③caller-runs 테스트의 공유 실행기 간섭(전용 실행기로 격리). 5차 만에 그린 — gh CLI 인증으로 로그 직접 판독 체계 확보
-- [ ] **[SHOULD]** `.github/workflows/cd.yml` — main merge → EC2 SSH 배포
-- [ ] **[MUST]** Secrets 설정 (GH_TOKEN, EC2_KEY 등)
+- [ ] **[SHOULD]** `.github/workflows/cd.yml` — master push → Oracle 서버 SSH 배포 (ADR-041)
+- [ ] **[MUST]** Secrets 설정 (ORACLE_HOST, SSH_KEY 등)
 
 ### 📊 관측
 - [ ] **[SHOULD]** `spring-boot-starter-actuator` + 필수 엔드포인트만 노출
@@ -813,7 +813,7 @@ review:summary:{userId}:{date}  TTL 5분
 - [ ] **[MUST]** k6 설치 + `tests/k6/` 디렉토리
 - [ ] **[MUST]** 시나리오: login / public deck list / quiz submit / due cards
 - [ ] **[MUST]** k6 테스트 전 seed data 생성 스크립트 작성
-- [ ] **[MUST]** **테스트 환경 스펙 기록** (EC2 타입, RAM, DB 위치)
+- [ ] **[MUST]** **테스트 환경 스펙 기록** (Oracle A1 사양, RAM, DB 위치)
 - [ ] **[MUST]** **Redis 적용 전후 비교 측정** (p50, p95, p99)
 - [ ] **[MUST]** 결과를 `docs/performance.md`에 기록 (실제 측정값)
 - [ ] **[SHOULD]** 병목 1개 이상 찾아서 개선 사례 작성
