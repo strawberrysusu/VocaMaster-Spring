@@ -6,8 +6,12 @@
 **Leitner Box 복습 알고리즘**이 "모르는 단어일수록 자주, 아는 단어일수록 가끔" 다시 보여줍니다.
 발음 듣기(🔊 브라우저 TTS) · 일본어 요미가나 · 공개 단어장 검색/복사/좋아요 · 학습 통계까지 — **React SPA 11화면**으로 매일 실사용 중입니다.
 
-> **상태:** 🔵 개발 중 — **Phase 6까지 완료 (7/8)** · **시작:** 2026-05 · **목표 마감:** 2027-01
-> 진행도와 의사결정 기록: [`docs/CHECKLIST.md`](docs/CHECKLIST.md) · [`docs/decisions.md`](docs/decisions.md) (**ADR 44**)
+### 🌐 Live: **https://vocamaster-app.duckdns.org/app/**
+
+> Oracle Cloud Tokyo, 1GB 무료 인스턴스 2대(앱/DB 분산) · Docker · nginx + Let's Encrypt HTTPS · 월 서버비 0원
+
+> **상태:** 🟢 **운영 중** — **Phase 7 배포 완료 (⑤·⑥·⑦)** · **시작:** 2026-05 · **목표 마감:** 2027-01
+> 진행도와 의사결정 기록: [`docs/CHECKLIST.md`](docs/CHECKLIST.md) · [`docs/decisions.md`](docs/decisions.md) (**ADR 46**)
 
 ---
 
@@ -18,7 +22,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 단어 발음이 아쉬워 매번 따로 검색하던 불편도 있었는데 — 지금은 카드마다 🔊 버튼 하나로 해결되고,
 직접 만든 발음이 더 좋습니다. **일본어(JLPT)·영어 단어를 매일 외우는 제가 첫 번째 사용자입니다.**
 
-기술적으로는 모든 설계 결정을 **ADR 44건**으로 남겨, "왜 이렇게 만들었나요"에
+기술적으로는 모든 설계 결정을 **ADR 46건**으로 남겨, "왜 이렇게 만들었나요"에
 전부 답할 수 있는 프로젝트를 목표로 합니다.
 
 ---
@@ -79,7 +83,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 | 4 | 공개 단어장 검색 · 복사 · 좋아요 · 인기 정렬 | ✅ 2026-08 |
 | 5 | Redis (Rate Limit · 랭킹 캐시 · 요약 캐시 · fail-open) | ✅ 2026-08 |
 | 6 | 비동기 이벤트 (Spring Event · AFTER_COMMIT · @Async) + **React SPA 11화면** | ✅ 2026-08 |
-| 7 | Docker · CI/CD · 배포 · k6 부하 테스트 (Redis 전후 측정) | 🟡 진행 중 — CI·보안 게이트(ADR-042)·Dockerfile(ADR-043)·Compose(ADR-044) 완료, Oracle 배포 대기 |
+| 7 | Docker · CI/CD · 배포 · k6 부하 테스트 (Redis 전후 측정) | 🟡 배포 완료(CI·보안 게이트·Docker·Oracle 2대 분산·백업·HTTPS, ADR-041~046) — 남은 것: CD·k6 |
 | 8 | 마감 · 문서/면접 준비 | 예정 |
 
 > Kafka는 검토 후 **도입하지 않기로 결정** — 단일 앱에서 브로커는 과한 도구, Spring Event로 경계를 긋고
@@ -177,7 +181,7 @@ frontend/         # React 19 + TS + Vite — 빌드 산출물은 jar 안 static/
 | 문서 | 내용 |
 |---|---|
 | [`docs/CHECKLIST.md`](docs/CHECKLIST.md) | Phase 0~8 상세 체크리스트 (진행의 단일 원장) |
-| [`docs/decisions.md`](docs/decisions.md) | **ADR 44** — 모든 설계 결정의 대안·근거·트레이드오프 |
+| [`docs/decisions.md`](docs/decisions.md) | **ADR 46** — 모든 설계 결정의 대안·근거·트레이드오프 |
 | [`docs/review-algorithm.md`](docs/review-algorithm.md) | Leitner Box 알고리즘 — 규칙 · 왜 SM-2/FSRS가 아닌가 |
 | [`docs/cache-strategy.md`](docs/cache-strategy.md) | 캐시 전략 — cache-aside · 무효화 타이밍 · fail-open |
 | [`docs/redis-conventions.md`](docs/redis-conventions.md) | Redis 키 규칙 · 직렬화 함정 |

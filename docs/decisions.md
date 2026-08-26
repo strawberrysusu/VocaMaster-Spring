@@ -1615,6 +1615,21 @@ ARM(arm64) 도커 빌드 경험이 이력서 거리.
 
 ---
 
+## ADR-046: Phase 7 ⑦ 공개 — DuckDNS 무료 도메인 + nginx + Let's Encrypt
+
+**상태:** 채택·공개 완료 (2026-08-26)
+**결정:** `https://vocamaster-app.duckdns.org` — 무료 서브도메인(DuckDNS) + nginx 리버스 프록시 + Let's Encrypt 인증서(자동 갱신 타이머).
+
+**대안:** (a) 유료 도메인(연 1.5~2만 원) — 비용 원칙(월 0원) 위배, 나중에 nginx `server_name` 갈아타기로 언제든 승격 가능 ❌지금은 (b) IP 직접 공개 — HTTPS 불가(평문 로그인 금지 정책 위반) ❌ (c) **DuckDNS** — DNS는 전화번호부일 뿐, 빌린 서브도메인이어도 인증서·자물쇠는 100% 진짜 ✅
+
+**구성:** 사용자가 DuckDNS에 도메인+서버 IP 등록(vocamaster는 선점돼 -app) → Security List 80/443 개방 → **OS iptables도 개방**(OCI 우분투 이미지는 INPUT에서 22 외 REJECT — nginx는 호스트 프로세스라 Docker와 달리 이 벽에 걸림, 유명한 함정) → nginx가 443 종단·127.0.0.1:8080으로 프록시(앱은 계속 인터넷 비노출) → certbot `--redirect --hsts`.
+
+**보안 헤더:** HSTS(1년)·nosniff·X-Frame·Referrer-Policy. 공개 후 외부 경로 실측: HTTPS 200 / HTTP→301 / Swagger 404 / **HTTPS 경유 JWT 로그인 왕복 200** (Secure 쿠키도 이제 유효).
+
+**기록:** 8/25 계정 생성 → 8/26 자정 A1 사냥 개시 → 개강 전날 밤 공개까지 만 24시간.
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

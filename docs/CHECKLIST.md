@@ -9,10 +9,10 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 7 — ⑤ 배포 + ⑥ 백업 완료 (8/26, ADR-045·deployment.md)** 다음 ⑦ nginx·HTTPS(=공개, 도메인 결정 대기) |
+| **진행 중인 Phase** | **Phase 7 — 🌐 공개 완료!! https://vocamaster-app.duckdns.org/app/ (8/26 밤, ADR-046)** 남은 것: CD·k6·Mustache 정리 |
 | **이번 주 집중** | 개강(8/27) 적응 + ⑥ DB 백업 절차 → ⑦ nginx·HTTPS·공개. A1 사냥꾼은 계속(잡히면 이사) |
 | **전체 진행도** | Phase 0~6 ✅ (Kafka는 A안 '안 함' 결정) / **Phase 7: ①~④ ✅ + Codex P0 3건 수리 ✅ (8/26, 테스트 172)** |
-| **다음 마일스톤** | **공개 URL** = ⑦ nginx·HTTPS 완료 시점 (그 전까지 8080 인터넷 비공개 유지 — 평문 로그인 금지 정책). 운영 실행은 Docker 경로만 |
+| **다음 마일스톤** | 공개 후 안정 운영 — CD(자동 배포) → ⑧ k6 측정(docs/performance.md) → 구형 Mustache 정리. 운영 실행은 Docker 경로만 |
 | **신규 ADR** | ADR-016~**044** — 이벤트 결합 해소·study 항·혼합 비동기·CASCADE·배포지(Tokyo 정정)·보안 게이트·Dockerfile·Compose — `docs/decisions.md` |
 | **▶ 다음 액션 (resume)** | **2026-08-25 마감: README 실물화 + week-16 4차 인출 + Phase 7 ① CI ② 보안 게이트 + Boot 3.5.16 상향 (테스트 169, ADR-041·042)**. ②의 실물: prod에서 springdoc 완전 비활성(404) / `ProdSafetyGuard`(레포에 공개된 dev·test 시크릿 재사용, 32바이트 미만 → 부팅 거부) / `ProdProfileTest`(prod 컨텍스트를 CI마다 실부팅 — 환경변수 4종 해석·Swagger 닫힘·Redis 없이 fail-open 부팅) / OSIV off / 기본 계정 자동구성 제외. 의존성: Boot 3.3.0(OSS 지원 종료 라인) → 3.5.16 + springdoc 2.8.17 + jjwt 0.12.7 — 사상자 전수 1건(Hibernate 6.6의 '삭제된 엔티티 참조' flush 단속 — 테스트에 영속성 컨텍스트 경계 `em.clear` 재현으로 수리, 운영 무관). dev 스모크는 8081 bootRun으로 7종 실측(8080 실서버 무접촉 룰 준수). **같은 날 저녁 ③ Dockerfile까지 완료** (ADR-043 — 3단 멀티스테이지·비root·기본 prod·565MB, 컨테이너에서 안전핀 거부+스모크 4종 실증). **같은 날 밤 ④ compose까지 완료** (ADR-044 — prod 스택 별도 파일·프로젝트 분리, DB/Redis 내부 전용, 리허설 실측: 처녀 DB Flyway 15판→가입→로그인→인증 왕복, 3컨테이너 healthy, 정리 후 dev 무영향). **다음 세션 첫 일감 = Phase 7 ⑤ Oracle A1 인스턴스 확보·배포** — 사용자가 직접 하는 단계(계정·카드 등록)라 **화면 단위로 하나하나 안내 약속**. 서버에서: git clone → .env 작성(openssl rand) → `docker compose -f docker-compose.prod.yml up -d --build` 한 줄. 그 뒤 ⑥ 백업 → ⑦ nginx·HTTPS → CD |
 > **🎓 Phase 4 완전 졸업 (2026-08-11)** — 실서버 HTTP 데모(검색→복사→좋아요→popular 1위 반영→400/403) + 구두 3문 통과. 1주 만에 Phase 통째 완료(계획은 '개강 전 절반'). ADR-030~033, 테스트 105+, 면접 1급 재료: FK 데드락 실화(ADR-031)·잠금 순서 3회 학습·조작 방지 3계열(복사 제외/좋아요 1회 캡/학습 보류). 다음: ① **week note 복구** (최고가 밀린 항목 — Phase 4 노트에 데드락 스토리) ② 주말 폐쇄훈련 #3 3회차 (빈칸 채우기, Codex 닫기 체크) ③ **Phase 5 Redis 진입** (사전 설명부터. 인기 정렬 filesort → ZSET 전환이 첫 동기). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 / 데모 서버 아직 켜져 있으면 gradle bootRun 태스크 종료 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
@@ -794,10 +794,10 @@ review:summary:{userId}:{date}  TTL 5분
 - [x] **[MUST]** 헬스체크 설정 — 3컨테이너 전부 + depends_on condition으로 기동 순서 제어. 리허설: 처녀 DB Flyway 15판→가입→로그인→인증 API 왕복 실측 ✅ 8/25
 
 ### 🌐 Nginx + HTTPS
-- [ ] **[SHOULD]** `nginx/nginx.conf` 리버스 프록시
-- [ ] **[SHOULD]** Let's Encrypt 인증서 발급
-- [ ] **[SHOULD]** HTTPS 강제 리다이렉트
-- [ ] **[SHOULD]** 보안 헤더 (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+- [x] **[SHOULD]** nginx 리버스 프록시 (호스트 설치, 127.0.0.1:8080 프록시) ✅ 8/26
+- [x] **[SHOULD]** Let's Encrypt 인증서 — vocamaster-app.duckdns.org, 자동 갱신 타이머 active ✅ 8/26
+- [x] **[SHOULD]** HTTPS 강제 리다이렉트 (301) + HSTS 1년 ✅ 8/26
+- [x] **[SHOULD]** 보안 헤더 4종 — 외부 경로 실측 ✅ 8/26
 
 ### 🔄 GitHub Actions CI/CD
 - [x] **[MUST]** `.github/workflows/ci.yml` — test + build ✅ 8/25. 도입 첫날 3결함 검거: ①시간대 의존 테스트(UTC 러너, -Putc 재현 스위치로 실증) ②비동기 폴링 3초 부족 ③caller-runs 테스트의 공유 실행기 간섭(전용 실행기로 격리). 5차 만에 그린 — gh CLI 인증으로 로그 직접 판독 체계 확보
