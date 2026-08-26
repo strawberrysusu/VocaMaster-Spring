@@ -9,7 +9,7 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 7 — 🌐 공개 완료!! https://vocamaster-app.duckdns.org/app/ (8/26 밤, ADR-046)** 남은 것: CD·k6·Mustache 정리 |
+| **진행 중인 Phase** | **Phase 7 — 🌐 공개 + 구글 로그인까지 (8/26 밤, ADR-046·047, 테스트 175)** 남은 것: CD·k6·Mustache 정리·탈퇴 UI |
 | **이번 주 집중** | 개강(8/27) 적응 + ⑥ DB 백업 절차 → ⑦ nginx·HTTPS·공개. A1 사냥꾼은 계속(잡히면 이사) |
 | **전체 진행도** | Phase 0~6 ✅ (Kafka는 A안 '안 함' 결정) / **Phase 7: ①~④ ✅ + Codex P0 3건 수리 ✅ (8/26, 테스트 172)** |
 | **다음 마일스톤** | 공개 후 안정 운영 — CD(자동 배포) → ⑧ k6 측정(docs/performance.md) → 구형 Mustache 정리. 운영 실행은 Docker 경로만 |
