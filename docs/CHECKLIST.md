@@ -801,8 +801,8 @@ review:summary:{userId}:{date}  TTL 5분
 
 ### 🔄 GitHub Actions CI/CD
 - [x] **[MUST]** `.github/workflows/ci.yml` — test + build ✅ 8/25. 도입 첫날 3결함 검거: ①시간대 의존 테스트(UTC 러너, -Putc 재현 스위치로 실증) ②비동기 폴링 3초 부족 ③caller-runs 테스트의 공유 실행기 간섭(전용 실행기로 격리). 5차 만에 그린 — gh CLI 인증으로 로그 직접 판독 체계 확보
-- [ ] **[SHOULD]** `.github/workflows/cd.yml` — master push → Oracle 서버 SSH 배포 (ADR-041)
-- [ ] **[MUST]** Secrets 설정 (ORACLE_HOST, SSH_KEY 등)
+- [x] **[SHOULD]** CD — ci.yml의 deploy job (needs: build → docker build → save|ssh|load → compose 동봉 → up → 헬스 게이트, docs-only 푸시는 생략) ✅ 8/27
+- [x] **[MUST]** Secrets — ORACLE_HOST·ORACLE_SSH_KEY (gh secret set으로 채팅 무기록 등록) ✅ 8/27
 
 ### 📊 관측
 - [ ] **[SHOULD]** `spring-boot-starter-actuator` + 필수 엔드포인트만 노출

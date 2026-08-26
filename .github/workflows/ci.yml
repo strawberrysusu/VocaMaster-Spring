@@ -1,7 +1,9 @@
-# CI — 모든 push/PR에서 전체 테스트(163, Testcontainers MySQL+Redis) + jar 빌드 (Phase 7 ①, ADR-041)
-# ubuntu-latest에는 Docker가 있어 Testcontainers가 로컬과 동일하게 동작한다.
-# React는 Gradle frontendBuild가 빌드하지만 의존성 설치(npm ci)는 여기서 먼저.
-name: CI
+# CI/CD (Phase 7 ①+CD, ADR-041)
+# CI: 모든 push/PR에서 전체 테스트(Testcontainers MySQL+Redis) + jar 빌드.
+# CD: master 푸시가 테스트를 통과하면(needs: build) 도쿄 서버에 자동 배포 —
+#     사람이 손으로 하던 "docker build → save|ssh|load → compose up"을 그대로 기계화.
+#     docs만 바뀐 푸시는 배포 생략 (재시작 다운타임 ~40초를 문서 커밋마다 낼 이유 없음)
+name: CI/CD
 
 on:
   push:
@@ -74,3 +76,58 @@ jobs:
           name: vocamaster-jar
           path: build/libs/*SNAPSHOT.jar
           retention-days: 7
+
+  deploy:
+    needs: build                                  # 테스트 통과 없이는 배포 없음
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: deploy-prod                          # 연속 푸시 시 배포가 겹치지 않게 직렬화
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2                          # 직전 커밋과 비교하려고 1개 더
+
+      - name: 앱 변경 감지 (docs·md만이면 배포 생략)
+        id: diff
+        run: |
+          CHANGED=$(git diff --name-only HEAD^ HEAD 2>/dev/null || git ls-files)
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -qvE '^(docs/|.*\.md$)'; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"; echo "docs-only push — 배포 생략"
+          fi
+
+      - name: Docker build (배포용 이미지 — 로컬과 같은 Dockerfile)
+        if: steps.diff.outputs.deploy == 'true'
+        run: docker build -t vocamaster:prod .
+
+      - name: SSH 키 준비
+        if: steps.diff.outputs.deploy == 'true'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: 이미지 전송 + compose 갱신 + 재기동
+        if: steps.diff.outputs.deploy == 'true'
+        run: |
+          SSH="ssh -o StrictHostKeyChecking=accept-new ubuntu@${{ secrets.ORACLE_HOST }}"
+          docker save vocamaster:prod | gzip -1 | $SSH 'gunzip | docker load'
+          # compose 파일도 매번 동봉 — "서버 compose가 구버전"이던 8/26 사고의 재발 방지
+          scp -o StrictHostKeyChecking=accept-new deploy/docker-compose.app.yml ubuntu@${{ secrets.ORACLE_HOST }}:~/
+          $SSH 'docker compose -f docker-compose.app.yml up -d'
+
+      - name: 헬스 확인 (healthy 못 되면 배포 실패로 표시)
+        if: steps.diff.outputs.deploy == 'true'
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new ubuntu@${{ secrets.ORACLE_HOST }} '
+            for i in $(seq 1 30); do
+              st=$(docker inspect -f "{{.State.Health.Status}}" vocamaster-app-app-1 2>/dev/null)
+              [ "$st" = "healthy" ] && echo "healthy ✓" && exit 0
+              sleep 5
+            done
+            echo "--- 앱 로그 꼬리 ---"; docker logs --tail 30 vocamaster-app-app-1; exit 1'
