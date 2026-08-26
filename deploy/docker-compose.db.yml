@@ -1,0 +1,50 @@
+# DB 서버용 (vocamaster-db, 1GB Micro) — MySQL + Redis (Phase 7 ⑤, ADR-045)
+# 사용법: docker compose -f docker-compose.db.yml up -d   (.env 필요: MYSQL_ROOT_PASSWORD, DB_PASSWORD)
+# 보안: 3306/6379는 Oracle Security List가 10.0.0.0/24(내부망) 소스만 허용 — 인터넷 차단은 클라우드 방화벽 계층
+name: vocamaster-db
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD가 .env에 없습니다}
+      MYSQL_DATABASE: vocamaster
+      MYSQL_USER: vocamaster
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD가 .env에 없습니다}
+    # 1GB 박스 메모리 절약 — performance_schema만 꺼도 ~150MB 확보 (관측은 앱 로그·slow query로)
+    command: --performance-schema=OFF
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  mysql-data:
+  redis-data:

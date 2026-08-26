@@ -1,0 +1,27 @@
+# 앱 서버용 (vocamaster-app, 1GB Micro) — Spring 앱 단독 (Phase 7 ⑤, ADR-045)
+# 사용법: docker compose -f docker-compose.app.yml up -d
+#   (.env 필요: DB_PASSWORD·JWT_SECRET / 이미지는 docker save|load로 전송 — 서버에서 빌드하면 1GB라 OOM)
+name: vocamaster-app
+
+services:
+  app:
+    image: vocamaster:prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"   # 인터넷 비공개 — 검증은 SSH 터널, 공개는 ⑦ nginx가 80/443으로
+    environment:
+      DB_URL: "jdbc:mysql://10.0.0.131:3306/vocamaster?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
+      DB_USERNAME: vocamaster
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD가 .env에 없습니다}
+      REDIS_HOST: "10.0.0.131"  # DB 서버의 내부망 IP — 같은 서브넷이라 사설로 통신
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET이 .env에 없습니다}
+    mem_limit: 700m             # 1GB 박스 — 이미지의 MaxRAMPercentage=75가 이 기준으로 힙 ~520m
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 60s         # 1GB 박스는 부팅이 더 느리다 (스왑 포함)
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

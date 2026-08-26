@@ -1593,6 +1593,28 @@ ARM(arm64) 도커 빌드 경험이 이력서 거리.
 
 ---
 
+## ADR-045: Phase 7 ⑤ 배포 토폴로지 — A1 품귀 실측 후 x86 Micro 1GB×2 분산
+
+**상태:** 채택·배포 완료 (2026-08-26)
+**범위:** 실서버 구성 (도쿄 리전)
+
+**컨텍스트:** 목표였던 A1 Flex(2 OCPU/12GB)는 **15시간 210회 자동 시도 전부 "Out of capacity"** (1/6 축소분도 0회 성공 — 도쿄 무료 ARM은 사실상 매물 0). 대안 검토: (a) PAYG 전환 — 업그레이드 시 **~$100 카드 승인**이 표준 절차인데 사용자 체크카드 잔고 사정상 기각 (b) 유료 VPS — 사용자 비용 기준(월 2~3천 원) 초과 (c) **Always Free의 남은 카드: x86 `VM.Standard.E2.1.Micro`(1 OCPU/1GB) 2대** — A1과 별도 무료 한도, 인기가 없어 재고 흔함 → **첫 발에 2대 확보**.
+
+**결정: 앱/DB 서버 분리 (1GB 한 대엔 전체 스택이 안 들어감)**
+- `vocamaster-app`(10.0.0.79): Spring 앱 단독 — `deploy/docker-compose.app.yml`, mem_limit 700m(힙 ~520m)
+- `vocamaster-db`(10.0.0.131): MySQL 8 + Redis — `deploy/docker-compose.db.yml`, performance_schema OFF(~150MB 절약)
+- 같은 서브넷 사설 IP로 통신. 두 박스 모두 swap 2G (1GB RAM 필수 보강)
+
+**보안 계층 (ADR-042·044 연장):** Security List = 인터넷에서 **22만** 허용, 3306/6379는 `10.0.0.0/24` 내부망 소스만, 앱 8080은 `127.0.0.1` 바인딩 — **HTTPS(⑦) 전까지 인터넷 완전 비공개**, 검증은 서버 내부 curl·SSH 터널만. 시크릿은 서버에서 `openssl rand`로 생성해 각 서버 `.env`에만 존재 (레포·채팅 무기록).
+
+**이미지 전달:** 레지스트리 없이 `docker save | gzip | ssh docker load` (565MB) — 서버에서 빌드하면 1GB라 OOM. 로컬(x86)과 서버 아키텍처가 일치해 가능했던 방식 (A1이었다면 buildx 필요했음).
+
+**배포 실증 (2026-08-26):** 처녀 DB Flyway 15판 자동 적용 → SPA 200 · 공개 API 200 · 미인증 401 · Swagger 404 · **가입→학습 2건→summary 200(total 2/accuracy 50)→stats 200** (P0-1 수리의 실서버 검증) · Redis 랭킹 경로 200. 앱 박스 메모리: swap 64Mi만 사용.
+
+**남긴 것:** A1 사냥꾼은 계속 가동 — 잡히면 단일 박스로 이사(무료 한도 별도라 공존 가능). k6(⑧)는 "1GB 무료 2대"의 실측으로 기록. VCN 잔해 10개 청소는 ⑥에서.
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)
