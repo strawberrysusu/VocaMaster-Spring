@@ -9,11 +9,11 @@
 
 | 항목 | 값 |
 |---|---|
-| **진행 중인 Phase** | **Phase 5 완전 졸업 🎓 (2026-08-12 — 시작과 졸업이 같은 날)** · Phase 4 졸업(08-11) |
-| **이번 주 집중** | **week note 복구** (Phase 4·5 면접 원고 — 세션의 완성 문장 세트를 자기 손으로) → 주말 폐쇄훈련 #3 3회차 → 주3(8/17~) 행정 |
-| **전체 진행도** | Phase 0~6 ✅ (Kafka는 A안 '안 함' 결정) / **Phase 7 진행 중 — ① CI ✅ ② 보안 게이트 ✅ (8/25)** |
-| **다음 마일스톤** | 개강(8/27) D-2 — Phase 7 ③ Dockerfile부터. 개강 후 저녁 1h 리듬 재확정 |
-| **신규 ADR** | ADR-016~039 — … / **좋아요: unique 멱등** / **인기 정렬: like×5+copy×3, study 항 제외** — `docs/decisions.md` |
+| **진행 중인 Phase** | **Phase 7 배포 — ①CI ②보안 게이트 ③Dockerfile ④Compose 완료, ⑤ Oracle 진행 중** (Codex 배포 게이트 통과 8/26) |
+| **이번 주 집중** | **Oracle A1 자리 확보** (자동 사냥꾼 가동 중, 8/28 저녁까지 미확보 시 플랜 B: PAYG vs Lightsail) → 서버 세팅·배포 → 개강(8/27) 후 저녁 1h 리듬 |
+| **전체 진행도** | Phase 0~6 ✅ (Kafka는 A안 '안 함' 결정) / **Phase 7: ①~④ ✅ + Codex P0 3건 수리 ✅ (8/26, 테스트 172)** |
+| **다음 마일스톤** | 서버 확보 → ⑤ 배포(Docker 경로만 — 직접 java -jar 금지, 기본 dev 함정) → 공개 전 필수: 최신 재빌드·스모크 → ⑥ 백업 → ⑦ nginx·HTTPS |
+| **신규 ADR** | ADR-016~**044** — 이벤트 결합 해소·study 항·혼합 비동기·CASCADE·배포지(Tokyo 정정)·보안 게이트·Dockerfile·Compose — `docs/decisions.md` |
 | **▶ 다음 액션 (resume)** | **2026-08-25 마감: README 실물화 + week-16 4차 인출 + Phase 7 ① CI ② 보안 게이트 + Boot 3.5.16 상향 (테스트 169, ADR-041·042)**. ②의 실물: prod에서 springdoc 완전 비활성(404) / `ProdSafetyGuard`(레포에 공개된 dev·test 시크릿 재사용, 32바이트 미만 → 부팅 거부) / `ProdProfileTest`(prod 컨텍스트를 CI마다 실부팅 — 환경변수 4종 해석·Swagger 닫힘·Redis 없이 fail-open 부팅) / OSIV off / 기본 계정 자동구성 제외. 의존성: Boot 3.3.0(OSS 지원 종료 라인) → 3.5.16 + springdoc 2.8.17 + jjwt 0.12.7 — 사상자 전수 1건(Hibernate 6.6의 '삭제된 엔티티 참조' flush 단속 — 테스트에 영속성 컨텍스트 경계 `em.clear` 재현으로 수리, 운영 무관). dev 스모크는 8081 bootRun으로 7종 실측(8080 실서버 무접촉 룰 준수). **같은 날 저녁 ③ Dockerfile까지 완료** (ADR-043 — 3단 멀티스테이지·비root·기본 prod·565MB, 컨테이너에서 안전핀 거부+스모크 4종 실증). **같은 날 밤 ④ compose까지 완료** (ADR-044 — prod 스택 별도 파일·프로젝트 분리, DB/Redis 내부 전용, 리허설 실측: 처녀 DB Flyway 15판→가입→로그인→인증 왕복, 3컨테이너 healthy, 정리 후 dev 무영향). **다음 세션 첫 일감 = Phase 7 ⑤ Oracle A1 인스턴스 확보·배포** — 사용자가 직접 하는 단계(계정·카드 등록)라 **화면 단위로 하나하나 안내 약속**. 서버에서: git clone → .env 작성(openssl rand) → `docker compose -f docker-compose.prod.yml up -d --build` 한 줄. 그 뒤 ⑥ 백업 → ⑦ nginx·HTTPS → CD |
 > **🎓 Phase 4 완전 졸업 (2026-08-11)** — 실서버 HTTP 데모(검색→복사→좋아요→popular 1위 반영→400/403) + 구두 3문 통과. 1주 만에 Phase 통째 완료(계획은 '개강 전 절반'). ADR-030~033, 테스트 105+, 면접 1급 재료: FK 데드락 실화(ADR-031)·잠금 순서 3회 학습·조작 방지 3계열(복사 제외/좋아요 1회 캡/학습 보류). 다음: ① **week note 복구** (최고가 밀린 항목 — Phase 4 노트에 데드락 스토리) ② 주말 폐쇄훈련 #3 3회차 (빈칸 채우기, Codex 닫기 체크) ③ **Phase 5 Redis 진입** (사전 설명부터. 인기 정렬 filesort → ZSET 전환이 첫 동기). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 / 데모 서버 아직 켜져 있으면 gradle bootRun 태스크 종료 개강 전 목표: **Phase 4 MUST 절반** (주3 8/17~은 국비 행정으로 물량 축소). 밀린 것: week note(최고가) + 폐쇄훈련 #3 3회차(빈칸 채우기, 주말 — 시작 전 Codex 닫기 체크). ⚠️ 터미널 gradlew 죽으면 JDK 25 Lombok 함정 참조 |
 
