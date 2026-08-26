@@ -1530,3 +1530,6 @@ button:disabled {
 .pp-email { font-size: 13px; color: #667; margin: 0 0 10px; word-break: break-all; }
 .pp-meta { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 12px; color: #889; }
 .pp-badge { background: var(--a-soft, #eef); color: var(--a, #55c); padding: 2px 9px; border-radius: 999px; font-weight: 600; }
+
+/* 덱 공개 범위 셀렉트 (덱 상세) */
+.vis-select { font-size: 12.5px; padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,.15); background: #fff; color: inherit; cursor: pointer; }

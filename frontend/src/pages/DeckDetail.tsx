@@ -69,6 +69,21 @@ export default function DeckDetail() {
     }
   }
 
+  // 공개 범위 변경 — 백엔드(updateVisibility)는 PUBLIC 전환 시 랭킹 등록/제거까지 처리 (ADR-032)
+  async function changeVisibility(v: Deck['visibility']) {
+    if (!deck || v === deck.visibility) return
+    if (v === 'PUBLIC' && !window.confirm('전체 공개하면 탐색에 노출되고 누구나 검색·복사할 수 있어요.\n공개할까요?')) {
+      load()   // 셀렉트 표시값 원위치
+      return
+    }
+    try {
+      await api(`/decks/${id}/visibility`, { method: 'PATCH', body: JSON.stringify({ visibility: v }) })
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
   async function removeDeck() {
     if (!deck) return
     if (!window.confirm(`덱 "${deck.title}"을(를) 삭제할까요?\n카드 ${cards.length}장과 학습·퀴즈·타이핑 기록이 전부 사라져요.`)) return
@@ -92,7 +107,20 @@ export default function DeckDetail() {
         <div className="page-head">
           <div>
             <h1>{deck?.title ?? '...'}</h1>
-            <p className="sub">카드 {cards.length}장{deck ? ` · 별표 ${deck.starredCount}장` : ''}</p>
+            <p className="sub" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              카드 {cards.length}장{deck ? ` · 별표 ${deck.starredCount}장` : ''}
+              <select
+                className="vis-select"
+                value={deck?.visibility ?? 'PRIVATE'}
+                disabled={!deck}
+                onChange={(e) => changeVisibility(e.target.value as Deck['visibility'])}
+                aria-label="공개 범위"
+              >
+                <option value="PRIVATE">🔒 비공개 — 나만</option>
+                <option value="UNLISTED">🔗 링크 공개 — 링크 아는 사람만</option>
+                <option value="PUBLIC">🌐 전체 공개 — 탐색 노출·복사 가능</option>
+              </select>
+            </p>
           </div>
           <div className="mode-buttons">
             {cards.length > 0 ? (
