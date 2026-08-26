@@ -119,6 +119,10 @@ public class StudyService {
     }
 
     // 학습 세션 결과 요약 (모르는 카드 목록 포함)
+    // readOnly 트랜잭션 필수 — records(LAZY 컬렉션)·deck.title(프록시)을 조회 뒤에 읽는다.
+    // OSIV off(ADR-042)라 트랜잭션이 없으면 운영 HTTP 경로에서 LazyInitializationException 500
+    // (Quiz/Typing은 컬렉션 대신 리포지토리 재조회 패턴이라 면역 — Codex 검산 2026-08-26)
+    @Transactional(readOnly = true)
     public StudySummaryResponse getSessionSummary(Long sessionId, Long userId) {
         StudySession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ForbiddenException("학습 세션을 찾을 수 없습니다"));
@@ -149,6 +153,9 @@ public class StudyService {
     }
 
     // 덱별 학습 통계 (플래시카드 + 퀴즈 통합)
+    // readOnly 트랜잭션 필수 — 세션별 records(LAZY 컬렉션) 순회 (위 getSessionSummary와 같은 이유).
+    // 세션 수 × records 로딩 N+1은 남아 있음 — 집계 쿼리 전환은 백로그 (지금 규모에선 무해)
+    @Transactional(readOnly = true)
     public DeckStatsResponse getDeckStats(Long deckId, Long userId) {
         deckService.verifyOwner(deckId, userId);
 
