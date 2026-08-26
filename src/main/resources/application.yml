@@ -22,11 +22,18 @@ jwt:
 
 server:
   port: 8080
+  forward-headers-strategy: framework   # nginx 뒤에서 OAuth redirect_uri가 https로 생성되게 (X-Forwarded-Proto 신뢰)
   servlet:
     encoding:
       charset: UTF-8
       enabled: true
       force: true
+
+# 구글 OAuth (ADR-047) — 키가 비어 있으면 기능 자체가 꺼짐 (로컬 dev 기본·테스트).
+# @Value는 relaxed binding이 없어 환경변수를 yml로 다리 놓아야 한다
+google:
+  client-id: ${GOOGLE_CLIENT_ID:}
+  client-secret: ${GOOGLE_CLIENT_SECRET:}
 
 springdoc:
   swagger-ui:

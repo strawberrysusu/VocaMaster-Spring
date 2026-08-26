@@ -1514,3 +1514,19 @@ button:disabled {
 .count-input:focus {
   border-color: var(--a);
 }
+
+/* 구글 로그인 버튼 (ADR-047) — 아이콘+텍스트 정렬 */
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* 프로필 팝오버 (아바타 클릭) */
+.avatar-wrap { position: relative; }
+.avatar-btn { border: none; cursor: pointer; }
+.profile-pop {
+  position: absolute; right: 0; top: calc(100% + 10px); z-index: 50;
+  background: #fff; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 12px;
+  padding: 14px 16px; min-width: 230px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.pp-nick { font-weight: 700; margin: 0 0 2px; font-size: 15px; }
+.pp-email { font-size: 13px; color: #667; margin: 0 0 10px; word-break: break-all; }
+.pp-meta { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 12px; color: #889; }
+.pp-badge { background: var(--a-soft, #eef); color: var(--a, #55c); padding: 2px 9px; border-radius: 999px; font-weight: 600; }

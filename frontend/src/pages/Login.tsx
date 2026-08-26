@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { setToken } from '../api/client'
 
@@ -12,6 +12,25 @@ export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/'   // 좋아요·복사 누르다 로그인 온 경우 원래 화면으로
+
+  // 구글 로그인 복귀 지점 (ADR-047): 서버가 refresh 쿠키만 심고 여기로 보낸다 —
+  // 그 쿠키로 access token을 받아야 로그인 완성 (라우트 가드가 localStorage 토큰 기준이라)
+  useEffect(() => {
+    const oauth = new URLSearchParams(location.search).get('oauth')
+    if (oauth === 'success') {
+      fetch('/auth/refresh', { method: 'POST' })
+        .then(async (r) => {
+          if (!r.ok) throw new Error()
+          const d = await r.json()
+          setToken(d.accessToken)
+          navigate('/', { replace: true })
+        })
+        .catch(() => setError('구글 로그인 처리에 실패했어요 — 다시 시도해주세요'))
+    } else if (oauth === 'error') {
+      setError('구글 로그인에 실패했어요 — 다시 시도하거나 이메일로 로그인해주세요')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function submit() {
     if (submitting) return
@@ -63,6 +82,17 @@ export default function Login() {
         {error && <p className="error" role="alert">{error}</p>}
         <button className="primary" disabled={submitting} onClick={submit}>
           {submitting ? '처리 중...' : mode === 'login' ? '로그인' : '가입하고 시작'}
+        </button>
+        <button
+          className="ghost google-btn"
+          disabled={submitting}
+          onClick={() => {
+            // SPA 라우팅이 아니라 서버의 OAuth 시작점으로 전체 이동 — 구글 → 콜백 → 다시 이 화면(?oauth=)
+            window.location.href = '/oauth2/authorization/google'
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.7 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.2C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.2 0 11.7-2 15.6-5.6l-7.7-6c-2.1 1.4-4.8 2.3-7.9 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>
+          구글로 로그인
         </button>
         <button className="ghost" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
           {mode === 'login' ? '계정이 없어요 → 회원가입' : '이미 계정이 있어요 → 로그인'}

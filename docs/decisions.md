@@ -1630,6 +1630,23 @@ ARM(arm64) 도커 빌드 경험이 이력서 거리.
 
 ---
 
+## ADR-047: 구글 로그인 — 세션형이 아닌 JWT 다리 방식
+
+**상태:** 채택 (2026-08-26 밤)
+**컨텍스트:** NewsPick의 구글 로그인은 `oauth2Login` 기본형(세션) — 키만 넣으면 끝이었다. VocaMaster는 STATELESS JWT(리프레시 회전·재사용 탐지)라 구글 인증이 성공해도 우리 토큰이 없으면 전 API가 401. **그 간극을 잇는 다리가 이번 작업의 전부.**
+
+**구성:**
+- `OAuth2SuccessHandler`: 구글 성공 → email_verified 확인 → `loginWithGoogle`(기존 issueTokens 재사용) → refresh 쿠키(AuthController와 동일 속성) 심고 `/app/login?oauth=success`로 → SPA가 그 쿠키로 `/auth/refresh` 호출해 로그인 완성 (기존 401→refresh 인프라 재활용)
+- 켜고 끄기: `google.client-id` 비면 oauth2Login 자체가 안 붙음 — 테스트·로컬 dev는 기존과 완전 동일 (조건부 등록)
+- V16: password NULL 허용 + provider 컬럼. 구글 계정에 비번 로그인 시도 → NPE가 아니라 안내 400
+- **같은 이메일 자동 연결**: 기존 이메일 가입자가 구글로 오면 같은 계정 (구글의 이메일 검증 신뢰 — 로컬·실서버 모두 실측 확인)
+- 함정 2개 격파: ① AuthService→SecurityConfig(PasswordEncoder)→핸들러→AuthService **순환 참조** → 핸들러를 생성자 대신 @Bean 메서드 파라미터로 ② nginx 뒤 redirect_uri가 http로 생성 → `forward-headers-strategy: framework`
+- 부속: 새 구글 콘솔은 게시에 홈페이지·개인정보처리방침 URL 필수 → `/privacy.html` 신설(permitAll), 프로필 팝오버(아바타 클릭 → /users/me, provider 뱃지)
+
+**테스트:** 175개 (신규 3: 신규 가입 / 자동 연결 / 구글 계정 비번 로그인 400) + 로컬 브라우저 실왕복.
+
+---
+
 # 운영 규칙 — 앞으로 새 결정마다
 
 1. **결정 *전*에** 이 파일에 ADR 추가 (또는 `docs/decisions/ADR-NNN-제목.md`로 분리)

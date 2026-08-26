@@ -76,10 +76,35 @@ public class AuthService {
             throw new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다");
         }
 
+        // 구글 가입자는 비밀번호가 null — matches()에 null이 들어가면 NPE (V16, ADR-047).
+        // 존재 노출 우려보다 UX 우선(가입 화면이 이미 이메일 중복을 알려주는 구조라 노출 이득이 없음)
+        if (user.getPassword() == null) {
+            throw new BadRequestException("구글 로그인으로 가입된 계정입니다 — '구글로 로그인' 버튼을 이용하세요");
+        }
+
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("이메일 또는 비밀번호가 올바르지 않습니다");
         }
         return user;
+    }
+
+    /**
+     * 구글 인증 성공 → 우리 토큰 발급으로 연결하는 다리 (ADR-047).
+     * 같은 이메일의 기존(local) 가입자는 자동으로 같은 계정에 로그인 —
+     * 구글이 이메일 소유를 검증(email_verified)한 것을 신뢰한다.
+     */
+    @Transactional
+    public TokenPair loginWithGoogle(String email, String name, String userAgent, String ip) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            String nickname = (name == null || name.isBlank()) ? "구글사용자" : name;
+            if (nickname.length() > 20) nickname = nickname.substring(0, 20);
+            user = userRepository.save(User.builder()
+                    .email(email).password(null).nickname(nickname).provider("google").build());
+        } else if (user.isDeleted()) {
+            throw new UnauthorizedException("탈퇴한 계정입니다");
+        }
+        return issueTokens(user, userAgent, ip);
     }
 
     /**

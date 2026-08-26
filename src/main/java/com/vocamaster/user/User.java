@@ -24,12 +24,17 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    // 구글 가입자는 비밀번호가 없다 (V16, ADR-047) — null 계정의 이메일 로그인은 AuthService가 막는다
     @JsonIgnore
     private String password;
 
     @Column(nullable = false)
     private String nickname;
+
+    // 가입 경로: local(이메일) | google — 통계·문의 대응용 기록
+    @Builder.Default
+    @Column(nullable = false)
+    private String provider = "local";
 
     @CreationTimestamp
     private LocalDateTime createdAt;
