@@ -58,9 +58,14 @@ ssh -i ~/.ssh/vocamaster_oracle ubuntu@<APP_IP> 'curl -s -o /dev/null -w "%{http
 ssh -i ~/.ssh/vocamaster_oracle -L 8090:127.0.0.1:8080 ubuntu@<APP_IP>
 ```
 
+## 완료된 것 (8/26~27 갱신)
+
+- ✅ nginx + Let's Encrypt — https://vocamaster-app.duckdns.org (자동 갱신 타이머, ADR-046)
+- ✅ CD — master push → 테스트 통과 시 자동 배포 (ci.yml deploy job, docs-only 푸시는 생략)
+- ✅ cron 자동 백업 첫 정기 실행 실증 (KST 8/27 04:30, backup.log 기록)
+
 ## 남은 일
 
-- ⑦ nginx + Let's Encrypt HTTPS → 80/443 개방 = **공개일** (도메인 필요)
-- CD: master push → 자동 배포 (GitHub Actions + Secrets)
+- 자동 롤백 (배포 후 헬스 실패 시 이전 이미지 복귀 — 현재는 실패 알림까지만)
 - 백업 오프사이트 승격 후보: Oracle Object Storage (Always Free 20GB) — 두 서버 전멸에도 생존
 - A1(2c/12GB) 사냥꾼 가동 중 — 잡히면 단일 박스 이사 (별도 무료 한도라 공존)
