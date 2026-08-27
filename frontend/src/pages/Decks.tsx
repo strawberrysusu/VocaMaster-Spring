@@ -67,6 +67,7 @@ export default function Decks() {
           <button className="btn-primary" disabled={creating || !title.trim()} onClick={create}>
             {creating ? '만드는 중...' : '덱 만들기'}
           </button>
+          <Link to="/import-files" className="btn-ghost-link">📁 파일로 만들기</Link>
         </div>
 
         {error && <p className="error" role="alert">{error}</p>}

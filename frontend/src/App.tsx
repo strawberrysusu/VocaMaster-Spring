@@ -10,6 +10,7 @@ import PublicDeckDetail from './pages/PublicDeckDetail'
 import Quiz from './pages/Quiz'
 import Typing from './pages/Typing'
 import ImportCards from './pages/ImportCards'
+import ImportFiles from './pages/ImportFiles'
 import Stats from './pages/Stats'
 import Settings from './pages/Settings'
 import ComingSoon from './pages/ComingSoon'
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/decks" element={<RequireAuth><Decks /></RequireAuth>} />
         <Route path="/decks/:id" element={<RequireAuth><DeckDetail /></RequireAuth>} />
         <Route path="/decks/:id/import" element={<RequireAuth><ImportCards /></RequireAuth>} />
+        <Route path="/import-files" element={<RequireAuth><ImportFiles /></RequireAuth>} />
         <Route path="/study" element={<RequireAuth><Study /></RequireAuth>} />
         <Route path="/quiz/:deckId" element={<RequireAuth><Quiz /></RequireAuth>} />
         <Route path="/typing/:deckId" element={<RequireAuth><Typing /></RequireAuth>} />
