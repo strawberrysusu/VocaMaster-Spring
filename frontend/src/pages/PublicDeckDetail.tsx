@@ -4,6 +4,7 @@ import { api, getToken } from '../api/client'
 import { afterCopy, copyDeckApi, toggleLikeApi, type PageResp, type PublicCard, type PublicDeck } from '../api/publicDecks'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
+import Ruby from '../components/Ruby'
 
 // 공개 덱 상세 — 복사 전에 내용을 볼 수 있게 (백로그 ②). UNLISTED 링크 진입점이기도 함.
 export default function PublicDeckDetail() {
@@ -108,7 +109,7 @@ export default function PublicDeckDetail() {
             {cards.map((c, i) => (
               <div key={c.id} className="word-row">
                 <span className="word-idx">{i + 1}</span>
-                <span className="word-front">{c.reading && <span className="reading-inline">{c.reading}</span>}{c.front} <SpeakButton text={c.reading || c.front} /></span>
+                <span className="word-front"><Ruby front={c.front} reading={c.reading} /> <SpeakButton text={c.reading || c.front} /></span>
                 <span className="word-back">{c.back}</span>
               </div>
             ))}

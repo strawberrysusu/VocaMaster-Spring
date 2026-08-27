@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import { fetchAllCards, type CardDto } from '../api/cards'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
+import Ruby from '../components/Ruby'
 
 interface Deck {
   id: number
@@ -179,7 +180,7 @@ export default function DeckDetail() {
           {cards.map((c, i) => (
             <div key={c.id} className="word-row">
               <span className="word-idx">{i + 1}</span>
-              <span className="word-front">{c.reading && <span className="reading-inline">{c.reading}</span>}{c.front} <SpeakButton text={c.reading || c.front} /></span>
+              <span className="word-front"><Ruby front={c.front} reading={c.reading} /> <SpeakButton text={c.reading || c.front} /></span>
               <span className="word-back">{c.back}</span>
               <div className="row-actions">
                 <button className={`star-btn ${c.starred ? 'on' : ''}`} title={c.starred ? '별표 해제' : '별표'} aria-pressed={c.starred} onClick={() => toggleStar(c.id)}>

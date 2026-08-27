@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
+import Ruby from '../components/Ruby'
 
 // 백엔드(Phase 1 ImportService) 계약 — 구분자 자동 감지(탭·|·:·,·-), 2칸(단어|뜻) / 3칸(단어|읽기|뜻), 1000줄, 중복 스킵
 interface PreviewResp {
@@ -162,7 +163,7 @@ export default function ImportCards() {
               {preview.cards.map((c, i) => (
                 <div key={i} className="word-row">
                   <span className="word-idx">{i + 1}</span>
-                  <span className="word-front">{c.reading && <span className="reading-inline">{c.reading}</span>}{c.front}</span>
+                  <span className="word-front"><Ruby front={c.front} reading={c.reading} /></span>
                   <span className="word-back">{c.back}</span>
                 </div>
               ))}

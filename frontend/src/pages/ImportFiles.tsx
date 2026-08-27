@@ -12,8 +12,10 @@ interface FileResult {
   error?: string
 }
 
-// day01.txt(탭 3칸: 単語 → （よみ） → 뜻) 같은 파일을 그대로 받기 위한 전처리 (백로그 ㉒):
-// ① 파일 첫머리 BOM 제거 ② 탭 3칸일 때 가운데(읽기) 양끝의 전각 괄호（）만 벗김
+// 실물 파일 두 형식을 그대로 받기 위한 전처리 (백로그 ㉒ — 사용자 vocajapanese 폴더 실측):
+// ① 파일 첫머리 BOM 제거
+// ② day01형: 탭 3칸 `単語 \t （よみ） \t 뜻` → 읽기 양끝 전각 괄호（）만 벗김
+// ③ day02형: `単語（よみ）, 뜻` (탭 없음) → `単語 \t よみ \t 뜻` 3칸으로 재구성
 //    — 뜻 안의 반각 괄호("경탄(놀라며 감탄함)")는 건드리지 않는다
 function preprocess(raw: string): string {
   return raw
@@ -25,6 +27,9 @@ function preprocess(raw: string): string {
         cols[1] = cols[1].trim().replace(/^（(.*)）$/, '$1')
         return cols.join('\t')
       }
+      // 탭이 없는 줄: 単語（よみ）[,，] 뜻 — 뜻에 쉼표가 더 있어도 통째로 보존
+      const m = line.match(/^(.+?)（(.+?)）\s*[,，]\s*(.+)$/)
+      if (m) return `${m[1].trim()}\t${m[2].trim()}\t${m[3].trim()}`
       return line
     })
     .join('\n')
