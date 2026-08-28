@@ -127,7 +127,8 @@ export default function Study() {
             {/* 🔊는 카드 button의 '형제' — 안에 넣으면 button 중첩(HTML 위반) + Enter/Space가 카드 뒤집기로 전파 */}
             <div className="study-card-wrap">
               <button className="study-card" onClick={() => setRevealed(true)}>
-                {queue[idx].reading && <span className="reading">{queue[idx].reading}</span>}
+                {/* 읽기는 답의 절반(한자→읽기 회상 훈련) — 뜻 확인 후에만 공개. 읽기 없는 카드(영어 등)는 원래대로 표시 없음 */}
+                {revealed && queue[idx].reading && <span className="reading">{queue[idx].reading}</span>}
                 <span className="study-word">{queue[idx].front}</span>
                 {revealed ? (
                   <span className="study-answer">{queue[idx].back}</span>
