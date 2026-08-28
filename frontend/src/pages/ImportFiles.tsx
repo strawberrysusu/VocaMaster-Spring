@@ -3,12 +3,18 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
 
+interface FailedLine {
+  line: number
+  content: string
+}
+
 interface FileResult {
   name: string
   deckId?: number
   imported?: number
   skipped?: number
   failedCount?: number
+  failed?: FailedLine[]
   error?: string
 }
 
@@ -58,7 +64,7 @@ export default function ImportFiles() {
           method: 'POST',
           body: JSON.stringify({ title }),
         })
-        const res = await api<{ imported: number; skipped: number; failedCount: number }>(
+        const res = await api<{ imported: number; skipped: number; failedCount: number; failed: FailedLine[] }>(
           `/decks/${deck.id}/import`,
           { method: 'POST', body: JSON.stringify({ text, separator: '' }) },
         )
@@ -152,15 +158,30 @@ export default function ImportFiles() {
             )}
             <div className="word-list">
               {results.map((r) => (
-                <div key={r.name} className="word-row">
-                  <span className="word-front">
-                    {r.deckId ? <Link to={`/decks/${r.deckId}`}>{r.name.replace(/\.[^.]+$/, '')}</Link> : r.name}
-                  </span>
-                  <span className="word-back" style={r.error ? { color: '#b0485c' } : undefined}>
-                    {r.error
-                      ? `실패: ${r.error}`
-                      : <>{r.imported}장 등록{(r.skipped ?? 0) > 0 && <> · 중복 {r.skipped}</>}{(r.failedCount ?? 0) > 0 && <> · 실패 {r.failedCount}줄</>}</>}
-                  </span>
+                <div key={r.name}>
+                  <div className="word-row">
+                    <span className="word-front">
+                      {r.deckId ? <Link to={`/decks/${r.deckId}`}>{r.name.replace(/\.[^.]+$/, '')}</Link> : r.name}
+                    </span>
+                    <span className="word-back" style={r.error ? { color: '#b0485c' } : undefined}>
+                      {r.error
+                        ? `실패: ${r.error}`
+                        : <>{r.imported}장 등록{(r.skipped ?? 0) > 0 && <> · 중복 {r.skipped}</>}{(r.failedCount ?? 0) > 0 && <> · 실패 {r.failedCount}줄</>}</>}
+                    </span>
+                  </div>
+                  {/* 실패 줄 상세 — 서버가 원래 주던 목록인데 그동안 화면이 버리고 숫자만 보여줬다 (8/28) */}
+                  {(r.failed ?? []).length > 0 && (
+                    <div style={{ margin: '2px 0 8px 30px' }}>
+                      {r.failed!.map((f) => (
+                        <p key={f.line} className="muted" style={{ margin: '2px 0', fontSize: 12.5, color: '#b0485c' }}>
+                          {f.line}행: {f.content}
+                        </p>
+                      ))}
+                      <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
+                        실패 원인은 둘 중 하나예요 — 칸 모양이 안 맞음(구분자 기준 2~3칸 아님, 단어/뜻 빈칸) 또는 글자 수 초과(단어·뜻 255자, 읽기 200자)
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
