@@ -37,6 +37,10 @@ export default function Listening() {
   const [idx, setIdx] = useState(0)
   const [phase, setPhase] = useState<'setup' | 'play' | 'done'>('setup')
   const [count, setCount] = useState(10)
+  const [ordered, setOrdered] = useState(false)   // true=1번부터 순서대로, false=무작위
+  const [rate, setRate] = useState(0.92)          // 재생 속도
+  const [times, setTimes] = useState(3)           // 반복 횟수
+  const [gapSec, setGapSec] = useState(1.8)       // 반복 간격(초)
   const [spelling, setSpelling] = useState('')
   const [meaning, setMeaning] = useState('')
   const [revealed, setRevealed] = useState(false)
@@ -52,15 +56,32 @@ export default function Listening() {
   // 화면을 떠나면 재생 즉시 중단 (늦은 재생 방지 — ⑰ 교훈 선반영)
   useEffect(() => () => stopRef.current(), [])
 
+  // 듣기 설정은 브라우저에 기억 — 다음에도 같은 속도·간격으로
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('vm.listening') ?? '{}')
+      if (typeof saved.ordered === 'boolean') setOrdered(saved.ordered)
+      if (typeof saved.rate === 'number') setRate(saved.rate)
+      if (typeof saved.times === 'number') setTimes(saved.times)
+      if (typeof saved.gapSec === 'number') setGapSec(saved.gapSec)
+    } catch { /* 저장값 손상 시 기본값 */ }
+  }, [])
+  useEffect(() => {
+    try {
+      localStorage.setItem('vm.listening', JSON.stringify({ ordered, rate, times, gapSec }))
+    } catch { /* 시크릿 모드 등 저장 불가 환경 무시 */ }
+  }, [ordered, rate, times, gapSec])
+
   function playCurrent(q: Item[], i: number) {
     stopRef.current()
     const c = q[i].card
-    stopRef.current = speakTimes(c.reading || c.front, 3, 1800)
+    stopRef.current = speakTimes(c.reading || c.front, { times, gapMs: gapSec * 1000, rate })
   }
 
   function start() {
     const n = Math.max(1, Math.min(count, pool.length))
-    const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, n)
+    const base = ordered ? [...pool] : [...pool].sort(() => Math.random() - 0.5)
+    const shuffled = base.slice(0, n)
     const q = shuffled.map((card) => ({ card, spelling: '', meaning: '' }))
     setQueue(q)
     setIdx(0)
@@ -135,6 +156,35 @@ export default function Listening() {
               />
               <span className="muted" style={{ fontSize: 13 }}>/ 카드 {pool.length}장</span>
             </div>
+            <div className="setup-row">
+              <span className="setup-label">출제 순서</span>
+              <div className="sort-tabs">
+                <button className={!ordered ? 'active' : ''} onClick={() => setOrdered(false)}>무작위</button>
+                <button className={ordered ? 'active' : ''} onClick={() => setOrdered(true)}>1번부터</button>
+              </div>
+            </div>
+            <div className="setup-row">
+              <span className="setup-label">속도</span>
+              <div className="sort-tabs">
+                <button className={rate === 0.75 ? 'active' : ''} onClick={() => setRate(0.75)}>느리게</button>
+                <button className={rate === 0.92 ? 'active' : ''} onClick={() => setRate(0.92)}>보통</button>
+                <button className={rate === 1.15 ? 'active' : ''} onClick={() => setRate(1.15)}>빠르게</button>
+              </div>
+            </div>
+            <div className="setup-row">
+              <span className="setup-label">반복</span>
+              <div className="sort-tabs">
+                {[2, 3, 5].map((n) => (
+                  <button key={n} className={times === n ? 'active' : ''} onClick={() => setTimes(n)}>{n}회</button>
+                ))}
+              </div>
+              <span className="setup-label" style={{ marginLeft: 10 }}>간격</span>
+              <div className="sort-tabs">
+                {[1, 1.8, 3].map((g) => (
+                  <button key={g} className={gapSec === g ? 'active' : ''} onClick={() => setGapSec(g)}>{g}초</button>
+                ))}
+              </div>
+            </div>
             <div className="answer-buttons">
               <button className="answer-yes" disabled={pool.length === 0 || !isTtsSupported()} onClick={start}>
                 🔊 듣기 시작
@@ -151,7 +201,7 @@ export default function Listening() {
             </div>
 
             <div className="answer-buttons" style={{ marginTop: 0 }}>
-              <button className="answer-no" onClick={() => playCurrent(queue, idx)}>🔊 다시 듣기 (3회)</button>
+              <button className="answer-no" onClick={() => playCurrent(queue, idx)}>🔊 다시 듣기 ({times}회)</button>
             </div>
 
             <input

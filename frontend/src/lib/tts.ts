@@ -68,10 +68,10 @@ export function speak(text: string, lang = detectLang(text)): void {
 // 반환: 중단 함수 — 문제를 넘기거나 화면을 떠날 때 호출해 "늦은 재생"을 막는다
 export function speakTimes(
   text: string,
-  times: number,
-  gapMs: number,
+  opts: { times: number; gapMs: number; rate?: number },
   onAllDone?: () => void,
 ): () => void {
+  const { times, gapMs, rate = 0.92 } = opts
   if (!isTtsSupported() || !text.trim() || times < 1) return () => {}
   let cancelled = false
   let timer: ReturnType<typeof setTimeout> | null = null
@@ -83,7 +83,7 @@ export function speakTimes(
     const u = new SpeechSynthesisUtterance(text)
     u.lang = lang
     if (voice) u.voice = voice
-    u.rate = 0.92
+    u.rate = rate
     u.onend = () => {
       if (cancelled) return
       if (remain > 1) timer = setTimeout(() => playOnce(remain - 1), gapMs)
