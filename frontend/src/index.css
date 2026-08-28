@@ -1544,5 +1544,14 @@ button:disabled {
 /* 후리가나 (ruby) — 목록에서 단어 위에 작게 */
 ruby rt { font-size: 0.56em; color: #8a93a5; font-weight: 500; user-select: none; }
 
-/* 듣기 받아쓰기 (백로그 ⑭) */
-.listen-result { background: var(--a-soft, #eef); border-radius: 12px; padding: 10px 14px; }
+/* 듣기 받아쓰기 (백로그 ⑭ — 시험지 레이아웃) */
+.listen-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.listen-sheet { display: flex; flex-direction: column; gap: 6px; }
+.listen-row { display: grid; grid-template-columns: 30px 40px 1fr 1fr auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 10px; }
+.listen-row.playing { background: var(--a-soft, #eef); }
+.listen-row input { min-width: 0; }
+.listen-play { border: 1px solid rgba(0,0,0,.15); background: #fff; border-radius: 8px; padding: 6px 0; cursor: pointer; font-size: 14px; }
+.listen-play:hover { border-color: var(--a, #55c); }
+.listen-marks { font-size: 13px; white-space: nowrap; }
+.listen-answer { margin: 0 0 4px 78px; font-size: 13px; color: #99566a; }
+@media (max-width: 640px) { .listen-row { grid-template-columns: 24px 36px 1fr 1fr auto; } .listen-answer { margin-left: 60px; } }
