@@ -196,7 +196,7 @@ export default function DeckDetail() {
               <h1>
                 {deck?.title ?? '...'}
                 {deck && (
-                  <button className="edit-btn" title="제목·설명 수정" aria-label="덱 제목·설명 수정" onClick={startDeckEdit}>✏️</button>
+                  <button className="edit-btn" title="제목·설명 수정" aria-label="덱 제목·설명 수정" onClick={startDeckEdit}>수정</button>
                 )}
               </h1>
             )}
@@ -299,7 +299,7 @@ export default function DeckDetail() {
                 <span className="word-back">{c.back}</span>
                 <div className="row-actions">
                   <button className="edit-btn" title="카드 수정" aria-label={`${c.front} 수정`} onClick={() => startCardEdit(c)}>
-                    ✏️
+                    수정
                   </button>
                   <button className={`star-btn ${c.starred ? 'on' : ''}`} title={c.starred ? '별표 해제' : '별표'} aria-pressed={c.starred} onClick={() => toggleStar(c.id)}>
                     ★
