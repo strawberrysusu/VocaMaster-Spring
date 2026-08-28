@@ -810,13 +810,12 @@ review:summary:{userId}:{date}  TTL 5분
 - [ ] **[STRETCH]** 요청 로깅 필터 (UserId/RequestId)
 
 ### 🚀 k6 부하 테스트
-- [ ] **[MUST]** k6 설치 + `tests/k6/` 디렉토리
-- [ ] **[MUST]** 시나리오: login / public deck list / quiz submit / due cards
-- [ ] **[MUST]** k6 테스트 전 seed data 생성 스크립트 작성
-- [ ] **[MUST]** **테스트 환경 스펙 기록** (Oracle A1 사양, RAM, DB 위치)
-- [ ] **[MUST]** **Redis 적용 전후 비교 측정** (p50, p95, p99)
-- [ ] **[MUST]** 결과를 `docs/performance.md`에 기록 (실제 측정값)
-- [ ] **[SHOULD]** 병목 1개 이상 찾아서 개선 사례 작성
+- [x] **[MUST]** k6 설치 + `tools/k6/` 디렉토리 ✅ 8/27 (계획의 tests/ 대신 tools/)
+- [x] **[MUST]** 시나리오 — **범위 축소 결정(8/28)**: 4종 계획을 public deck list 1종으로. Redis 전후 비교라는 목적에 필요한 최소이자, 무료 1GB 서버에 로그인·쓰기 부하를 반복하는 위험 회피. 나머지 시나리오·seed 스크립트는 백로그
+- [x] **[MUST]** **테스트 환경 스펙 기록** ✅ (A1 아닌 E2.1.Micro 2대 — performance.md 환경 절)
+- [x] **[MUST]** **Redis 적용 전후 비교 측정** (p50, p95, p99) ✅ 8/28 — 1차(3.5×)는 웜/콜드 불공정으로 **철회**, 워밍업 분리+3회 반복 재측정으로 교체. 현 규모에선 DB 직접이 더 빠름 (교훈 5개는 performance.md)
+- [x] **[MUST]** 결과를 `docs/performance.md`에 기록 (실제 측정값 + 원시 결과 `tools/k6/results/`) ✅
+- [x] **[SHOULD]** 병목 1개 이상 찾아서 개선 사례 작성 — 코드 병목 대신 **측정 자체의 결함(콜드 JVM·closed model·워밍업 미분리)을 찾아 바로잡은 검산 사례**로 기록 ✅
 
 ### 🧪 테스트
 - [ ] **[MUST]** CI에서 모든 테스트 통과

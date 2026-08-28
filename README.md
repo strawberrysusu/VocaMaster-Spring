@@ -83,7 +83,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 | 4 | 공개 단어장 검색 · 복사 · 좋아요 · 인기 정렬 | ✅ 2026-08 |
 | 5 | Redis (Rate Limit · 랭킹 캐시 · 요약 캐시 · fail-open) | ✅ 2026-08 |
 | 6 | 비동기 이벤트 (Spring Event · AFTER_COMMIT · @Async) + **React SPA 11화면** | ✅ 2026-08 |
-| 7 | Docker · CI/CD · 배포 · k6 부하 테스트 | ✅ 운영 중 — CI/CD·Oracle 2대 분산·백업·HTTPS·구글 로그인. **k6 실측: Redis 랭킹이 p95 3.5×·p99 4.0× 개선** ([performance.md](docs/performance.md)) |
+| 7 | Docker · CI/CD · 배포 · k6 부하 테스트 | ✅ 운영 중 — CI/CD·Oracle 2대 분산·백업·HTTPS·구글 로그인. **k6 실측 검산기: 1차 "p95 3.5× 개선"이 웜/콜드 불공정 비교로 판명 → 재측정으로 스스로 철회** ([performance.md](docs/performance.md)) |
 | 8 | 마감 · 문서/면접 준비 | 예정 |
 
 > Kafka는 검토 후 **도입하지 않기로 결정** — 단일 앱에서 브로커는 과한 도구, Spring Event로 경계를 긋고

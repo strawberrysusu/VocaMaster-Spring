@@ -1,0 +1,7 @@
+# k6 비교 측정용 override (Codex 검산: 재현 파일을 레포에) — 인기 랭킹의 Redis 경로를 끈다
+# 사용(서버): docker compose -f docker-compose.app.yml -f ranking-off.yml up -d
+# 원복:      docker compose -f docker-compose.app.yml up -d
+services:
+  app:
+    environment:
+      RANKING_POPULAR_ENABLED: "false"
