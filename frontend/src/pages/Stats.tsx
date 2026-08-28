@@ -98,8 +98,11 @@ export default function Stats() {
                 <span className="title">덱별 진행률</span>
                 <span className="hint">진행 = 한 번이라도 답한 카드 · 숙달 = 박스 5 이상(14일+)</span>
               </div>
-              {data.decks.length === 0 && <p className="muted">아직 덱이 없어요.</p>}
-              {data.decks.map((d) => {
+              {/* 학습을 시작한 덱만 — 임포트만 해둔 덱 수십 개가 0% 행으로 쏟아지는 소음 방지 (8/28 사용자 피드백) */}
+              {data.decks.filter((d) => d.started > 0).length === 0 && (
+                <p className="muted">아직 학습을 시작한 덱이 없어요 — 복습·퀴즈로 답하면 여기에 진행률이 쌓여요.</p>
+              )}
+              {data.decks.filter((d) => d.started > 0).map((d) => {
                 const startedPct = d.cardCount ? Math.round((d.started / d.cardCount) * 100) : 0
                 const masteredPct = d.cardCount ? Math.round((d.mastered / d.cardCount) * 100) : 0
                 return (
@@ -117,6 +120,11 @@ export default function Stats() {
                   </div>
                 )
               })}
+              {data.decks.some((d) => d.started === 0) && data.decks.some((d) => d.started > 0) && (
+                <p className="muted" style={{ margin: '10px 0 0', fontSize: 12.5 }}>
+                  아직 시작 안 한 덱 {data.decks.filter((d) => d.started === 0).length}개는 숨겼어요
+                </p>
+              )}
             </div>
           </>
         )}
