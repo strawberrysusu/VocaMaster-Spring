@@ -62,3 +62,41 @@ export function speak(text: string, lang = detectLang(text)): void {
   u.rate = 0.95
   speechSynthesis.speak(u)
 }
+
+// 듣기 받아쓰기용 (백로그 ⑭): 같은 텍스트를 N회, 간격을 두고 재생.
+// speak()의 cancel 방식은 연속 재생을 끊으므로 onend 체인으로 잇는다 (⑬에서 예고한 방식).
+// 반환: 중단 함수 — 문제를 넘기거나 화면을 떠날 때 호출해 "늦은 재생"을 막는다
+export function speakTimes(
+  text: string,
+  times: number,
+  gapMs: number,
+  onAllDone?: () => void,
+): () => void {
+  if (!isTtsSupported() || !text.trim() || times < 1) return () => {}
+  let cancelled = false
+  let timer: ReturnType<typeof setTimeout> | null = null
+  const lang = detectLang(text)
+  const voice = pickVoice(lang)
+
+  const playOnce = (remain: number) => {
+    if (cancelled) return
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = lang
+    if (voice) u.voice = voice
+    u.rate = 0.92
+    u.onend = () => {
+      if (cancelled) return
+      if (remain > 1) timer = setTimeout(() => playOnce(remain - 1), gapMs)
+      else onAllDone?.()
+    }
+    speechSynthesis.speak(u)
+  }
+
+  speechSynthesis.cancel()
+  playOnce(times)
+  return () => {
+    cancelled = true
+    if (timer) clearTimeout(timer)
+    speechSynthesis.cancel()
+  }
+}

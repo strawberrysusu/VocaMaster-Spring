@@ -11,6 +11,7 @@ import Quiz from './pages/Quiz'
 import Typing from './pages/Typing'
 import ImportCards from './pages/ImportCards'
 import ImportFiles from './pages/ImportFiles'
+import Listening from './pages/Listening'
 import Stats from './pages/Stats'
 import Settings from './pages/Settings'
 import ComingSoon from './pages/ComingSoon'
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/study" element={<RequireAuth><Study /></RequireAuth>} />
         <Route path="/quiz/:deckId" element={<RequireAuth><Quiz /></RequireAuth>} />
         <Route path="/typing/:deckId" element={<RequireAuth><Typing /></RequireAuth>} />
+        <Route path="/listening/:deckId" element={<RequireAuth><Listening /></RequireAuth>} />
         <Route path="/stats" element={<RequireAuth><Stats /></RequireAuth>} />
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="/explore" element={<RequireAuth><Explore /></RequireAuth>} />

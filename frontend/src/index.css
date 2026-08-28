@@ -1543,3 +1543,6 @@ button:disabled {
 
 /* 후리가나 (ruby) — 목록에서 단어 위에 작게 */
 ruby rt { font-size: 0.56em; color: #8a93a5; font-weight: 500; user-select: none; }
+
+/* 듣기 받아쓰기 (백로그 ⑭) */
+.listen-result { background: var(--a-soft, #eef); border-radius: 12px; padding: 10px 14px; }

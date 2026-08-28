@@ -141,6 +141,11 @@ export default function DeckDetail() {
             ) : (
               <button className="mode-stub" disabled title="카드를 먼저 추가하세요">타이핑</button>
             )}
+            {cards.length >= 1 ? (
+              <Link to={`/listening/${id}`} className="mode-btn">듣기</Link>
+            ) : (
+              <button className="mode-stub" disabled title="카드를 먼저 추가하세요">듣기</button>
+            )}
           </div>
         </div>
 
