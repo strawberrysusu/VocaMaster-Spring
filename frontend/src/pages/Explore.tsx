@@ -14,17 +14,44 @@ export default function Explore() {
   const [copiedIds, setCopiedIds] = useState<Record<number, boolean>>({})
   const [busyId, setBusyId] = useState<number | null>(null)
   const [error, setError] = useState('')
+  // 더 보기 (8/28) — 백엔드 Page는 원래 완비, 화면이 첫 페이지만 쓰고 있었다
+  const [page, setPage] = useState(0)
+  const [last, setLast] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  function buildParams(p: number) {
+    const params = new URLSearchParams({ sort, size: '30', page: String(p) })
+    if (query.trim()) params.set('keyword', query.trim())
+    return params
+  }
 
   useEffect(() => {
     setDecks(null)
-    const params = new URLSearchParams({ sort, size: '30' })
-    if (query.trim()) params.set('keyword', query.trim())
+    setPage(0)
+    setLast(true)
     let alive = true   // 빠르게 검색·정렬을 바꾸면 늦게 도착한 옛 응답이 새 결과를 덮는다 — 이 effect가 살아있을 때만 반영
-    api<PageResp<PublicDeck>>(`/public/decks?${params}`)
-      .then((p) => { if (alive) setDecks(p.content) })
+    api<PageResp<PublicDeck>>(`/public/decks?${buildParams(0)}`)
+      .then((p) => { if (alive) { setDecks(p.content); setLast(p.last) } })
       .catch((e) => { if (alive) setError(e.message) })
     return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, sort])
+
+  async function loadMore() {
+    if (loadingMore || last) return
+    setLoadingMore(true)
+    try {
+      const next = page + 1
+      const p = await api<PageResp<PublicDeck>>(`/public/decks?${buildParams(next)}`)
+      setDecks((ds) => [...(ds ?? []), ...p.content])
+      setPage(next)
+      setLast(p.last)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   async function toggleLike(deck: PublicDeck) {
     if (busyId) return
@@ -126,6 +153,14 @@ export default function Explore() {
             </p>
           )}
         </div>
+
+        {decks !== null && !last && (
+          <div style={{ textAlign: 'center', margin: '22px 0 8px' }}>
+            <button className="btn-primary" disabled={loadingMore} onClick={loadMore} style={{ minWidth: 160 }}>
+              {loadingMore ? '불러오는 중...' : '더 보기 ↓'}
+            </button>
+          </div>
+        )}
       </div>
     </>
   )

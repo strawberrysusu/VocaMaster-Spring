@@ -20,6 +20,7 @@ export interface LikeResponse {
 export interface PageResp<T> {
   content: T[]
   totalElements: number
+  last: boolean   // Spring Page 표준 필드 — 마지막 페이지면 true ('더 보기' 표시 여부)
 }
 
 export interface PublicCard {
