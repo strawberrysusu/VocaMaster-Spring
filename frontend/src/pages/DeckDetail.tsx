@@ -224,6 +224,11 @@ export default function DeckDetail() {
             ) : (
               <button className="btn-primary" disabled title="카드를 먼저 추가하세요">복습 학습 (Leitner)</button>
             )}
+            {deck !== null && deck.starredCount > 0 && (
+              <Link to={`/study?deckId=${id}&starredOnly=1`} className="mode-btn" title={`★ 표시한 ${deck.starredCount}장만 복습`}>
+                ⭐만
+              </Link>
+            )}
             {cards.length >= 2 ? (
               <Link to={`/quiz/${id}`} className="mode-btn">퀴즈</Link>
             ) : (

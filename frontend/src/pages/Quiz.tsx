@@ -51,6 +51,7 @@ export default function Quiz() {
   const [direction, setDirection] = useState<Direction>('front_to_back')
   const [count, setCount] = useState(10)
   const [wrongOnly, setWrongOnly] = useState(false)
+  const [starredOnly, setStarredOnly] = useState(false)   // 별표만 — wrongOnly와 상호 배타 (백엔드 else-if 순서와 일치)
   const [choices, setChoices] = useState<4 | 5 | 6>(() => loadSettings().quizChoices)   // 선택지 수 — 설정에 기억
   const [cardCount, setCardCount] = useState<number | null>(null)   // 문제 수 상한 = 덱 카드 수
 
@@ -76,7 +77,7 @@ export default function Quiz() {
     try {
       const body = opts?.sourceSessionId
         ? { direction, total: count, choiceCount: choices, sourceSessionId: opts.sourceSessionId }
-        : { direction, total: count, choiceCount: choices, wrongOnly }
+        : { direction, total: count, choiceCount: choices, wrongOnly, starredOnly }
       const res = await api<StartResp>(`/decks/${deckId}/quiz-sessions`, { method: 'POST', body: JSON.stringify(body) })
       setSummary(null)   // 성공한 뒤에만 요약을 치운다 — 실패하면 결과 화면 유지
       setSession(res)
@@ -229,14 +230,15 @@ export default function Quiz() {
             <div className="setup-row">
               <span className="setup-label">범위</span>
               <div className="sort-tabs">
-                <button className={!wrongOnly ? 'active' : ''} disabled={busy} onClick={() => setWrongOnly(false)}>전체</button>
-                <button className={wrongOnly ? 'active' : ''} disabled={busy} onClick={() => setWrongOnly(true)}>오답만</button>
+                <button className={!wrongOnly && !starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(false); setStarredOnly(false) }}>전체</button>
+                <button className={wrongOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(true); setStarredOnly(false) }}>오답만</button>
+                <button className={starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setStarredOnly(true); setWrongOnly(false) }}>⭐ 별표만</button>
               </div>
             </div>
             <button className="cta" style={{ marginTop: 8 }} disabled={busy} onClick={() => start()}>
               {busy ? '준비 중...' : '시작'}
             </button>
-            <p className="muted" style={{ fontSize: 12.5 }}>덱의 서로 다른 답이 모자라면 선택지가 그만큼만 나와요 (최소 2). '오답만'은 지금까지 틀린 카드 전체예요</p>
+            <p className="muted" style={{ fontSize: 12.5 }}>덱의 서로 다른 답이 모자라면 선택지가 그만큼만 나와요 (최소 2). '오답만'은 지금까지 틀린 카드, '별표만'은 ★ 표시한 카드예요</p>
           </div>
         )}
 

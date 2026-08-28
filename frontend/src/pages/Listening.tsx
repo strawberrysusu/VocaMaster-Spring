@@ -41,6 +41,7 @@ export default function Listening() {
   const [playingIdx, setPlayingIdx] = useState<number | null>(null)
   const [count, setCount] = useState(10)
   const [ordered, setOrdered] = useState(false)   // true=1번부터 순서대로, false=무작위
+  const [starredOnly, setStarredOnly] = useState(false)   // 별표만 — 듣기는 서버 세션이 없어 클라이언트에서 거른다
   const [rate, setRate] = useState(0.92)
   const [times, setTimes] = useState(3)
   const [gapSec, setGapSec] = useState(1.8)
@@ -109,9 +110,11 @@ export default function Listening() {
     step(from)
   }
 
+  const activePool = starredOnly ? pool.filter((c) => c.starred) : pool
+
   function start() {
-    const n = Math.max(1, Math.min(count, pool.length))
-    const base = ordered ? [...pool] : [...pool].sort(() => Math.random() - 0.5)
+    const n = Math.max(1, Math.min(count, activePool.length))
+    const base = ordered ? [...activePool] : [...activePool].sort(() => Math.random() - 0.5)
     const q = base.slice(0, n).map((card) => ({ card, spelling: '', meaning: '' }))
     setQueue(q)
     setGraded(false)
@@ -166,11 +169,25 @@ export default function Listening() {
                 type="number"
                 className="count-input"
                 min={1}
-                max={pool.length || 1}
+                max={activePool.length || 1}
                 value={count}
                 onChange={(e) => setCount(Number(e.target.value))}
               />
-              <span className="muted" style={{ fontSize: 13 }}>/ 카드 {pool.length}장</span>
+              <span className="muted" style={{ fontSize: 13 }}>/ 카드 {activePool.length}장{starredOnly ? ' (별표)' : ''}</span>
+            </div>
+            <div className="setup-row">
+              <span className="setup-label">범위</span>
+              <div className="sort-tabs">
+                <button className={!starredOnly ? 'active' : ''} onClick={() => setStarredOnly(false)}>전체</button>
+                <button
+                  className={starredOnly ? 'active' : ''}
+                  disabled={pool.filter((c) => c.starred).length === 0}
+                  title={pool.some((c) => c.starred) ? '' : '★ 표시한 카드가 없어요'}
+                  onClick={() => setStarredOnly(true)}
+                >
+                  ⭐ 별표만
+                </button>
+              </div>
             </div>
             <div className="setup-row">
               <span className="setup-label">출제 순서</span>
@@ -202,7 +219,7 @@ export default function Listening() {
               </div>
             </div>
             <div className="answer-buttons">
-              <button className="answer-yes" disabled={pool.length === 0 || !isTtsSupported()} onClick={start}>
+              <button className="answer-yes" disabled={activePool.length === 0 || !isTtsSupported()} onClick={start}>
                 🔊 시험 시작 (전체 재생)
               </button>
             </div>

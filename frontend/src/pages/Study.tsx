@@ -29,6 +29,7 @@ interface AnswerResult {
 export default function Study() {
   const [params] = useSearchParams()
   const deckId = params.get('deckId')
+  const starredOnly = params.get('starredOnly') === '1'   // /study?deckId=N&starredOnly=1 (덱 상세 '⭐만' 진입)
 
   const [queue, setQueue] = useState<StudyCard[] | null>(null)
   const [idx, setIdx] = useState(0)
@@ -50,14 +51,15 @@ export default function Study() {
     if (deckId) {
       fetchAllCards(deckId)
         .then(({ cards }) => {
-          setQueue(cards.map((c) => ({ cardId: c.id, front: c.front, back: c.back, reading: c.reading })))
+          const picked = starredOnly ? cards.filter((c) => c.starred) : cards
+          setQueue(picked.map((c) => ({ cardId: c.id, front: c.front, back: c.back, reading: c.reading })))
           localStorage.setItem('vm.lastStudyDeckId', deckId) // 홈 '이어서 학습' 카드 재료
         })
         .catch((e) => setError(e.message))
     } else {
       api<StudyCard[]>('/reviews/due').then(setQueue).catch((e) => setError(e.message))
     }
-  }, [deckId])
+  }, [deckId, starredOnly])
 
   useEffect(loadQueue, [loadQueue])
 
@@ -95,7 +97,7 @@ export default function Study() {
 
         {queue !== null && total === 0 && (
           <div className="stub">
-            <h2>{deckId ? '이 덱에는 카드가 없어요' : '지금 복습할 카드가 없어요 🎉'}</h2>
+            <h2>{deckId ? (starredOnly ? '★ 표시한 카드가 없어요' : '이 덱에는 카드가 없어요') : '지금 복습할 카드가 없어요 🎉'}</h2>
             <p>
               <Link to={deckId ? `/decks/${deckId}` : '/'} className="link" style={{ color: 'var(--a)' }}>
                 ← 돌아가기
