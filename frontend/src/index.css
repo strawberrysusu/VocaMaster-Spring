@@ -1555,3 +1555,11 @@ ruby rt { font-size: 0.56em; color: #8a93a5; font-weight: 500; user-select: none
 .listen-marks { font-size: 13px; white-space: nowrap; }
 .listen-answer { margin: 0 0 4px 78px; font-size: 13px; color: #99566a; }
 @media (max-width: 640px) { .listen-row { grid-template-columns: 24px 36px 1fr 1fr auto; } .listen-answer { margin-left: 60px; } }
+
+/* 덱 일괄 공개 전환 (선택 모드) */
+.select-toggle.on { border-color: var(--a, #55c); color: var(--a, #55c); }
+.bulk-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -6px 0 14px; padding: 10px 12px; background: var(--a-soft, #eef); border-radius: 12px; font-size: 13.5px; }
+.bulk-sep { color: #99a; }
+.deck-card.selected { outline: 2px solid var(--a, #55c); }
+.pick-mark { position: absolute; top: 10px; right: 12px; font-size: 15px; color: var(--a, #55c); }
+.deck-card { position: relative; }
