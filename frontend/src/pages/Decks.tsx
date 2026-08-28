@@ -28,7 +28,7 @@ export default function Decks() {
   const [busy, setBusy] = useState(false)
   // 페이지 나누기 (8/28) — 덱 수십 개를 한 화면에 쏟으면 과부하. 목록은 이미 다 받아오므로 화면에서만 나눈다
   const [page, setPage] = useState(0)
-  const PAGE_SIZE = 12
+  const PAGE_SIZE = 30
 
   function load() {
     api<Deck[]>('/decks').then(setDecks).catch((e) => setError(e.message))

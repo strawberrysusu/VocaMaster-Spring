@@ -14,43 +14,25 @@ export default function Explore() {
   const [copiedIds, setCopiedIds] = useState<Record<number, boolean>>({})
   const [busyId, setBusyId] = useState<number | null>(null)
   const [error, setError] = useState('')
-  // 더 보기 (8/28) — 백엔드 Page는 원래 완비, 화면이 첫 페이지만 쓰고 있었다
+  // 페이지 넘김 (8/28) — 백엔드 Page는 원래 완비, 화면이 첫 페이지만 쓰고 있었다.
+  // '더 보기'(이어 붙이기)가 아니라 페이지 교체 — 쌓이면 과부하가 되돌아온다 (사용자 피드백)
   const [page, setPage] = useState(0)
-  const [last, setLast] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-
-  function buildParams(p: number) {
-    const params = new URLSearchParams({ sort, size: '30', page: String(p) })
-    if (query.trim()) params.set('keyword', query.trim())
-    return params
-  }
+  const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
     setDecks(null)
-    setPage(0)
-    setLast(true)
+    const params = new URLSearchParams({ sort, size: '30', page: String(page) })
+    if (query.trim()) params.set('keyword', query.trim())
     let alive = true   // 빠르게 검색·정렬을 바꾸면 늦게 도착한 옛 응답이 새 결과를 덮는다 — 이 effect가 살아있을 때만 반영
-    api<PageResp<PublicDeck>>(`/public/decks?${buildParams(0)}`)
-      .then((p) => { if (alive) { setDecks(p.content); setLast(p.last) } })
+    api<PageResp<PublicDeck>>(`/public/decks?${params}`)
+      .then((p) => { if (alive) { setDecks(p.content); setTotalPages(Math.max(1, p.totalPages)) } })
       .catch((e) => { if (alive) setError(e.message) })
     return () => { alive = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, sort])
+  }, [query, sort, page])
 
-  async function loadMore() {
-    if (loadingMore || last) return
-    setLoadingMore(true)
-    try {
-      const next = page + 1
-      const p = await api<PageResp<PublicDeck>>(`/public/decks?${buildParams(next)}`)
-      setDecks((ds) => [...(ds ?? []), ...p.content])
-      setPage(next)
-      setLast(p.last)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setLoadingMore(false)
-    }
+  function goPage(p: number) {
+    setPage(p)
+    window.scrollTo({ top: 0, behavior: 'smooth' })   // 아래 페이저에서 눌러도 새 목록의 처음부터
   }
 
   async function toggleLike(deck: PublicDeck) {
@@ -97,18 +79,23 @@ export default function Explore() {
             placeholder="제목이나 설명으로 검색"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && setQuery(keyword)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setQuery(keyword)
+                setPage(0)
+              }
+            }}
           />
-          <button className="btn-primary" onClick={() => setQuery(keyword)}>
+          <button className="btn-primary" onClick={() => { setQuery(keyword); setPage(0) }}>
             검색
           </button>
         </div>
 
         <div className="sort-tabs">
-          <button className={sort === 'popular' ? 'active' : ''} onClick={() => setSort('popular')}>
+          <button className={sort === 'popular' ? 'active' : ''} onClick={() => { setSort('popular'); setPage(0) }}>
             인기순
           </button>
-          <button className={sort === 'recent' ? 'active' : ''} onClick={() => setSort('recent')}>
+          <button className={sort === 'recent' ? 'active' : ''} onClick={() => { setSort('recent'); setPage(0) }}>
             최신순
           </button>
         </div>
@@ -154,11 +141,15 @@ export default function Explore() {
           )}
         </div>
 
-        {decks !== null && !last && (
-          <div style={{ textAlign: 'center', margin: '22px 0 8px' }}>
-            <button className="btn-primary" disabled={loadingMore} onClick={loadMore} style={{ minWidth: 160 }}>
-              {loadingMore ? '불러오는 중...' : '더 보기 ↓'}
-            </button>
+        {totalPages > 1 && (
+          <div className="pager">
+            <button disabled={page === 0} onClick={() => goPage(page - 1)}>◀ 이전</button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button key={i} className={i === page ? 'active' : ''} onClick={() => goPage(i)}>
+                {i + 1}
+              </button>
+            ))}
+            <button disabled={page === totalPages - 1} onClick={() => goPage(page + 1)}>다음 ▶</button>
           </div>
         )}
       </div>
