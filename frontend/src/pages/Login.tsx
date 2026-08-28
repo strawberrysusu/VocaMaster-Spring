@@ -6,6 +6,7 @@ export default function Login() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [password2, setPassword2] = useState('')   // 가입 시 재입력 확인 — 서버 전송 없음 (클라 검증 전용)
   const [nickname, setNickname] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -34,6 +35,10 @@ export default function Login() {
 
   async function submit() {
     if (submitting) return
+    if (mode === 'register' && password !== password2) {
+      setError('비밀번호가 서로 달라요 — 같은 비밀번호를 두 번 입력해주세요')
+      return
+    }
     setSubmitting(true)
     setError('')
     try {
@@ -77,7 +82,25 @@ export default function Login() {
           onKeyDown={(e) => e.key === 'Enter' && submit()}
         />
         {mode === 'register' && (
-          <input placeholder="닉네임" value={nickname} onChange={(e) => setNickname(e.target.value)} />
+          <>
+            <input
+              placeholder="비밀번호 확인 (한 번 더)"
+              type="password"
+              value={password2}
+              onChange={(e) => setPassword2(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submit()}
+              aria-label="비밀번호 확인"
+            />
+            {password2 !== '' && password !== password2 && (
+              <p className="error" style={{ margin: '0 0 4px', fontSize: 13 }}>비밀번호가 서로 달라요</p>
+            )}
+            <input
+              placeholder="닉네임"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submit()}
+            />
+          </>
         )}
         {error && <p className="error" role="alert">{error}</p>}
         <button className="primary" disabled={submitting} onClick={submit}>
@@ -94,7 +117,7 @@ export default function Login() {
           <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.7 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.2C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.2 0 11.7-2 15.6-5.6l-7.7-6c-2.1 1.4-4.8 2.3-7.9 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>
           구글로 로그인
         </button>
-        <button className="ghost" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+        <button className="ghost" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setPassword2(''); setError('') }}>
           {mode === 'login' ? '계정이 없어요 → 회원가입' : '이미 계정이 있어요 → 로그인'}
         </button>
       </div>
