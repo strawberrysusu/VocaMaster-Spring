@@ -43,7 +43,6 @@ public class SecurityConfig {
                     "/auth/register", "/auth/login", "/auth/refresh", "/auth/logout",
                     "/oauth2/**", "/login/oauth2/**",           // 구글 로그인 시작·콜백 (ADR-047)
                     "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**",
-                    "/pages/**", "/css/**", "/js/**",
                     "/", "/app/**",                             // React SPA (정적 번들 + 딥링크 fallback)
                     "/privacy.html"                             // 개인정보처리방침 — 구글 OAuth 게시 요건 (ADR-047)
                 ).permitAll()

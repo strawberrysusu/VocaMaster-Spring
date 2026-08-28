@@ -12,7 +12,8 @@ import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckService;
-import com.vocamaster.quiz.QuizAttemptRepository;
+import com.vocamaster.quiz.QuizQuestionRepository;
+import com.vocamaster.quiz.QuizSessionRepository;
 import com.vocamaster.study.dto.*;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
@@ -51,7 +52,8 @@ public class StudyService {
     private final CardRepository cardRepository;
     private final DeckService deckService;
     private final UserRepository userRepository;
-    private final QuizAttemptRepository quizAttemptRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
+    private final QuizSessionRepository quizSessionRepository;
     private final StatsService statsService;
 
     // 학습 세션 시작
@@ -172,13 +174,14 @@ public class StudyService {
             }
         }
 
-        // 퀴즈 통계
-        long quizTotal = quizAttemptRepository.countByDeckIdAndUserId(deckId, userId);
-        long quizCorrect = quizAttemptRepository.countByDeckIdAndUserIdAndIsCorrectTrue(deckId, userId);
+        // 퀴즈 통계 — 세션(quiz_questions) 기반 (8/28 전환: 구형 attempts는 Mustache 청소로 기록 중단.
+        // 그전엔 React 세션 퀴즈가 통계에 안 잡히던 잠복 버그이기도 했다)
+        long quizTotal = quizQuestionRepository.countAnswered(deckId, userId);
+        long quizCorrect = quizQuestionRepository.countAnsweredCorrect(deckId, userId);
 
         // 최근 7일
         long recentStudy = sessionRepository.countByDeckIdAndUserIdAndCreatedAtAfter(deckId, userId, sevenDaysAgo);
-        long recentQuiz = quizAttemptRepository.countByDeckIdAndUserIdAndCreatedAtAfter(deckId, userId, sevenDaysAgo);
+        long recentQuiz = quizSessionRepository.countByDeckIdAndUserIdAndStartedAtAfter(deckId, userId, sevenDaysAgo);
 
         return DeckStatsResponse.builder()
                 .deckId(deckId)

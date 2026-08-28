@@ -15,4 +15,7 @@ public interface QuizSessionRepository extends JpaRepository<QuizSession, Long> 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from QuizSession s where s.id = :id")
     Optional<QuizSession> findWithLockById(@Param("id") Long id);
+
+    // 덱 통계: 최근 7일 퀴즈 세션 수 (attempts 기반에서 전환, 8/28)
+    long countByDeckIdAndUserIdAndStartedAtAfter(Long deckId, Long userId, java.time.LocalDateTime after);
 }
