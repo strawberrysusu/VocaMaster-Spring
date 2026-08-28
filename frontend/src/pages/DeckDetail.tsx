@@ -9,6 +9,7 @@ import Ruby from '../components/Ruby'
 interface Deck {
   id: number
   title: string
+  description: string | null
   visibility: 'PRIVATE' | 'PUBLIC' | 'UNLISTED'
   cardCount: number
   starredCount: number
@@ -24,6 +25,16 @@ export default function DeckDetail() {
   const [reading, setReading] = useState('')   // 읽기(요미가나) — 선택
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
+  // 덱 제목·설명 인라인 수정 (8/28, 동결 예외 — 기존 PATCH /decks/{id} 재사용)
+  const [editingDeck, setEditingDeck] = useState(false)
+  const [dTitle, setDTitle] = useState('')
+  const [dDesc, setDDesc] = useState('')
+  // 카드 인라인 수정 — 한 번에 한 행만 (기존 PATCH /cards/{id} 재사용)
+  const [editingCardId, setEditingCardId] = useState<number | null>(null)
+  const [eFront, setEFront] = useState('')
+  const [eReading, setEReading] = useState('')
+  const [eBack, setEBack] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const load = useCallback(() => {
     api<Deck>(`/decks/${id}`).then(setDeck).catch((e) => setError(e.message))
@@ -85,6 +96,55 @@ export default function DeckDetail() {
     }
   }
 
+  function startDeckEdit() {
+    if (!deck) return
+    setDTitle(deck.title)
+    setDDesc(deck.description ?? '')
+    setEditingDeck(true)
+  }
+
+  async function saveDeck() {
+    if (saving || !dTitle.trim()) return
+    setSaving(true)
+    try {
+      await api(`/decks/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ title: dTitle.trim(), description: dDesc.trim() }),
+      })
+      setEditingDeck(false)
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function startCardEdit(c: CardDto) {
+    setEditingCardId(c.id)
+    setEFront(c.front)
+    setEReading(c.reading ?? '')
+    setEBack(c.back)
+  }
+
+  async function saveCard() {
+    if (saving || editingCardId === null || !eFront.trim() || !eBack.trim()) return
+    setSaving(true)
+    try {
+      // reading은 빈 문자열도 그대로 보낸다 — 백엔드가 ""를 "읽기 삭제"로 처리
+      await api(`/cards/${editingCardId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ front: eFront.trim(), reading: eReading.trim(), back: eBack.trim() }),
+      })
+      setEditingCardId(null)
+      load()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function removeDeck() {
     if (!deck) return
     if (!window.confirm(`덱 "${deck.title}"을(를) 삭제할까요?\n카드 ${cards.length}장과 학습·퀴즈·타이핑 기록이 전부 사라져요.`)) return
@@ -107,7 +167,40 @@ export default function DeckDetail() {
 
         <div className="page-head">
           <div>
-            <h1>{deck?.title ?? '...'}</h1>
+            {editingDeck ? (
+              <div className="deck-edit-form">
+                <input
+                  aria-label="덱 이름"
+                  value={dTitle}
+                  onChange={(e) => setDTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && saveDeck()}
+                  maxLength={100}
+                  autoFocus
+                />
+                <input
+                  aria-label="덱 설명"
+                  placeholder="설명 (선택)"
+                  value={dDesc}
+                  onChange={(e) => setDDesc(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && saveDeck()}
+                  maxLength={255}
+                />
+                <div className="edit-actions">
+                  <button className="btn-primary" disabled={saving || !dTitle.trim()} onClick={saveDeck}>
+                    {saving ? '저장 중...' : '저장'}
+                  </button>
+                  <button className="btn-ghost-link" disabled={saving} onClick={() => setEditingDeck(false)}>취소</button>
+                </div>
+              </div>
+            ) : (
+              <h1>
+                {deck?.title ?? '...'}
+                {deck && (
+                  <button className="edit-btn" title="제목·설명 수정" aria-label="덱 제목·설명 수정" onClick={startDeckEdit}>✏️</button>
+                )}
+              </h1>
+            )}
+            {!editingDeck && deck?.description && <p className="deck-desc">{deck.description}</p>}
             <p className="sub" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               카드 {cards.length}장{deck ? ` · 별표 ${deck.starredCount}장` : ''}
               <select
@@ -182,21 +275,37 @@ export default function DeckDetail() {
         {error && <p className="error" role="alert">{error}</p>}
 
         <div className="word-list">
-          {cards.map((c, i) => (
-            <div key={c.id} className="word-row">
-              <span className="word-idx">{i + 1}</span>
-              <span className="word-front"><Ruby front={c.front} reading={c.reading} /> <SpeakButton text={c.reading || c.front} /></span>
-              <span className="word-back">{c.back}</span>
-              <div className="row-actions">
-                <button className={`star-btn ${c.starred ? 'on' : ''}`} title={c.starred ? '별표 해제' : '별표'} aria-pressed={c.starred} onClick={() => toggleStar(c.id)}>
-                  ★
-                </button>
-                <button className="del-btn" title="카드 삭제" aria-label={`${c.front} 삭제`} onClick={() => removeCard(c.id, c.front)}>
-                  🗑
-                </button>
+          {cards.map((c, i) =>
+            c.id === editingCardId ? (
+              <div key={c.id} className="word-row row-edit">
+                <span className="word-idx">{i + 1}</span>
+                <input aria-label="단어" value={eFront} onChange={(e) => setEFront(e.target.value)} maxLength={255} autoFocus />
+                <input aria-label="읽기" className="reading-input" placeholder="읽기 (선택)" value={eReading} onChange={(e) => setEReading(e.target.value)} maxLength={200} />
+                <input aria-label="뜻" value={eBack} onChange={(e) => setEBack(e.target.value)} maxLength={255} onKeyDown={(e) => e.key === 'Enter' && saveCard()} />
+                <div className="row-actions">
+                  <button className="btn-primary btn-sm" disabled={saving || !eFront.trim() || !eBack.trim()} onClick={saveCard}>저장</button>
+                  <button className="btn-ghost-link" disabled={saving} onClick={() => setEditingCardId(null)}>취소</button>
+                </div>
               </div>
-            </div>
-          ))}
+            ) : (
+              <div key={c.id} className="word-row">
+                <span className="word-idx">{i + 1}</span>
+                <span className="word-front"><Ruby front={c.front} reading={c.reading} /> <SpeakButton text={c.reading || c.front} /></span>
+                <span className="word-back">{c.back}</span>
+                <div className="row-actions">
+                  <button className="edit-btn" title="카드 수정" aria-label={`${c.front} 수정`} onClick={() => startCardEdit(c)}>
+                    ✏️
+                  </button>
+                  <button className={`star-btn ${c.starred ? 'on' : ''}`} title={c.starred ? '별표 해제' : '별표'} aria-pressed={c.starred} onClick={() => toggleStar(c.id)}>
+                    ★
+                  </button>
+                  <button className="del-btn" title="카드 삭제" aria-label={`${c.front} 삭제`} onClick={() => removeCard(c.id, c.front)}>
+                    🗑
+                  </button>
+                </div>
+              </div>
+            )
+          )}
           {cards.length === 0 && (
             <p className="muted" style={{ padding: '24px 4px' }}>
               아직 카드가 없어요 — 위에서 첫 단어를 추가하면 학습을 시작할 수 있어요.

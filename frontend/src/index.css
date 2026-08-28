@@ -1563,3 +1563,47 @@ ruby rt { font-size: 0.56em; color: #8a93a5; font-weight: 500; user-select: none
 .deck-card.selected { outline: 2px solid var(--a, #55c); }
 .pick-mark { position: absolute; top: 10px; right: 12px; font-size: 15px; color: var(--a, #55c); }
 .deck-card { position: relative; }
+
+/* ===== 덱·카드 인라인 수정 (8/28) ===== */
+.edit-btn {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  opacity: 0.55;
+  padding: 2px 4px;
+}
+.edit-btn:hover { opacity: 1; }
+h1 .edit-btn { font-size: 17px; vertical-align: 2px; margin-left: 6px; }
+
+.deck-desc {
+  margin: 2px 0 6px;
+  color: var(--muted, #6b7280);
+  font-size: 14px;
+}
+
+.deck-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 480px;
+}
+.deck-edit-form input {
+  padding: 9px 12px;
+  border: 1.5px solid #d8d8e2;
+  border-radius: 9px;
+  font-size: 15px;
+}
+.deck-edit-form input:first-child { font-size: 19px; font-weight: 700; }
+.edit-actions { display: flex; gap: 8px; align-items: center; }
+
+.word-row.row-edit input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1.5px solid #d8d8e2;
+  border-radius: 8px;
+  font-size: 14.5px;
+}
+.word-row.row-edit .row-actions { opacity: 1; display: flex; gap: 6px; align-items: center; }
+.btn-sm { padding: 7px 14px; font-size: 13.5px; }
