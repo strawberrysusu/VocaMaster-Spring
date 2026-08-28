@@ -26,6 +26,9 @@ export default function Decks() {
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [busy, setBusy] = useState(false)
+  // 페이지 나누기 (8/28) — 덱 수십 개를 한 화면에 쏟으면 과부하. 목록은 이미 다 받아오므로 화면에서만 나눈다
+  const [page, setPage] = useState(0)
+  const PAGE_SIZE = 12
 
   function load() {
     api<Deck[]>('/decks').then(setDecks).catch((e) => setError(e.message))
@@ -78,6 +81,9 @@ export default function Decks() {
   }
 
   const totalCards = decks.reduce((a, d) => a + d.cardCount, 0)
+  const totalPages = Math.max(1, Math.ceil(decks.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages - 1)   // 삭제로 페이지 수가 줄어도 빈 화면 안 되게
+  const visible = decks.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
 
   return (
     <>
@@ -117,7 +123,7 @@ export default function Decks() {
           <div className="bulk-bar">
             <span>{selected.size}개 선택</span>
             <button className="btn-ghost-link" disabled={busy} onClick={() => setSelected(new Set(decks.map((d) => d.id)))}>
-              전체 선택
+              전체 선택 ({decks.length}개, 모든 페이지)
             </button>
             <span className="bulk-sep">→</span>
             <button className="btn-ghost-link" disabled={busy || selected.size === 0} onClick={() => applyVisibility('PUBLIC')}>🌐 전체 공개</button>
@@ -130,7 +136,7 @@ export default function Decks() {
         {error && <p className="error" role="alert">{error}</p>}
 
         <div className="deck-grid">
-          {decks.map((d) => (
+          {visible.map((d) => (
             <Link
               key={d.id}
               to={`/decks/${d.id}`}
@@ -150,6 +156,18 @@ export default function Decks() {
           ))}
           {decks.length === 0 && <p className="muted">덱이 없어요. 위에서 첫 덱을 만들어보세요.</p>}
         </div>
+
+        {totalPages > 1 && (
+          <div className="pager">
+            <button disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>◀ 이전</button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button key={i} className={i === safePage ? 'active' : ''} onClick={() => setPage(i)}>
+                {i + 1}
+              </button>
+            ))}
+            <button disabled={safePage === totalPages - 1} onClick={() => setPage(safePage + 1)}>다음 ▶</button>
+          </div>
+        )}
       </div>
     </>
   )
