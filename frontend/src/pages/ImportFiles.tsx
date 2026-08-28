@@ -37,6 +37,7 @@ function preprocess(raw: string): string {
 
 export default function ImportFiles() {
   const [files, setFiles] = useState<File[]>([])
+  const [prefix, setPrefix] = useState('')   // 덱 이름 접두어 — "N1 — " + day01 식으로 출처 구분 (폴더 기능 전까지의 정리 수단)
   const [busy, setBusy] = useState(false)
   const [current, setCurrent] = useState('')
   const [results, setResults] = useState<FileResult[]>([])
@@ -49,7 +50,7 @@ export default function ImportFiles() {
     // 순차 처리 — 파일 수십 개를 동시에 쏘면 서버(1GB)가 고생한다. 하나 끝나면 다음
     for (const f of files) {
       setCurrent(f.name)
-      const title = f.name.replace(/\.[^.]+$/, '')
+      const title = (prefix.trim() ? `${prefix.trim()} ` : '') + f.name.replace(/\.[^.]+$/, '')
       try {
         const text = preprocess(await f.text())
         if (!text.trim()) throw new Error('빈 파일')
@@ -94,6 +95,23 @@ export default function ImportFiles() {
         </div>
 
         <div className="quiz-setup">
+          <div className="setup-row">
+            <span className="setup-label">이름 앞에 붙일 말</span>
+            <input
+              placeholder="예: N1 (선택)"
+              value={prefix}
+              disabled={busy}
+              maxLength={30}
+              onChange={(e) => setPrefix(e.target.value)}
+              style={{ maxWidth: 220 }}
+            />
+            {prefix.trim() && files.length > 0 && (
+              <span className="muted" style={{ fontSize: 12.5 }}>
+                → "{prefix.trim()} {files[0].name.replace(/\.[^.]+$/, '')}" 식으로 만들어져요
+              </span>
+            )}
+          </div>
+
           <label className="file-pick">
             <input
               type="file"
