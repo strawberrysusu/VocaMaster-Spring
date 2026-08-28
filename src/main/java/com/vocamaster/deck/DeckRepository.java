@@ -20,6 +20,7 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
     @Query(value = """
             select d from Deck d join fetch d.user
             where d.visibility = :visibility
+              and d.user.deletedAt is null
               and (:keyword is null
                    or lower(d.title) like lower(concat('%', :keyword, '%'))
                    or lower(d.description) like lower(concat('%', :keyword, '%')))
@@ -28,6 +29,7 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
            countQuery = """
             select count(d) from Deck d
             where d.visibility = :visibility
+              and d.user.deletedAt is null
               and (:keyword is null
                    or lower(d.title) like lower(concat('%', :keyword, '%'))
                    or lower(d.description) like lower(concat('%', :keyword, '%')))
@@ -42,6 +44,7 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
     @Query(value = """
             select d from Deck d join fetch d.user
             where d.visibility = :visibility
+              and d.user.deletedAt is null
               and (:keyword is null
                    or lower(d.title) like lower(concat('%', :keyword, '%'))
                    or lower(d.description) like lower(concat('%', :keyword, '%')))
@@ -50,6 +53,7 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
            countQuery = """
             select count(d) from Deck d
             where d.visibility = :visibility
+              and d.user.deletedAt is null
               and (:keyword is null
                    or lower(d.title) like lower(concat('%', :keyword, '%'))
                    or lower(d.description) like lower(concat('%', :keyword, '%')))
@@ -65,7 +69,7 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
 
     // 캐시가 준 id들을 PUBLIC 조건으로 재검증하며 로드 (ADR-035 — 권한 판단은 항상 DB).
     // IN 결과는 입력 순서를 보장하지 않음 — 호출자가 Redis 순서로 재조립해야 함
-    @Query("select d from Deck d join fetch d.user where d.id in :ids and d.visibility = :visibility")
+    @Query("select d from Deck d join fetch d.user where d.id in :ids and d.visibility = :visibility and d.user.deletedAt is null")
     List<Deck> findByIdInAndVisibilityWithUser(@Param("ids") List<Long> ids,
                                                @Param("visibility") DeckVisibility visibility);
 

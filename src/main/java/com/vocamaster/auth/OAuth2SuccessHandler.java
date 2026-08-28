@@ -60,6 +60,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     .build();
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
             response.sendRedirect("/app/login?oauth=success");
+        } catch (LocalAccountExistsException e) {
+            // pre-hijack 가드 (Codex 검산 8/28) — 일반 가입 계정과 자동 연결 안 함, 어느 문으로 들어올지 안내
+            response.sendRedirect("/app/login?oauth=local_exists");
         } catch (Exception e) {
             // 어떤 실패든 스택이 사용자 화면에 새지 않게 — 로그인 화면에서 안내
             response.sendRedirect("/app/login?oauth=error");

@@ -112,6 +112,9 @@ public class PublicDeckService {
         if (deck.getVisibility() == DeckVisibility.PRIVATE) {
             throw new NotFoundException(DECK_NOT_FOUND);   // 403 아님 — 존재 자체를 숨김
         }
+        if (deck.getUser().isDeleted()) {
+            throw new NotFoundException(DECK_NOT_FOUND);   // 탈퇴 사용자의 콘텐츠 — 목록과 동일하게 숨김 (Codex 검산 8/28)
+        }
         return deck;
     }
 }

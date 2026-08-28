@@ -1,5 +1,6 @@
 package com.vocamaster.auth;
 
+import com.vocamaster.user.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,7 +17,8 @@ import java.util.List;
 /**
  * Bearer access token을 검증하고 SecurityContext에 CustomUserDetails를 박는 필터.
  *
- * - DB 조회 X (JWT 자체 검증 + JWT의 claim만 사용) — 성능 ↑
+ * - JWT 자체 검증 + claim 사용. 단 하나의 DB 조회: 탈퇴 여부(PK 존재 확인) — 탈퇴 즉시
+ *   기존 access token(최대 1h 잔존)도 차단하기 위함 (Codex 검산 2026-08-28, privacy 약속 정합)
  * - type=access 만 통과 (refresh token으로 일반 API 호출 차단 — 이중 방어)
  * - 3분기 (2026-08-19 정리):
  *   · 헤더 없음        → 익명으로 통과 (permitAll 공개 GET은 익명 응답, 보호 API는 entry point가 401)
@@ -28,6 +30,7 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -38,7 +41,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
 
-            if (jwtProvider.validate(token) && "access".equals(jwtProvider.getType(token))) {
+            if (jwtProvider.validate(token) && "access".equals(jwtProvider.getType(token))
+                    && userRepository.existsByIdAndDeletedAtIsNull(jwtProvider.getUserId(token))) {
                 Long userId = jwtProvider.getUserId(token);
                 String email = jwtProvider.getEmail(token);
                 CustomUserDetails principal = new CustomUserDetails(userId, email);

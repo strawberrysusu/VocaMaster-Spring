@@ -39,19 +39,35 @@ class GoogleLoginTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("같은 이메일의 기존(이메일 가입) 사용자 — 새 계정이 아니라 그 계정으로 로그인 (자동 연결)")
-    void existingLocalUser_sameAccount() {
+    @DisplayName("같은 이메일의 기존(이메일 가입) 계정 — 자동 연결 대신 거부 (pre-hijacking 차단, 정책 변경 8/28)")
+    void existingLocalUser_refused() {
+        // 시나리오: 공격자가 피해자의 Gmail 주소로 먼저 일반 가입해둔 상태.
+        // 진짜 주인이 구글 로그인해도 그 계정에 '합류'시키면 안 된다 — 두 사람이 한 계정을 공유하게 되므로.
         String email = "link_" + System.nanoTime() + "@gmail.com";
         User local = userRepository.save(User.builder()
-                .email(email).password(passwordEncoder.encode("Passw0rd!")).nickname("원주인").build());
+                .email(email).password(passwordEncoder.encode("Passw0rd!")).nickname("선점자").build());
 
-        authService.loginWithGoogle(email, "구글이름", "test-ua", "127.0.0.1");
+        assertThrows(LocalAccountExistsException.class,
+                () -> authService.loginWithGoogle(email, "진짜주인", "test-ua", "127.0.0.1"));
 
-        assertEquals(1, userRepository.findByEmail(email).stream().count(), "계정이 늘어나면 안 됨");
+        // 거부 이후에도 기존 계정은 무변경 (새 계정 생성도, 프로필 덮어쓰기도 없어야)
+        assertEquals(1, userRepository.findByEmail(email).stream().count());
         User after = userRepository.findByEmail(email).orElseThrow();
         assertEquals(local.getId(), after.getId());
-        assertEquals("원주인", after.getNickname(), "기존 프로필을 덮어쓰지 않아야");
-        assertNotNull(after.getPassword(), "기존 비밀번호 로그인도 계속 가능해야");
+        assertEquals("선점자", after.getNickname());
+    }
+
+    @Test
+    @DisplayName("구글로 만든 계정의 재로그인 — 새 계정 없이 같은 계정으로")
+    void repeatedGoogleLogin_sameAccount() {
+        String email = "re_" + System.nanoTime() + "@gmail.com";
+        authService.loginWithGoogle(email, "첫로그인", "test-ua", "127.0.0.1");
+        Long firstId = userRepository.findByEmail(email).orElseThrow().getId();
+
+        TokenPair pair = authService.loginWithGoogle(email, "두번째", "test-ua", "127.0.0.1");
+
+        assertNotNull(pair.accessToken());
+        assertEquals(firstId, userRepository.findByEmail(email).orElseThrow().getId());
     }
 
     @Test

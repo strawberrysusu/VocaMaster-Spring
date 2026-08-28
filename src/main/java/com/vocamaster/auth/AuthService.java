@@ -89,9 +89,12 @@ public class AuthService {
     }
 
     /**
-     * 구글 인증 성공 → 우리 토큰 발급으로 연결하는 다리 (ADR-047).
-     * 같은 이메일의 기존(local) 가입자는 자동으로 같은 계정에 로그인 —
-     * 구글이 이메일 소유를 검증(email_verified)한 것을 신뢰한다.
+     * 구글 인증 성공 → 우리 토큰 발급으로 연결하는 다리 (ADR-047, 정책 변경 2026-08-28).
+     *
+     * 기존 local(이메일 가입) 계정과의 자동 연결은 하지 않는다 — 거부한다 (Codex 검산):
+     * 이메일 가입에 소유 검증이 없어, 공격자가 남의 Gmail로 선가입해두면 진짜 주인이
+     * 구글 로그인으로 그 계정에 합류하는 pre-hijacking 경로가 되기 때문.
+     * 판정 기준은 password != null (구글 생성 계정만 비번이 없다) — provider 값보다 견고.
      */
     @Transactional
     public TokenPair loginWithGoogle(String email, String name, String userAgent, String ip) {
@@ -103,6 +106,9 @@ public class AuthService {
                     .email(email).password(null).nickname(nickname).provider("google").build());
         } else if (user.isDeleted()) {
             throw new UnauthorizedException("탈퇴한 계정입니다");
+        } else if (user.getPassword() != null) {
+            log.warn("구글 로그인 거부 — 같은 이메일의 일반(local) 계정 존재 (pre-hijack 가드), userId={}", user.getId());
+            throw new LocalAccountExistsException();
         }
         return issueTokens(user, userAgent, ip);
     }

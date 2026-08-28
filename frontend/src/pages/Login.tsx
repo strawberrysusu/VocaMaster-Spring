@@ -27,6 +27,9 @@ export default function Login() {
           navigate('/', { replace: true })
         })
         .catch(() => setError('구글 로그인 처리에 실패했어요 — 다시 시도해주세요'))
+    } else if (oauth === 'local_exists') {
+      // pre-hijack 가드 — 일반 가입 계정엔 구글 자동 연결을 하지 않는다 (Codex 검산 8/28)
+      setError('이 이메일로 일반 가입된 계정이 있어요 — 이메일/비밀번호로 로그인해 주세요')
     } else if (oauth === 'error') {
       setError('구글 로그인에 실패했어요 — 다시 시도하거나 이메일로 로그인해주세요')
     }
