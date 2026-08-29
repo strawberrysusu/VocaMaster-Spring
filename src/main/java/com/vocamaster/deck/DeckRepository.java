@@ -62,10 +62,10 @@ public interface DeckRepository extends JpaRepository<Deck, Long> {
                                          @Param("keyword") String keyword,
                                          Pageable pageable);
 
-    // 랭킹 재구축·전체 개수용 (ADR-035)
-    List<Deck> findByVisibility(DeckVisibility visibility);
+    // 랭킹 재구축·전체 개수용 (ADR-035). 탈퇴 소유자 제외판 — 캐시 total 뻥튀기·유령 ZSET 멤버 방지 (Codex 검산 8/29)
+    List<Deck> findByVisibilityAndUser_DeletedAtIsNull(DeckVisibility visibility);
 
-    long countByVisibility(DeckVisibility visibility);
+    long countByVisibilityAndUser_DeletedAtIsNull(DeckVisibility visibility);
 
     // 캐시가 준 id들을 PUBLIC 조건으로 재검증하며 로드 (ADR-035 — 권한 판단은 항상 DB).
     // IN 결과는 입력 순서를 보장하지 않음 — 호출자가 Redis 순서로 재조립해야 함

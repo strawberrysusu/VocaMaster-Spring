@@ -90,8 +90,9 @@ public class DeckService {
                 .orElseThrow(() -> new NotFoundException(PublicDeckService.DECK_NOT_FOUND));
 
         boolean isOwner = original.getUser().getId().equals(userId);
-        if (!isOwner && original.getVisibility() == DeckVisibility.PRIVATE) {
-            // 남의 비공개 = 없는 덱과 동일 응답 (존재 숨김). 자기 덱은 visibility 무관 복사 가능
+        if (!isOwner && (original.getVisibility() == DeckVisibility.PRIVATE || original.getUser().isDeleted())) {
+            // 남의 비공개 = 없는 덱과 동일 응답 (존재 숨김). 자기 덱은 visibility 무관 복사 가능.
+            // 탈퇴자 덱도 동일 404 — 탈퇴 전 ID를 알던 사용자의 복사 우회 차단 (Codex 검산 2026-08-29)
             throw new NotFoundException(PublicDeckService.DECK_NOT_FOUND);
         }
 

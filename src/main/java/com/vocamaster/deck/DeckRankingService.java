@@ -169,7 +169,7 @@ public class DeckRankingService {
     // 전체 재구축: DEL → PUBLIC 전체 ZADD → main TTL(65m) → ready 표지(60m).
     // 동시에 두 요청이 재구축하면 마지막이 이김 — 같은 DB를 읽으므로 결과 동일 (멱등)
     private void rebuild() {
-        List<Deck> publicDecks = deckRepository.findByVisibility(DeckVisibility.PUBLIC);
+        List<Deck> publicDecks = deckRepository.findByVisibilityAndUser_DeletedAtIsNull(DeckVisibility.PUBLIC);
         redis.delete(KEY);
         if (!publicDecks.isEmpty()) {
             Set<ZSetOperations.TypedTuple<String>> tuples = publicDecks.stream()

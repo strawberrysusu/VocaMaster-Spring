@@ -78,7 +78,7 @@ public class PublicDeckService {
         if (ids == null) return null;
 
         // ZCARD는 낡은 id를 셀 수 있어 총계는 DB가 정확 (비용은 count 하나 — 우리가 아끼려는 건 정렬이지 개수가 아님)
-        long total = deckRepository.countByVisibility(DeckVisibility.PUBLIC);
+        long total = deckRepository.countByVisibilityAndUser_DeletedAtIsNull(DeckVisibility.PUBLIC);
         if (ids.isEmpty()) return new PageImpl<>(List.of(), pageable, total);
 
         List<Deck> decks = deckRepository.findByIdInAndVisibilityWithUser(ids, DeckVisibility.PUBLIC);

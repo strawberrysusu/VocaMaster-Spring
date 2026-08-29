@@ -61,12 +61,13 @@ public class DeckLikeService {
         return LikeResponse.of(liked, deck.getLikeCount());
     }
 
-    // 접근 규칙은 복사(ADR-031)와 동일: 남의 PRIVATE = 없는 덱과 같은 404, 자기 덱은 visibility 무관
+    // 접근 규칙은 복사(ADR-031)와 동일: 남의 PRIVATE = 없는 덱과 같은 404, 자기 덱은 visibility 무관.
+    // 소유자가 탈퇴한 덱도 404 — 검색·상세에서 숨겨진 덱을 ID로 우회 접근하는 구멍 (Codex 검산 2026-08-29)
     private Deck visibleDeckOrThrow(Long deckId, Long userId) {
         Deck deck = deckRepository.findById(deckId)
                 .orElseThrow(() -> new NotFoundException(PublicDeckService.DECK_NOT_FOUND));
         if (!deck.getUser().getId().equals(userId)
-                && deck.getVisibility() == DeckVisibility.PRIVATE) {
+                && (deck.getVisibility() == DeckVisibility.PRIVATE || deck.getUser().isDeleted())) {
             throw new NotFoundException(PublicDeckService.DECK_NOT_FOUND);
         }
         return deck;
