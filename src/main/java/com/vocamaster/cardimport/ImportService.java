@@ -2,12 +2,14 @@ package com.vocamaster.cardimport;
 
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
+import com.vocamaster.cardimport.dto.ImportFileRequest;
 import com.vocamaster.cardimport.dto.ImportRequest;
 import com.vocamaster.cardimport.dto.ImportResponse;
 import com.vocamaster.cardimport.dto.PreviewResponse;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckService;
+import com.vocamaster.deck.dto.CreateDeckRequest;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,29 @@ public class ImportService {
                 .failed(parsed.failed)
                 .totalParsed(parsed.cards.size())
                 .failedCount(parsed.failed.size())
+                .build();
+    }
+
+    // 파일 한 개 = 덱 생성 + 카드 등록을 "한" 트랜잭션으로 (Codex 검산 2026-08-29).
+    // 예전 프론트는 덱 생성과 import를 두 요청으로 보내, 두 번째가 실패하면 빈 덱이 남았다.
+    // importCards()는 내부 호출(self-invocation)이라 그 @Transactional 프록시는 안 타지만,
+    // 이 메서드의 트랜잭션이 이미 열려 있어 전체가 하나의 경계 — 파싱 초과·DB 오류 시 덱 생성까지 롤백.
+    @Transactional
+    public ImportResponse createDeckAndImport(Long userId, ImportFileRequest req) {
+        CreateDeckRequest createReq = new CreateDeckRequest();
+        createReq.setTitle(req.getTitle());
+        Long deckId = deckService.create(userId, createReq).getId();
+
+        ImportRequest importReq = new ImportRequest();
+        importReq.setText(req.getText());
+        importReq.setSeparator(req.getSeparator() == null ? "" : req.getSeparator());
+        ImportResponse result = importCards(deckId, userId, importReq);
+        return ImportResponse.builder()                 // ImportResponse는 @Builder 불변 — deckId만 얹어 재조립
+                .deckId(deckId)
+                .imported(result.getImported())
+                .skipped(result.getSkipped())
+                .failed(result.getFailed())
+                .failedCount(result.getFailedCount())
                 .build();
     }
 

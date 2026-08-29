@@ -68,15 +68,12 @@ export default function ImportFiles() {
       try {
         const text = preprocess(await f.text())
         if (!text.trim()) throw new Error('빈 파일')
-        const deck = await api<{ id: number }>('/decks', {
-          method: 'POST',
-          body: JSON.stringify({ title }),
-        })
-        const res = await api<{ imported: number; skipped: number; failedCount: number; failed: FailedLine[] }>(
-          `/decks/${deck.id}/import`,
-          { method: 'POST', body: JSON.stringify({ text, separator: '' }) },
+        // 덱 생성+카드 등록 단일 트랜잭션 API — 등록이 실패하면 빈 덱도 안 남는다 (Codex 검산 8/29)
+        const res = await api<{ deckId: number; imported: number; skipped: number; failedCount: number; failed: FailedLine[] }>(
+          '/decks/import-file',
+          { method: 'POST', body: JSON.stringify({ title, text, separator: '' }) },
         )
-        out.push({ name: f.name, deckId: deck.id, ...res })
+        out.push({ name: f.name, ...res })
       } catch (e) {
         // 한 파일이 실패해도 나머지는 계속 — 결과표에 이유 표시
         out.push({ name: f.name, error: (e as Error).message })

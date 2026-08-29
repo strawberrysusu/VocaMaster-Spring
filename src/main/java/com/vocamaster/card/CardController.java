@@ -44,7 +44,7 @@ public class CardController {
 
     @PatchMapping("/cards/{id}")
     @Operation(summary = "카드 수정")
-    public CardResponse update(@PathVariable Long id, @RequestBody UpdateCardRequest req) {
+    public CardResponse update(@PathVariable Long id, @Valid @RequestBody UpdateCardRequest req) {
         return cardService.update(id, CurrentUser.getId(), req);
     }
 

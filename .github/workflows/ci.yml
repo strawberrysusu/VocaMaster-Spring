@@ -88,12 +88,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2                          # 직전 커밋과 비교하려고 1개 더
+          fetch-depth: 0                          # push 범위 전체 diff — 마지막 커밋만 보면 "코드+문서" 푸시를 docs-only로 오판 (Codex 검산 8/29)
 
       - name: 앱 변경 감지 (docs·md만이면 배포 생략)
         id: diff
         run: |
-          CHANGED=$(git diff --name-only HEAD^ HEAD 2>/dev/null || git ls-files)
+          # push 전체 범위 비교. before가 zero-sha(새 브랜치·force push)면 안전하게 전체를 변경으로 간주
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || echo "$BEFORE" | grep -q '^0*$'; then
+            CHANGED=$(git ls-files)
+          else
+            CHANGED=$(git diff --name-only "$BEFORE" "${{ github.sha }}" 2>/dev/null || git ls-files)
+          fi
           echo "$CHANGED"
           if echo "$CHANGED" | grep -qvE '^(docs/|.*\.md$)'; then
             echo "deploy=true" >> "$GITHUB_OUTPUT"

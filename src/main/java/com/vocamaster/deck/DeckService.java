@@ -52,6 +52,10 @@ public class DeckService {
         return DeckResponse.from(deck, cardCount, starredCount);
     }
 
+    // @Transactional: 무트랜잭션이면 조회된 엔티티가 detached라 save()가 전체 컬럼 merge —
+    // 그 사이 오른 좋아요·복사 카운터를 낡은 값으로 되돌릴 수 있다 (Codex 검산 2026-08-29).
+    // 트랜잭션 안이면 managed + @DynamicUpdate라 바뀐 컬럼만 UPDATE.
+    @Transactional
     public DeckResponse update(Long id, Long userId, UpdateDeckRequest req) {
         Deck deck = verifyOwner(id, userId);
         if (req.getTitle() != null) deck.setTitle(req.getTitle());

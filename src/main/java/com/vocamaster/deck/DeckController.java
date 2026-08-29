@@ -42,7 +42,7 @@ public class DeckController {
 
     @PatchMapping("/{id}")
     @Operation(summary = "단어장 수정")
-    public DeckResponse update(@PathVariable Long id, @RequestBody UpdateDeckRequest req) {
+    public DeckResponse update(@PathVariable Long id, @Valid @RequestBody UpdateDeckRequest req) {
         return deckService.update(id, CurrentUser.getId(), req);
     }
 
