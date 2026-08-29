@@ -18,20 +18,28 @@ interface FileResult {
   error?: string
 }
 
-// 실물 파일 두 형식을 그대로 받기 위한 전처리 (백로그 ㉒ — 사용자 vocajapanese 폴더 실측):
-// ① 파일 첫머리 BOM 제거
+// 실물 파일 세 형식을 그대로 받기 위한 전처리 (백로그 ㉒ — 사용자 vocajapanese 폴더 실측):
+// ① 파일 첫머리 BOM 제거 + CRLF(\r\n) 개행 — \r이 줄 끝에 남으면 JS 정규식의 `.`이
+//    \r을 매치하지 않아 아래 규칙이 전멸한다 (8/29 실측: day07+ 8천 장 오염의 근본 원인)
 // ② day01형: 탭 3칸 `単語 \t （よみ） \t 뜻` → 읽기 양끝 전각 괄호（）만 벗김
 // ③ day02형: `単語（よみ）, 뜻` (탭 없음) → `単語 \t よみ \t 뜻` 3칸으로 재구성
 //    — 뜻 안의 반각 괄호("경탄(놀라며 감탄함)")는 건드리지 않는다
+// ④ n1모음형: 탭 2칸 `単語 \t （よみ） 뜻` (읽기와 뜻이 한 칸에) → 3칸으로 분리
+//    — 전각（）선두일 때만. 반각 (…) 선두는 정당한 뜻 주석일 수 있어 건드리지 않는다
 function preprocess(raw: string): string {
   return raw
     .replace(/^﻿/, '')
-    .split('\n')
+    .split(/\r?\n/)
     .map((line) => {
       const cols = line.split('\t')
       if (cols.length === 3) {
         cols[1] = cols[1].trim().replace(/^（(.*)）$/, '$1')
         return cols.join('\t')
+      }
+      if (cols.length === 2) {
+        const m2 = cols[1].trim().match(/^（([^（）]+)）\s*(.+)$/)
+        if (m2) return `${cols[0].trim()}\t${m2[1].trim()}\t${m2[2].trim()}`
+        return line
       }
       // 탭이 없는 줄: 単語（よみ）[,，] 뜻 — 뜻에 쉼표가 더 있어도 통째로 보존
       const m = line.match(/^(.+?)（(.+?)）\s*[,，]\s*(.+)$/)
