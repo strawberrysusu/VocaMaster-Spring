@@ -3,6 +3,7 @@ package com.vocamaster.deck;
 import com.vocamaster.common.CurrentUser;
 import com.vocamaster.deck.dto.CreateDeckRequest;
 import com.vocamaster.deck.dto.DeckResponse;
+import com.vocamaster.deck.dto.MoveDeckFolderRequest;
 import com.vocamaster.deck.dto.UpdateDeckRequest;
 import com.vocamaster.deck.dto.UpdateVisibilityRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,6 +45,12 @@ public class DeckController {
     @Operation(summary = "단어장 수정")
     public DeckResponse update(@PathVariable Long id, @Valid @RequestBody UpdateDeckRequest req) {
         return deckService.update(id, CurrentUser.getId(), req);
+    }
+
+    @PatchMapping("/{id}/folder")
+    @Operation(summary = "덱을 폴더로 이동 (folderId=null → 미분류)")
+    public DeckResponse moveToFolder(@PathVariable Long id, @RequestBody MoveDeckFolderRequest req) {
+        return deckService.moveToFolder(id, CurrentUser.getId(), req.getFolderId());
     }
 
     @PatchMapping("/{id}/visibility")

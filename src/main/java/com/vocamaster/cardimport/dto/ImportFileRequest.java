@@ -17,4 +17,6 @@ public class ImportFileRequest {
     private String text;
 
     private String separator; // 비우면 자동 감지 (기존 ImportRequest와 동일 규약)
+
+    private Long folderId;    // 선택 — 만들면서 이 폴더로 (null = 미분류)
 }

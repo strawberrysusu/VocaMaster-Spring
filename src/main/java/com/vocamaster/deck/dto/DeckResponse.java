@@ -17,6 +17,7 @@ public class DeckResponse {
     private DeckVisibility visibility;
     private long cardCount;
     private long starredCount;
+    private Long folderId;   // null = 미분류
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -28,6 +29,7 @@ public class DeckResponse {
                 .visibility(deck.getVisibility())
                 .cardCount(cardCount)
                 .starredCount(starredCount)
+                .folderId(deck.getFolderId())
                 .createdAt(deck.getCreatedAt())
                 .updatedAt(deck.getUpdatedAt())
                 .build();
@@ -41,6 +43,7 @@ public class DeckResponse {
                 .description(deck.getDescription() != null ? deck.getDescription() : "")
                 .visibility(deck.getVisibility())
                 .cardCount(cardCount)
+                .folderId(deck.getFolderId())
                 .createdAt(deck.getCreatedAt())
                 .updatedAt(deck.getUpdatedAt())
                 .build();

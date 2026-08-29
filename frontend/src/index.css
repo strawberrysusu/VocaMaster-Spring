@@ -1637,3 +1637,49 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
   font-weight: 700;
 }
 .pager button:disabled { opacity: 0.4; cursor: default; }
+
+/* ===== 📁 폴더 바 (8/29, 동결 전 마지막 기능) ===== */
+.folder-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 18px;
+}
+.folder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid #e2e2ea;
+  background: #fff;
+  border-radius: 99px;
+  padding: 6px 13px;
+  font-size: 13.5px;
+  color: #555;
+  cursor: pointer;
+}
+.folder-chip:hover { border-color: var(--a, #5b5bd6); }
+.folder-chip.active {
+  background: var(--a-soft, #ececf7);
+  border-color: var(--a, #5b5bd6);
+  color: var(--a, #5b5bd6);
+  font-weight: 700;
+}
+.folder-chip-name { font: inherit; color: inherit; cursor: pointer; }
+.folder-chip-op {
+  font-size: 12px;
+  opacity: 0.6;
+  padding: 0 3px;
+  cursor: pointer;
+}
+.folder-chip-op:hover { opacity: 1; }
+.folder-add { border-style: dashed; color: #888; }
+.bulk-move {
+  border: 1px solid #d8d8e2;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 13px;
+  background: #fff;
+  color: #555;
+}
+.bulk-danger { color: #b0485c !important; }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
@@ -51,10 +51,16 @@ function preprocess(raw: string): string {
 
 export default function ImportFiles() {
   const [files, setFiles] = useState<File[]>([])
-  const [prefix, setPrefix] = useState('')   // 덱 이름 접두어 — "N1 — " + day01 식으로 출처 구분 (폴더 기능 전까지의 정리 수단)
+  const [prefix, setPrefix] = useState('')   // 덱 이름 접두어 — "N1 " + day01 식으로 출처 구분
+  const [folders, setFolders] = useState<{ id: number; name: string }[]>([])
+  const [folderId, setFolderId] = useState<number | ''>('')   // '' = 미분류
   const [busy, setBusy] = useState(false)
   const [current, setCurrent] = useState('')
   const [results, setResults] = useState<FileResult[]>([])
+
+  useEffect(() => {
+    api<{ id: number; name: string }[]>('/folders').then(setFolders).catch(() => {})
+  }, [])
 
   async function run() {
     if (busy || files.length === 0) return
@@ -71,7 +77,7 @@ export default function ImportFiles() {
         // 덱 생성+카드 등록 단일 트랜잭션 API — 등록이 실패하면 빈 덱도 안 남는다 (Codex 검산 8/29)
         const res = await api<{ deckId: number; imported: number; skipped: number; failedCount: number; failed: FailedLine[] }>(
           '/decks/import-file',
-          { method: 'POST', body: JSON.stringify({ title, text, separator: '' }) },
+          { method: 'POST', body: JSON.stringify({ title, text, separator: '', folderId: folderId === '' ? null : folderId }) },
         )
         out.push({ name: f.name, ...res })
       } catch (e) {
@@ -121,6 +127,16 @@ export default function ImportFiles() {
                 → "{prefix.trim()} {files[0].name.replace(/\.[^.]+$/, '')}" 식으로 만들어져요
               </span>
             )}
+          </div>
+
+          <div className="setup-row">
+            <span className="setup-label">넣을 폴더</span>
+            <select value={folderId} disabled={busy} onChange={(e) => setFolderId(e.target.value === '' ? '' : Number(e.target.value))} style={{ maxWidth: 220 }}>
+              <option value="">📂 미분류</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>📁 {f.name}</option>
+              ))}
+            </select>
           </div>
 
           <label className="file-pick">

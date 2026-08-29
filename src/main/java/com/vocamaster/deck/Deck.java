@@ -39,6 +39,9 @@ public class Deck {
     @Builder.Default
     private DeckVisibility visibility = DeckVisibility.PRIVATE;
 
+    // 📁 분류 폴더 (V20). 연관 대신 값 참조 — 폴더 삭제 시 DB FK(SET NULL)가 미분류로 정리
+    private Long folderId;
+
     @Column(nullable = false)
     private long copyCount;
 

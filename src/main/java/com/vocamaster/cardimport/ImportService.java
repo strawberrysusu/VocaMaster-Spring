@@ -54,6 +54,9 @@ public class ImportService {
         CreateDeckRequest createReq = new CreateDeckRequest();
         createReq.setTitle(req.getTitle());
         Long deckId = deckService.create(userId, createReq).getId();
+        if (req.getFolderId() != null) {
+            deckService.moveToFolder(deckId, userId, req.getFolderId());   // 같은 트랜잭션 — 남의 폴더면 덱 생성까지 롤백
+        }
 
         ImportRequest importReq = new ImportRequest();
         importReq.setText(req.getText());

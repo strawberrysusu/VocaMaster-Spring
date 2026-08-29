@@ -3,6 +3,7 @@ package com.vocamaster.deck;
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.common.exception.ForbiddenException;
+import com.vocamaster.folder.FolderService;
 import com.vocamaster.deck.dto.CreateDeckRequest;
 import com.vocamaster.deck.dto.DeckResponse;
 import com.vocamaster.deck.dto.UpdateDeckRequest;
@@ -23,6 +24,7 @@ public class DeckService {
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
     private final DeckRankingService rankingService;
+    private final FolderService folderService;
 
     public DeckResponse create(Long userId, CreateDeckRequest req) {
         User user = userRepository.findById(userId)
@@ -61,6 +63,17 @@ public class DeckService {
         if (req.getTitle() != null) deck.setTitle(req.getTitle());
         if (req.getDescription() != null) deck.setDescription(req.getDescription());
         deckRepository.save(deck);
+        return DeckResponse.listOf(deck, cardRepository.countByDeckId(id));
+    }
+
+    // 📁 덱을 폴더로 이동 (folderId=null → 미분류). 남의 폴더 = 없는 폴더와 같은 404
+    @Transactional
+    public DeckResponse moveToFolder(Long id, Long userId, Long folderId) {
+        Deck deck = verifyOwner(id, userId);
+        if (folderId != null) {
+            folderService.ownFolderOrThrow(folderId, userId);
+        }
+        deck.setFolderId(folderId);
         return DeckResponse.listOf(deck, cardRepository.countByDeckId(id));
     }
 
