@@ -12,7 +12,9 @@ public class UpdateCardRequest {
     private String back;
     @Size(max = 200)
     private String reading;         // 읽기(요미가나) — 선택
+    @Size(max = 500)          // cards.example_sentence varchar(500)
     private String exampleSentence;
+    @Size(max = 500)
     private String memo;
     private Integer position;
 }

@@ -30,6 +30,17 @@ ssh -i ~/.ssh/vocamaster_oracle ubuntu@<APP_IP> 'docker compose -f docker-compos
 
 > 서버에서 직접 빌드 금지 — 1GB라 Gradle+Node 빌드가 OOM. (Flyway 마이그레이션은 앱 기동 시 자동)
 
+## 배포 실패 시 복구 (수동 — 자동 롤백은 백로그)
+
+CD의 헬스 게이트·HTTP 스모크가 실패해도 **이전 컨테이너가 이미 교체된 뒤**일 수 있다. 복구 순서:
+
+1. **증상 확인**: `ssh ubuntu@<APP_IP>` → `docker logs --tail 50 vocamaster-app-app-1`
+2. **가장 빠른 복구 = 직전 커밋으로 재배포**: 로컬에서
+   `git revert --no-edit HEAD && git push` → CD가 이전 코드로 새 이미지를 배포 (V 마이그레이션은 전진만 하므로 스키마는 안전)
+3. **CD 자체가 죽었을 때의 비상 경로**: 서버에 남아 있는 직전 이미지로 임시 기동 —
+   `docker images | head`로 이전 이미지 ID 확인 → `docker tag <이전ID> vocamaster:prod && docker compose -f docker-compose.app.yml up -d`
+4. 복구 후 원인 수리 커밋을 정상 경로로 배포
+
 ## 백업 (⑥ — 매일 자동)
 
 - **cron**: 매일 KST 04:30, DB 서버의 `~/backup-mysql.sh`

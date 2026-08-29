@@ -99,21 +99,27 @@ export default function Decks() {
     }
   }
 
-  // 일괄 삭제 — 카드·학습 기록까지 사라지는 되돌릴 수 없는 작업이라 개수+경고 confirm
+  // 일괄 삭제 — 되돌릴 수 없는 작업이라 "정확히 뭘 지우는지" 이름까지 확인창에 (Codex 검산 8/29:
+  // 화면 밖 덱이 선택에 남는 사고는 폴더 전환 시 초기화로 막고, 이름 나열은 최후 방어선)
   async function deleteSelected() {
     if (busy || selected.size === 0) return
-    if (!window.confirm(`선택한 ${selected.size}개 덱을 삭제할까요?\n각 덱의 카드와 학습·퀴즈·타이핑 기록이 전부 사라지고 되돌릴 수 없어요.`)) return
+    const names = decks.filter((d) => selected.has(d.id)).map((d) => d.title)
+    const preview = names.slice(0, 5).map((n) => `· ${n}`).join('\n') + (names.length > 5 ? `\n… 외 ${names.length - 5}개` : '')
+    if (!window.confirm(`선택한 ${selected.size}개 덱을 삭제할까요?\n\n${preview}\n\n각 덱의 카드와 학습·퀴즈·타이핑 기록이 전부 사라지고 되돌릴 수 없어요.`)) return
     setBusy(true)
     setError('')
+    let done = 0
     try {
       for (const id of selected) {
         await api(`/decks/${id}`, { method: 'DELETE' })
+        done++
       }
       setSelected(new Set())
       setSelectMode(false)
       load()
     } catch (e) {
-      setError((e as Error).message)
+      // 순차 처리라 중간 실패 시 앞부분만 지워짐 — 어디까지 됐는지 명시하고 실상태 재조회
+      setError(`${done}개 삭제 후 중단: ${(e as Error).message} — 목록을 새로고침했어요`)
       load()
     } finally {
       setBusy(false)
@@ -208,15 +214,15 @@ export default function Decks() {
         </div>
 
         <div className="folder-bar">
-          <button className={`folder-chip ${activeFolder === 'all' ? 'active' : ''}`} onClick={() => { setActiveFolder('all'); setPage(0) }}>
+          <button className={`folder-chip ${activeFolder === 'all' ? 'active' : ''}`} onClick={() => { setActiveFolder('all'); setPage(0); setSelected(new Set()) }}>
             전체 {decks.length}
           </button>
-          <button className={`folder-chip ${activeFolder === 'none' ? 'active' : ''}`} onClick={() => { setActiveFolder('none'); setPage(0) }}>
+          <button className={`folder-chip ${activeFolder === 'none' ? 'active' : ''}`} onClick={() => { setActiveFolder('none'); setPage(0); setSelected(new Set()) }}>
             📂 미분류 {unfiledCount}
           </button>
           {folders.map((f) => (
             <span key={f.id} className={`folder-chip ${activeFolder === f.id ? 'active' : ''}`}>
-              <button className="folder-chip-name" onClick={() => { setActiveFolder(f.id); setPage(0) }}>
+              <button className="folder-chip-name" onClick={() => { setActiveFolder(f.id); setPage(0); setSelected(new Set()) }}>
                 📁 {f.name} {decks.filter((d) => d.folderId === f.id).length}
               </button>
               {activeFolder === f.id && (

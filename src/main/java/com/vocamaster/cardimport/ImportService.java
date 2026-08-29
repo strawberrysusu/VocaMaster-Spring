@@ -62,6 +62,12 @@ public class ImportService {
         importReq.setText(req.getText());
         importReq.setSeparator(req.getSeparator() == null ? "" : req.getSeparator());
         ImportResponse result = importCards(deckId, userId, importReq);
+        if (result.getImported() == 0) {
+            // 전 줄이 형식 오류(또는 빈 내용)면 예외가 아니라 imported=0 '성공'으로 끝나 빈 덱이 커밋된다 —
+            // 400으로 전환해 덱 생성까지 롤백 (Codex 검산 8/29). 정상+오류 혼합의 부분 성공은 그대로 허용.
+            throw new BadRequestException(
+                    "등록할 수 있는 카드가 없습니다 — 실패 " + result.getFailedCount() + "줄. 형식(단어|뜻 또는 단어|읽기|뜻)을 확인해 주세요");
+        }
         return ImportResponse.builder()                 // ImportResponse는 @Builder 불변 — deckId만 얹어 재조립
                 .deckId(deckId)
                 .imported(result.getImported())

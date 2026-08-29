@@ -67,7 +67,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
   (원본 기록은 유실 시 복구 불가). 큐 포화는 CallerRuns로 유실 0 (ADR-039)
 - **존재 숨김(404) 보안 계약** — 남의 비공개 덱은 "없는 덱"과 상태·코드·메시지까지 동일 응답 (열거 공격 차단),
   HTTP 레벨 테스트로 박제 (ADR-030)
-- **테스트 171** — Testcontainers **실제 MySQL 8** + Flyway(V1~V18) 검증, H2 미사용.
+- **테스트 180** — Testcontainers **실제 MySQL 8** + Flyway(V1~V20) 검증, H2 미사용.
   트랜잭션 경계·동시성이 관심사인 테스트는 자동 롤백을 끄고 운영과 동일한 커밋 경계로 검증
 - **정직한 감사 문화** — 전수 감사([7월](docs/audit-2026-07.md) · 8월 ADR-040)로 찾은 결함을
   재현 테스트와 함께 수리하고, 남긴 것은 트레이드오프로 문서화
@@ -96,7 +96,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 **Backend** Java 17 · Spring Boot 3.5 · Spring Security · Spring Data JPA · Validation
 **Frontend** React 19 · TypeScript · Vite (Gradle이 빌드해 jar에 번들 — 별도 배포 없음)
 **Auth** JWT (jjwt) — Access(단기) + Refresh(14일, rotation)
-**Database** MySQL 8 · Flyway (V1~V18) · **Redis 7** (Lettuce — 랭킹·Rate Limit·캐시, fail-open)
+**Database** MySQL 8 · Flyway (V1~V20) · **Redis 7** (Lettuce — 랭킹·Rate Limit·캐시, fail-open)
 **Test** JUnit 5 · **Testcontainers (MySQL 8 + Redis)** — H2 미사용, 운영과 동일 DB로 검증
 **Docs** springdoc-openapi (Swagger)
 
@@ -136,7 +136,7 @@ gradlew.bat bootRun        # Windows
 ### 테스트
 
 ```bash
-gradlew.bat test   # Docker Desktop 실행 상태에서 — 171 tests
+gradlew.bat test   # Docker Desktop 실행 상태에서 — 180 tests
 ```
 
 ### Docker 운영 스택 (배포와 동일 구성 로컬 리허설)

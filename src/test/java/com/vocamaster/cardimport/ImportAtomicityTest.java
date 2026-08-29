@@ -73,4 +73,21 @@ class ImportAtomicityTest extends AbstractIntegrationTest {
 
         assertEquals(decksBefore, deckRepository.count(), "실패했으면 빈 덱도 남으면 안 됨");
     }
+
+    @Test
+    @DisplayName("전 줄이 형식 오류 — imported=0 '성공'이 아니라 400 + 덱까지 롤백 (Codex 검산 8/29)")
+    void createDeckAndImport_allInvalidLines_rejected() {
+        Long userId = registerUser();
+        long decksBefore = deckRepository.count();
+
+        ImportFileRequest req = new ImportFileRequest();
+        req.setTitle("빈 덱이 되면 안 되는 덱");
+        req.setText("칸이하나뿐인줄\n이것도칸하나\n또칸하나");   // 전부 구분자 없음 → 전 줄 실패
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> importService.createDeckAndImport(userId, req));
+
+        assertTrue(e.getMessage().contains("등록할 수 있는 카드가 없습니다"));
+        assertEquals(decksBefore, deckRepository.count(), "빈 덱이 커밋되면 안 됨");
+    }
 }
