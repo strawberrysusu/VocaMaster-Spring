@@ -251,7 +251,8 @@ export default function Quiz() {
             <div className="quiz-card">
               <p className="quiz-kicker">{direction === 'front_to_back' ? '이 단어의 뜻은?' : '이 뜻의 단어는?'}</p>
               <p className="quiz-question">
-                {q.reading && <span className="reading">{q.reading}</span>}
+                {/* 읽기는 답의 절반(한자→읽기 회상) — 채점 후에만 공개. 복습 카드(8/28)와 같은 규칙 */}
+                {picked !== null && q.reading && <span className="reading">{q.reading}</span>}
                 {q.question} <SpeakButton text={q.reading || q.question} />
               </p>
               <div className="choice-grid">

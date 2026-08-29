@@ -205,7 +205,8 @@ export default function Typing() {
             <div className="quiz-card">
               <p className="quiz-kicker">{direction === 'front_to_back' ? '이 단어의 뜻을 입력하세요' : '이 뜻의 단어를 입력하세요'}</p>
               <p className="quiz-question">
-                {q.reading && <span className="reading">{q.reading}</span>}
+                {/* 읽기는 답의 절반(한자→읽기 회상) — 채점 후에만 공개. 복습·퀴즈와 같은 규칙 */}
+                {result !== null && q.reading && <span className="reading">{q.reading}</span>}
                 {q.question} <SpeakButton text={q.reading || q.question} />
               </p>
               <form
