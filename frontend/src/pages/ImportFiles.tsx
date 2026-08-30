@@ -89,6 +89,8 @@ export default function ImportFiles() {
     setCurrent('')
     setBusy(false)
     setFiles([])
+    // 폴더에 넣으며 가져온 경우 사이드바 개수 즉시 갱신 (Codex UI 검산 — 화면 이동 없이도)
+    if (out.some((r) => !r.error)) window.dispatchEvent(new Event('vm:library-changed'))
   }
 
   const totalImported = results.reduce((s, r) => s + (r.imported ?? 0), 0)

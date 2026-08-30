@@ -93,6 +93,13 @@ export default function Study() {
       <TopNav />
       <div className="shell study-shell">
         {error && <p className="error" role="alert">{error}</p>}
+        {/* 몰입 모드(사이드바 없음)에서 최초 로딩이 실패하면 갇힌다 — 탈출·재시도 제공 (Codex UI 검산) */}
+        {error && queue === null && (
+          <p style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+            <button className="btn-primary" onClick={loadQueue}>다시 시도</button>
+            <Link to={deckId ? `/decks/${deckId}` : '/'} className="hero-secondary">← 돌아가기</Link>
+          </p>
+        )}
 
         {queue === null && !error && <p className="muted">불러오는 중...</p>}
 
