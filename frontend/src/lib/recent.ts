@@ -5,21 +5,32 @@ const KEY = 'vm.recentStudy'
 const LEGACY_KEY = 'vm.lastStudyDeckId' // 구버전: 마지막 1개만 저장하던 키
 const MAX = 5
 
+export type StudyMode = 'study' | 'quiz' | 'typing' | 'listening'
+
 export interface RecentEntry {
   id: number
   at: number // epoch ms, 0 = 시각 미상(구버전 키에서 승격)
+  mode?: StudyMode // 이어하기가 마지막에 쓴 모드로 가도록 (없으면 플래시카드 복습)
 }
 
-export function recordRecentStudy(deckId: number | string) {
+export function recordRecentStudy(deckId: number | string, mode: StudyMode = 'study') {
   const id = Number(deckId)
   if (!Number.isFinite(id)) return
   try {
     const list = getRecentStudy().filter((e) => e.id !== id)
-    list.unshift({ id, at: Date.now() })
+    list.unshift({ id, at: Date.now(), mode })
     localStorage.setItem(KEY, JSON.stringify(list.slice(0, MAX)))
   } catch {
     /* 저장 불가(시크릿 모드 등)여도 학습은 계속 */
   }
+}
+
+// 모드별 이어하기 경로 — 미상(구버전 기록)은 플래시카드 복습으로
+export function resumePath(id: number, mode?: StudyMode): string {
+  if (mode === 'quiz') return `/quiz/${id}`
+  if (mode === 'typing') return `/typing/${id}`
+  if (mode === 'listening') return `/listening/${id}`
+  return `/study?deckId=${id}`
 }
 
 export function getRecentStudy(): RecentEntry[] {

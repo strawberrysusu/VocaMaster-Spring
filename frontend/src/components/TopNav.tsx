@@ -89,17 +89,23 @@ export default function TopNav({ streak }: { streak?: number }) {
     pathname.startsWith('/typing/') ||
     pathname.startsWith('/listening/')
 
-  // 사이드바 폴더 목록 — 페이지 이동마다 재조회 (폴더 생성/이동이 자연 반영). 실패해도 조용히.
+  // 사이드바 폴더 목록 — 페이지 이동 시 + 같은 화면에서 폴더·소속이 바뀌었다는 알림
+  // (vm:library-changed, Decks가 발화)마다 재조회 (Codex UI 검산 ②). 실패해도 조용히.
   useEffect(() => {
     if (!loggedIn || focusMode) return
-    api<Folder[]>('/folders').then(setFolders).catch(() => {})
-    api<DeckLite[]>('/decks')
-      .then((ds) => {
-        const m = new Map<number, number>()
-        for (const d of ds) if (d.folderId !== null) m.set(d.folderId, (m.get(d.folderId) ?? 0) + 1)
-        setDeckCounts(m)
-      })
-      .catch(() => {})
+    function refresh() {
+      api<Folder[]>('/folders').then(setFolders).catch(() => {})
+      api<DeckLite[]>('/decks')
+        .then((ds) => {
+          const m = new Map<number, number>()
+          for (const d of ds) if (d.folderId !== null) m.set(d.folderId, (m.get(d.folderId) ?? 0) + 1)
+          setDeckCounts(m)
+        })
+        .catch(() => {})
+    }
+    refresh()
+    window.addEventListener('vm:library-changed', refresh)
+    return () => window.removeEventListener('vm:library-changed', refresh)
   }, [pathname, loggedIn, focusMode])
 
   const activeFolderParam = pathname.startsWith('/decks') ? new URLSearchParams(search).get('folder') : null

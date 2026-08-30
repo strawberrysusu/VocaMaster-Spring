@@ -114,7 +114,7 @@ export default function Listening() {
   const activePool = starredOnly ? pool.filter((c) => c.starred) : pool
 
   function start() {
-    if (deckId) recordRecentStudy(deckId) // 홈 '최근 학습 덱' 재료
+    if (deckId) recordRecentStudy(deckId, 'listening') // 홈 '최근 학습 덱' 재료
     const n = Math.max(1, Math.min(count, activePool.length))
     const base = ordered ? [...activePool] : [...activePool].sort(() => Math.random() - 0.5)
     const q = base.slice(0, n).map((card) => ({ card, spelling: '', meaning: '' }))

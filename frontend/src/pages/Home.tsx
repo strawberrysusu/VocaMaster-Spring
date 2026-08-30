@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
-import { getRecentStudy, agoLabel } from '../lib/recent'
+import { getRecentStudy, agoLabel, resumePath } from '../lib/recent'
 import TopNav from '../components/TopNav'
 
 interface TodaySummary {
@@ -60,8 +60,8 @@ export default function Home() {
   // 리디자인 2차(8/30): 최근 학습 덱 — 4모드가 localStorage에 남긴 기록을 덱 목록과 join.
   // 삭제된 덱은 join에서 자연 탈락. 기록이 없으면 내 덱 상위 몇 개로 대신 채운다.
   const recentDecks = getRecentStudy()
-    .map((e) => ({ deck: decks?.find((d) => d.id === e.id && d.cardCount > 0), at: e.at }))
-    .filter((e): e is { deck: Deck; at: number } => !!e.deck)
+    .map((e) => ({ deck: decks?.find((d) => d.id === e.id && d.cardCount > 0), at: e.at, mode: e.mode }))
+    .filter((e): e is { deck: Deck; at: number; mode: ReturnType<typeof getRecentStudy>[number]['mode'] } => !!e.deck)
     .slice(0, 3)
   const fallbackDecks = recentDecks.length === 0 ? (decks ?? []).filter((d) => d.cardCount > 0).slice(0, 3) : []
 
@@ -182,13 +182,13 @@ export default function Home() {
               <h2>최근 학습 덱</h2>
               <Link to="/decks" className="link">전체 보기</Link>
             </div>
-            {recentDecks.map(({ deck, at }) => (
+            {recentDecks.map(({ deck, at, mode }) => (
               <div className="recent-row" key={deck.id}>
                 <div className="recent-info">
                   <Link to={`/decks/${deck.id}`} className="recent-title">{deck.title}</Link>
                   <p className="recent-meta">카드 {deck.cardCount}장{at ? ` · 마지막 학습 ${agoLabel(at)}` : ''}</p>
                 </div>
-                <Link to={`/study?deckId=${deck.id}`} className="resume-btn">이어하기</Link>
+                <Link to={resumePath(deck.id, mode)} className="resume-btn">이어하기</Link>
               </div>
             ))}
             {fallbackDecks.map((d) => (

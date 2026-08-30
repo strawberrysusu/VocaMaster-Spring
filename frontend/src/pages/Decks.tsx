@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
 
@@ -37,7 +37,6 @@ export default function Decks() {
   const PAGE_SIZE = 30
   // 📁 폴더 (8/29, 동결 전 마지막 기능) — 'all'=전체, 'none'=미분류, number=그 폴더
   const [folders, setFolders] = useState<Folder[]>([])
-  const [activeFolder, setActiveFolder] = useState<'all' | 'none' | number>('all')
   // 폴더에 덱 담기 (8/30) — "폴더 만들고 들어가면 빈 화면에서 덱을 가져올 방법이 없다"는 UX 구멍 수리.
   // 보내기(선택 모드→폴더로 이동)의 역방향: 폴더 화면에서 기존 덱을 골라 가져온다. 같은 이동 API.
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -51,22 +50,43 @@ export default function Decks() {
 
   useEffect(load, [])
 
-  // 사이드바의 폴더 링크(/decks?folder=ID)로 진입·전환 — 칩 클릭은 기존처럼 로컬 상태만
-  const { search } = useLocation()
+  // 사이드바 폴더 개수 실시간 반영 — 폴더·소속을 바꾼 뒤 TopNav에 재조회를 알린다 (Codex UI 검산 ②)
+  function loadAndNotify() {
+    load()
+    window.dispatchEvent(new Event('vm:library-changed'))
+  }
+
+  // 폴더 선택은 URL(?folder=)이 단일 기준 (Codex UI 검산 ① — 칩·사이드바·뒤로가기가 항상 일치).
+  // 잘못된 값('abc', 음수)이나 로드 후 존재하지 않는 폴더는 '전체'로 — NaN이 이동 API에서
+  // null로 직렬화돼 "미분류 이동"이 되는 사고 경로를 입구에서 차단.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const rawFolder = searchParams.get('folder')
+  const parsedFolder = rawFolder !== null && rawFolder !== 'none' ? Number(rawFolder) : NaN
+  const activeFolder: 'all' | 'none' | number =
+    rawFolder === null
+      ? 'all'
+      : rawFolder === 'none'
+        ? 'none'
+        : Number.isInteger(parsedFolder) && parsedFolder > 0 && (folders.length === 0 || folders.some((f) => f.id === parsedFolder))
+          ? parsedFolder
+          : 'all'
+
+  function goFolder(next: 'all' | 'none' | number) {
+    setSearchParams(next === 'all' ? {} : { folder: String(next) })
+  }
+
+  // 폴더가 바뀌면 페이지·선택 초기화 (화면 밖 덱이 선택에 남는 삭제 사고 방지 — 8/29 검산 유지)
   useEffect(() => {
-    const q = new URLSearchParams(search).get('folder')
-    if (q === null) return                       // 쿼리 없는 일반 진입은 기존 상태 유지
-    setActiveFolder(q === 'none' ? 'none' : Number(q))
     setPage(0)
     setSelected(new Set())
-  }, [search])
+  }, [rawFolder])
 
   async function createFolder() {
     const name = window.prompt('새 폴더 이름 (예: JLPT N1)')
     if (!name?.trim()) return
     try {
       await api('/folders', { method: 'POST', body: JSON.stringify({ name: name.trim() }) })
-      load()
+      loadAndNotify()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -77,7 +97,7 @@ export default function Decks() {
     if (!name?.trim() || name.trim() === f.name) return
     try {
       await api(`/folders/${f.id}`, { method: 'PATCH', body: JSON.stringify({ name: name.trim() }) })
-      load()
+      loadAndNotify()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -87,8 +107,8 @@ export default function Decks() {
     if (!window.confirm(`"${f.name}" 폴더를 삭제할까요?\n안의 덱들은 삭제되지 않고 미분류로 이동해요.`)) return
     try {
       await api(`/folders/${f.id}`, { method: 'DELETE' })
-      if (activeFolder === f.id) setActiveFolder('all')
-      load()
+      if (activeFolder === f.id) goFolder('all')
+      loadAndNotify()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -105,10 +125,10 @@ export default function Decks() {
       }
       setSelected(new Set())
       setSelectMode(false)
-      load()
+      loadAndNotify()
     } catch (e) {
       setError((e as Error).message)
-      load()
+      loadAndNotify()
     } finally {
       setBusy(false)
     }
@@ -119,6 +139,16 @@ export default function Decks() {
     setPickerQuery('')
     setPickerOpen(true)
   }
+
+  // 모달 접근성 (Codex UI 검산): Escape로 닫기 — 진행 중(busy)엔 무시
+  useEffect(() => {
+    if (!pickerOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) setPickerOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [pickerOpen, busy])
 
   function togglePick(id: number) {
     setPicked((s) => {
@@ -140,10 +170,10 @@ export default function Decks() {
         done++
       }
       setPickerOpen(false)
-      load()
+      loadAndNotify()
     } catch (e) {
       setError(`${done}개 담은 후 중단: ${(e as Error).message} — 목록을 새로고침했어요`)
-      load()
+      loadAndNotify()
     } finally {
       setBusy(false)
     }
@@ -166,11 +196,11 @@ export default function Decks() {
       }
       setSelected(new Set())
       setSelectMode(false)
-      load()
+      loadAndNotify()
     } catch (e) {
       // 순차 처리라 중간 실패 시 앞부분만 지워짐 — 어디까지 됐는지 명시하고 실상태 재조회
       setError(`${done}개 삭제 후 중단: ${(e as Error).message} — 목록을 새로고침했어요`)
-      load()
+      loadAndNotify()
     } finally {
       setBusy(false)
     }
@@ -268,15 +298,15 @@ export default function Decks() {
         </div>
 
         <div className="folder-bar">
-          <button className={`folder-chip ${activeFolder === 'all' ? 'active' : ''}`} onClick={() => { setActiveFolder('all'); setPage(0); setSelected(new Set()) }}>
+          <button className={`folder-chip ${activeFolder === 'all' ? 'active' : ''}`} onClick={() => goFolder('all')}>
             전체 {decks.length}
           </button>
-          <button className={`folder-chip ${activeFolder === 'none' ? 'active' : ''}`} onClick={() => { setActiveFolder('none'); setPage(0); setSelected(new Set()) }}>
+          <button className={`folder-chip ${activeFolder === 'none' ? 'active' : ''}`} onClick={() => goFolder('none')}>
             📂 미분류 {unfiledCount}
           </button>
           {folders.map((f) => (
             <span key={f.id} className={`folder-chip ${activeFolder === f.id ? 'active' : ''}`}>
-              <button className="folder-chip-name" onClick={() => { setActiveFolder(f.id); setPage(0); setSelected(new Set()) }}>
+              <button className="folder-chip-name" onClick={() => goFolder(f.id)}>
                 📁 {f.name} {decks.filter((d) => d.folderId === f.id).length}
               </button>
               {activeFolder === f.id && (
@@ -375,7 +405,7 @@ export default function Decks() {
 
         {pickerOpen && typeof activeFolder === 'number' && (
           <div className="modal-overlay" onClick={() => !busy && setPickerOpen(false)}>
-            <div className="modal-panel" role="dialog" aria-label="폴더에 덱 담기" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-panel" role="dialog" aria-modal="true" aria-label="폴더에 덱 담기" onClick={(e) => e.stopPropagation()}>
               <div className="modal-head">
                 <h2>📁 {activeFolderObj?.name ?? '폴더'}에 덱 담기</h2>
                 <button className="modal-close" aria-label="닫기" disabled={busy} onClick={() => setPickerOpen(false)}>✕</button>
@@ -388,6 +418,7 @@ export default function Decks() {
                     <input
                       aria-label="담을 덱 검색"
                       placeholder="덱 이름 검색"
+                      autoFocus
                       value={pickerQuery}
                       onChange={(e) => setPickerQuery(e.target.value)}
                     />

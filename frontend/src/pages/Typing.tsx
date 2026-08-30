@@ -78,7 +78,7 @@ export default function Typing() {
         ? { direction, total: count, sourceSessionId: opts.sourceSessionId }
         : { direction, total: count, wrongOnly, starredOnly }
       const res = await api<StartResp>(`/decks/${deckId}/typing-sessions`, { method: 'POST', body: JSON.stringify(body) })
-      if (deckId) recordRecentStudy(deckId) // 홈 '최근 학습 덱' 재료
+      if (deckId) recordRecentStudy(deckId, 'typing') // 홈 '최근 학습 덱' 재료
       setSummary(null)   // 성공한 뒤에만 요약을 치운다 — 실패하면 결과 화면 유지
       setSession(res)
       setIdx(0)
