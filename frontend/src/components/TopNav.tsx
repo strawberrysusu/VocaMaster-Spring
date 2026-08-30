@@ -81,9 +81,17 @@ export default function TopNav({ streak }: { streak?: number }) {
   const [deckCounts, setDeckCounts] = useState<Map<number, number>>(new Map())
   const loggedIn = !!getToken()
 
+  // 학습 4모드는 몰입 모드 — 사이드바(모바일 탭바 포함) 없이 풀스크린 (Quizlet 방식, 8/30 사용자 지적).
+  // 각 학습 화면에 "← 덱으로" 탈출구가 이미 있다. .shell 여백은 CSS :has(.sidenav)가 따라온다.
+  const focusMode =
+    pathname === '/study' ||
+    pathname.startsWith('/quiz/') ||
+    pathname.startsWith('/typing/') ||
+    pathname.startsWith('/listening/')
+
   // 사이드바 폴더 목록 — 페이지 이동마다 재조회 (폴더 생성/이동이 자연 반영). 실패해도 조용히.
   useEffect(() => {
-    if (!loggedIn) return
+    if (!loggedIn || focusMode) return
     api<Folder[]>('/folders').then(setFolders).catch(() => {})
     api<DeckLite[]>('/decks')
       .then((ds) => {
@@ -92,7 +100,7 @@ export default function TopNav({ streak }: { streak?: number }) {
         setDeckCounts(m)
       })
       .catch(() => {})
-  }, [pathname, loggedIn])
+  }, [pathname, loggedIn, focusMode])
 
   const activeFolderParam = pathname.startsWith('/decks') ? new URLSearchParams(search).get('folder') : null
 
@@ -124,6 +132,9 @@ export default function TopNav({ streak }: { streak?: number }) {
     clearToken()
     navigate('/login')   // basename(/app)을 라우터가 처리 — 절대경로 /login은 API 보안에 걸림 (Codex 검산)
   }
+
+  // 훅 선언이 모두 끝난 뒤의 조건부 렌더 (React 훅 순서 규칙)
+  if (focusMode) return null
 
   return (
     <div className="sidenav">
