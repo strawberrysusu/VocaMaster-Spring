@@ -36,7 +36,10 @@ CD의 헬스 게이트·HTTP 스모크가 실패해도 **이전 컨테이너가 
 
 1. **증상 확인**: `ssh ubuntu@<APP_IP>` → `docker logs --tail 50 vocamaster-app-app-1`
 2. **가장 빠른 복구 = 직전 커밋으로 재배포**: 로컬에서
-   `git revert --no-edit HEAD && git push` → CD가 이전 코드로 새 이미지를 배포 (V 마이그레이션은 전진만 하므로 스키마는 안전)
+   `git revert --no-edit HEAD && git push` → CD가 이전 코드로 새 이미지를 배포
+   ⚠ 되돌린 커밋에 V 마이그레이션이 포함돼 있었다면 스키마는 신버전인 채 코드만 구버전이 된다 —
+   추가형(컬럼/테이블 신설)이면 대체로 무해하지만, 파괴적 변경(삭제·리네임·타입 변경)이 이미 적용된 경우
+   구버전 코드가 깨질 수 있으니 revert 전에 해당 커밋의 `db/migration` 포함 여부부터 확인
 3. **CD 자체가 죽었을 때의 비상 경로**: 서버에 남아 있는 직전 이미지로 임시 기동 —
    `docker images | head`로 이전 이미지 ID 확인 → `docker tag <이전ID> vocamaster:prod && docker compose -f docker-compose.app.yml up -d`
 4. 복구 후 원인 수리 커밋을 정상 경로로 배포
