@@ -1780,6 +1780,80 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
 .folder-chip-op:hover { opacity: 1; }
 .folder-add { border-style: dashed; color: #888; }
 
+/* ── 홈 대시보드 2차 (8/30 리디자인) — 최근 학습 덱 + 내 폴더 패널 ── */
+.home-2col {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+.home-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px 22px;
+}
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.panel-head h2 { margin: 0; font-size: 16px; letter-spacing: -0.02em; }
+.panel-sub { font-size: 12.5px; color: var(--muted, #9a9ba8); }
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 2px;
+  border-top: 1px solid #f1f1f5;
+}
+.recent-row:first-of-type { border-top: none; }
+.recent-info { flex: 1; min-width: 0; }
+.recent-title {
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--ink-2);
+  text-decoration: none;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-title:hover { color: var(--a); }
+.recent-meta { margin: 3px 0 0; font-size: 12.5px; color: var(--muted, #9a9ba8); }
+.resume-btn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--a-soft);
+  color: var(--a);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.resume-btn:hover { filter: brightness(0.97); }
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 2px;
+  border-top: 1px solid #f1f1f5;
+  text-decoration: none;
+  color: inherit;
+}
+.folder-row:first-of-type { border-top: none; }
+.folder-row-icon { font-size: 17px; }
+.folder-row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.folder-row-name { font-weight: 700; font-size: 14px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-row-name:hover { color: var(--a); }
+.folder-row-meta { font-size: 12px; color: var(--muted, #9a9ba8); margin-top: 2px; }
+.folder-row-arrow { color: #c6c7d2; font-size: 17px; }
+
+@media (max-width: 768px) {
+  .home-2col { grid-template-columns: 1fr; }
+}
+
 /* ── 폴더에 덱 담기 (8/30) — 빈 폴더에서 덱을 "가져올" 동선이 없던 구멍 수리 ── */
 .deck-add-card {
   border: 1.5px dashed #c9c9dd;

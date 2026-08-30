@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
+import { getRecentStudy, agoLabel } from '../lib/recent'
 import TopNav from '../components/TopNav'
 
 interface TodaySummary {
@@ -20,6 +21,12 @@ interface Deck {
   title: string
   visibility: string
   cardCount: number
+  folderId: number | null
+}
+
+interface Folder {
+  id: number
+  name: string
 }
 
 const SECONDS_PER_CARD = 25 // 예상 시간 어림값 — 카드당 평균 답변 시간
@@ -29,6 +36,7 @@ export default function Home() {
   const [boxes, setBoxes] = useState<BoxCount[] | null>(null)
   // null=로딩 중, []=정말 덱 없음 — 초기값 []로 두면 로딩 순간 기존 유저에게 온보딩이 번쩍임 (Codex 검산)
   const [decks, setDecks] = useState<Deck[] | null>(null)
+  const [folders, setFolders] = useState<Folder[]>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -38,6 +46,7 @@ export default function Home() {
     api<Deck[]>('/decks')
       .then(setDecks)
       .catch((e) => setError(e.message))   // 삼키면 장애 시 영원히 '신규 유저'로 오판
+    api<Folder[]>('/folders').then(setFolders).catch(() => {})   // 폴더 패널만 조용히 숨김
   }, [])
 
   const today = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
@@ -45,10 +54,26 @@ export default function Home() {
   const dueMinutes = Math.max(1, Math.round((due * SECONDS_PER_CARD) / 60))
   const maxBox = boxes ? Math.max(1, ...boxes.map((b) => b.count)) : 1
 
-  // 디자인 v2: 신규 유저 온보딩 + 이어서 학습 (마지막 학습 덱은 localStorage로 — 별도 API 불필요)
-  const isNewUser = decks !== null && decks.length === 0   // 로딩 중(null)엔 판정 보류
-  const lastStudyId = localStorage.getItem('vm.lastStudyDeckId')
-  const resumeDeck = decks?.find((d) => String(d.id) === lastStudyId && d.cardCount > 0)
+  // 디자인 v2: 신규 유저 온보딩 (로딩 중 null엔 판정 보류)
+  const isNewUser = decks !== null && decks.length === 0
+
+  // 리디자인 2차(8/30): 최근 학습 덱 — 4모드가 localStorage에 남긴 기록을 덱 목록과 join.
+  // 삭제된 덱은 join에서 자연 탈락. 기록이 없으면 내 덱 상위 몇 개로 대신 채운다.
+  const recentDecks = getRecentStudy()
+    .map((e) => ({ deck: decks?.find((d) => d.id === e.id && d.cardCount > 0), at: e.at }))
+    .filter((e): e is { deck: Deck; at: number } => !!e.deck)
+    .slice(0, 3)
+  const fallbackDecks = recentDecks.length === 0 ? (decks ?? []).filter((d) => d.cardCount > 0).slice(0, 3) : []
+
+  // 내 폴더 패널 — 폴더별 덱/카드 수는 이미 받은 덱 목록에서 집계 (추가 API 없음)
+  const folderCards = folders.map((f) => {
+    const inFolder = (decks ?? []).filter((d) => d.folderId === f.id)
+    return { id: f.id as number | 'none', name: f.name, deckCount: inFolder.length, cardCount: inFolder.reduce((a, d) => a + d.cardCount, 0) }
+  })
+  const unfiled = (decks ?? []).filter((d) => d.folderId === null)
+  if (folders.length > 0 && unfiled.length > 0) {
+    folderCards.push({ id: 'none', name: '미분류', deckCount: unfiled.length, cardCount: unfiled.reduce((a, d) => a + d.cardCount, 0) })
+  }
 
   if (isNewUser) {
     return (
@@ -151,6 +176,57 @@ export default function Home() {
           )}
         </section>
 
+        <div className="home-2col">
+          <section className="home-panel">
+            <div className="panel-head">
+              <h2>최근 학습 덱</h2>
+              <Link to="/decks" className="link">전체 보기</Link>
+            </div>
+            {recentDecks.map(({ deck, at }) => (
+              <div className="recent-row" key={deck.id}>
+                <div className="recent-info">
+                  <Link to={`/decks/${deck.id}`} className="recent-title">{deck.title}</Link>
+                  <p className="recent-meta">카드 {deck.cardCount}장{at ? ` · 마지막 학습 ${agoLabel(at)}` : ''}</p>
+                </div>
+                <Link to={`/study?deckId=${deck.id}`} className="resume-btn">이어하기</Link>
+              </div>
+            ))}
+            {fallbackDecks.map((d) => (
+              <div className="recent-row" key={d.id}>
+                <div className="recent-info">
+                  <Link to={`/decks/${d.id}`} className="recent-title">{d.title}</Link>
+                  <p className="recent-meta">카드 {d.cardCount}장</p>
+                </div>
+                <Link to={`/study?deckId=${d.id}`} className="resume-btn">학습하기</Link>
+              </div>
+            ))}
+            {recentDecks.length === 0 && fallbackDecks.length === 0 && decks !== null && (
+              <p className="muted">카드가 있는 덱이 아직 없어요 — 내 덱에서 시작해보세요.</p>
+            )}
+            {decks === null && <p className="muted">불러오는 중...</p>}
+          </section>
+
+          <section className="home-panel">
+            <div className="panel-head">
+              <h2>내 폴더</h2>
+              <span className="panel-sub">덱 {decks?.length ?? 0}개</span>
+            </div>
+            {folderCards.map((f) => (
+              <Link key={f.id} to={`/decks?folder=${f.id}`} className="folder-row">
+                <span className="folder-row-icon">{f.id === 'none' ? '📂' : '📁'}</span>
+                <span className="folder-row-info">
+                  <span className="folder-row-name">{f.name}</span>
+                  <span className="folder-row-meta">{f.deckCount}개 덱 · {f.cardCount.toLocaleString()}장</span>
+                </span>
+                <span className="folder-row-arrow">›</span>
+              </Link>
+            ))}
+            {folderCards.length === 0 && (
+              <p className="muted">내 덱의 "＋ 새 폴더"로 덱을 정리할 수 있어요.</p>
+            )}
+          </section>
+        </div>
+
         {summary && (
           <div className="stats-2col">
             <div className="stat-card">
@@ -176,36 +252,6 @@ export default function Home() {
             </div>
           </div>
         )}
-
-        {resumeDeck && (
-          <section className="resume-card">
-            <div>
-              <p className="label">이어서 학습</p>
-              <p className="resume-title">{resumeDeck.title}</p>
-              <p className="muted" style={{ fontSize: 13, margin: '4px 0 0' }}>
-                카드 {resumeDeck.cardCount}장 · 최근 학습한 덱
-              </p>
-            </div>
-            <Link to={`/study?deckId=${resumeDeck.id}`} className="btn-primary" style={{ textDecoration: 'none' }}>
-              이어서 학습
-            </Link>
-          </section>
-        )}
-
-        <div className="section-head" style={{ margin: '44px 0 16px' }}>
-          <h2>내 덱</h2>
-          <Link to="/decks" className="link">전체 보기</Link>
-        </div>
-        <div className="deck-grid">
-          {(decks ?? []).slice(0, 3).map((d) => (
-            <Link key={d.id} to={`/decks/${d.id}`} className="deck-card">
-              <span className="tag">{d.visibility}</span>
-              <p className="title">{d.title}</p>
-              <p className="meta">카드 {d.cardCount}장</p>
-            </Link>
-          ))}
-          {decks === null && <p className="muted">불러오는 중...</p>}
-        </div>
       </div>
     </>
   )

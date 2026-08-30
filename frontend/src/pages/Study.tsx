@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { fetchAllCards } from '../api/cards'
+import { recordRecentStudy } from '../lib/recent'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
 
@@ -53,7 +54,7 @@ export default function Study() {
         .then(({ cards }) => {
           const picked = starredOnly ? cards.filter((c) => c.starred) : cards
           setQueue(picked.map((c) => ({ cardId: c.id, front: c.front, back: c.back, reading: c.reading })))
-          localStorage.setItem('vm.lastStudyDeckId', deckId) // 홈 '이어서 학습' 카드 재료
+          recordRecentStudy(deckId) // 홈 '최근 학습 덱' 재료
         })
         .catch((e) => setError(e.message))
     } else {
