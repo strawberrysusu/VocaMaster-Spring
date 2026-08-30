@@ -1674,6 +1674,67 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
 }
 .folder-chip-op:hover { opacity: 1; }
 .folder-add { border-style: dashed; color: #888; }
+
+/* ── 폴더에 덱 담기 (8/30) — 빈 폴더에서 덱을 "가져올" 동선이 없던 구멍 수리 ── */
+.deck-add-card {
+  border: 1.5px dashed #c9c9dd;
+  background: #fbfbfe;
+  cursor: pointer;
+  font: inherit;
+  box-shadow: none;
+}
+.deck-add-card:hover {
+  border-color: var(--a, #5b5bd6);
+  background: var(--a-soft, #ececf7);
+}
+.deck-add-card .add-plus { font-size: 24px; color: var(--a, #5b5bd6); line-height: 1; }
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 27, 38, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 20px;
+}
+.modal-panel {
+  background: #fff;
+  border-radius: 20px;
+  padding: 22px 24px;
+  width: min(560px, 100%);
+  max-height: min(640px, 90vh);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px -24px rgba(26, 27, 38, 0.4);
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.modal-head h2 { margin: 0; font-size: 17px; }
+.modal-close { border: none; background: none; font-size: 15px; color: #888; cursor: pointer; padding: 4px 8px; }
+.picker-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.picker-tools input {
+  flex: 1;
+  min-width: 160px;
+  border: 1px solid var(--border, #e2e2ea);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+}
+.pick-list {
+  overflow-y: auto;
+  border: 1px solid var(--border, #e2e2ea);
+  border-radius: 12px;
+  padding: 4px;
+  flex: 1;
+  min-height: 120px;
+}
+.pick-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+.pick-row:hover { background: #f5f5fb; }
+.pick-title { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-where { font-size: 12px; color: #999; white-space: nowrap; }
+.modal-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.modal-foot .muted { font-size: 12px; }
+
 .bulk-move {
   border: 1px solid #d8d8e2;
   border-radius: 8px;

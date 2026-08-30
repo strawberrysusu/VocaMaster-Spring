@@ -38,6 +38,11 @@ export default function Decks() {
   // 📁 폴더 (8/29, 동결 전 마지막 기능) — 'all'=전체, 'none'=미분류, number=그 폴더
   const [folders, setFolders] = useState<Folder[]>([])
   const [activeFolder, setActiveFolder] = useState<'all' | 'none' | number>('all')
+  // 폴더에 덱 담기 (8/30) — "폴더 만들고 들어가면 빈 화면에서 덱을 가져올 방법이 없다"는 UX 구멍 수리.
+  // 보내기(선택 모드→폴더로 이동)의 역방향: 폴더 화면에서 기존 덱을 골라 가져온다. 같은 이동 API.
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [picked, setPicked] = useState<Set<number>>(new Set())
+  const [pickerQuery, setPickerQuery] = useState('')
 
   function load() {
     api<Deck[]>('/decks').then(setDecks).catch((e) => setError(e.message))
@@ -93,6 +98,41 @@ export default function Decks() {
       load()
     } catch (e) {
       setError((e as Error).message)
+      load()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function openPicker() {
+    setPicked(new Set())
+    setPickerQuery('')
+    setPickerOpen(true)
+  }
+
+  function togglePick(id: number) {
+    setPicked((s) => {
+      const n = new Set(s)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  }
+
+  async function addPickedToFolder() {
+    if (busy || picked.size === 0 || typeof activeFolder !== 'number') return
+    setBusy(true)
+    setError('')
+    let done = 0
+    try {
+      for (const id of picked) {
+        await api(`/decks/${id}/folder`, { method: 'PATCH', body: JSON.stringify({ folderId: activeFolder }) })
+        done++
+      }
+      setPickerOpen(false)
+      load()
+    } catch (e) {
+      setError(`${done}개 담은 후 중단: ${(e as Error).message} — 목록을 새로고침했어요`)
       load()
     } finally {
       setBusy(false)
@@ -178,6 +218,10 @@ export default function Decks() {
   const safePage = Math.min(page, totalPages - 1)   // 삭제·폴더 전환으로 페이지 수가 줄어도 빈 화면 안 되게
   const visible = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE)
   const unfiledCount = decks.filter((d) => d.folderId === null).length
+  // 담기 후보 = 지금 보는 폴더에 없는 모든 덱 (다른 폴더 소속 포함 — 담으면 옮겨진다고 모달에서 안내)
+  const activeFolderObj = typeof activeFolder === 'number' ? folders.find((f) => f.id === activeFolder) : undefined
+  const candidates = typeof activeFolder === 'number' ? decks.filter((d) => d.folderId !== activeFolder) : []
+  const shownCandidates = candidates.filter((d) => d.title.toLowerCase().includes(pickerQuery.trim().toLowerCase()))
 
   return (
     <>
@@ -271,6 +315,13 @@ export default function Decks() {
         {error && <p className="error" role="alert">{error}</p>}
 
         <div className="deck-grid">
+          {typeof activeFolder === 'number' && !selectMode && (
+            <button className="deck-card deck-add-card" onClick={openPicker}>
+              <span className="add-plus">＋</span>
+              <p className="title">이 폴더에 덱 담기</p>
+              <p className="meta">이미 만든 덱을 골라서 가져와요</p>
+            </button>
+          )}
           {visible.map((d) => (
             <Link
               key={d.id}
@@ -293,7 +344,9 @@ export default function Decks() {
             <p className="muted">
               {decks.length === 0
                 ? '덱이 없어요. 위에서 첫 덱을 만들어보세요.'
-                : '이 폴더엔 덱이 없어요 — ☑ 선택 모드에서 덱을 골라 "폴더로 이동"으로 채울 수 있어요.'}
+                : typeof activeFolder === 'number'
+                  ? '이 폴더엔 아직 덱이 없어요 — "＋ 덱 담기" 카드로 채워보세요.'
+                  : '미분류 덱이 없어요 — 전부 폴더에 정리되어 있어요.'}
             </p>
           )}
         </div>
@@ -307,6 +360,55 @@ export default function Decks() {
               </button>
             ))}
             <button disabled={safePage === totalPages - 1} onClick={() => setPage(safePage + 1)}>다음 ▶</button>
+          </div>
+        )}
+
+        {pickerOpen && typeof activeFolder === 'number' && (
+          <div className="modal-overlay" onClick={() => !busy && setPickerOpen(false)}>
+            <div className="modal-panel" role="dialog" aria-label="폴더에 덱 담기" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-head">
+                <h2>📁 {activeFolderObj?.name ?? '폴더'}에 덱 담기</h2>
+                <button className="modal-close" aria-label="닫기" disabled={busy} onClick={() => setPickerOpen(false)}>✕</button>
+              </div>
+              {candidates.length === 0 ? (
+                <p className="muted">담을 수 있는 덱이 없어요 — 모든 덱이 이미 이 폴더에 있어요.</p>
+              ) : (
+                <>
+                  <div className="picker-tools">
+                    <input
+                      aria-label="담을 덱 검색"
+                      placeholder="덱 이름 검색"
+                      value={pickerQuery}
+                      onChange={(e) => setPickerQuery(e.target.value)}
+                    />
+                    <button className="btn-ghost-link" disabled={busy || shownCandidates.length === 0} onClick={() => setPicked(new Set(shownCandidates.map((d) => d.id)))}>
+                      보이는 것 전체 선택
+                    </button>
+                    <button className="btn-ghost-link" disabled={busy || picked.size === 0} onClick={() => setPicked(new Set())}>
+                      해제
+                    </button>
+                  </div>
+                  <div className="pick-list">
+                    {shownCandidates.map((d) => (
+                      <label key={d.id} className="pick-row">
+                        <input type="checkbox" checked={picked.has(d.id)} disabled={busy} onChange={() => togglePick(d.id)} />
+                        <span className="pick-title">{d.title}</span>
+                        <span className="pick-where">
+                          {d.folderId === null ? '📂 미분류' : `📁 ${folders.find((f) => f.id === d.folderId)?.name ?? '다른 폴더'}`} · {d.cardCount}장
+                        </span>
+                      </label>
+                    ))}
+                    {shownCandidates.length === 0 && <p className="muted">검색과 일치하는 덱이 없어요.</p>}
+                  </div>
+                  <div className="modal-foot">
+                    <span className="muted">다른 폴더의 덱을 담으면 그쪽에서는 빠져요 (덱은 한 폴더에만 소속)</span>
+                    <button className="btn-primary" disabled={busy || picked.size === 0} onClick={addPickedToFolder}>
+                      {busy ? '담는 중…' : `${picked.size}개 담기`}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
