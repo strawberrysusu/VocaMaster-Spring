@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
 
@@ -50,6 +50,16 @@ export default function Decks() {
   }
 
   useEffect(load, [])
+
+  // 사이드바의 폴더 링크(/decks?folder=ID)로 진입·전환 — 칩 클릭은 기존처럼 로컬 상태만
+  const { search } = useLocation()
+  useEffect(() => {
+    const q = new URLSearchParams(search).get('folder')
+    if (q === null) return                       // 쿼리 없는 일반 진입은 기존 상태 유지
+    setActiveFolder(q === 'none' ? 'none' : Number(q))
+    setPage(0)
+    setSelected(new Set())
+  }, [search])
 
   async function createFolder() {
     const name = window.prompt('새 폴더 이름 (예: JLPT N1)')

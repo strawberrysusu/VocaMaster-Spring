@@ -47,20 +47,112 @@ input {
   font-weight: 700;
 }
 
-/* ── 상단 네비게이션 ── */
-.topnav {
+/* ── 좌측 사이드바 (리디자인 8/30 — 상단 가로 탭에서 전환, Quizlet식) ── */
+.sidenav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 232px;
   background: #fff;
-  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px 16px;
+  z-index: 50;
 }
 
-.topnav-inner {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 14px 32px;
+.side-top {
   display: flex;
   align-items: center;
-  gap: 22px;
+  justify-content: space-between;
+  padding: 2px 8px 18px;
 }
+
+.side-account-mobile {
+  display: none;   /* 모바일 상단 헤더에서만 */
+}
+
+.side-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.side-menu a {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  font-size: 14.5px;
+  font-weight: 500;
+  text-decoration: none;
+  color: #6e6f80;
+}
+
+.side-menu a:hover { background: #f6f6fa; }
+
+.side-menu a.active {
+  background: var(--a-soft);
+  color: var(--a);
+  font-weight: 700;
+}
+
+.side-folders {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.side-folders-head {
+  margin: 0 0 6px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #9a9ba8);
+}
+
+.side-folder {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  text-decoration: none;
+  color: #55566a;
+}
+
+.side-folder:hover { background: #f6f6fa; }
+.side-folder.active { background: var(--a-soft); color: var(--a); font-weight: 700; }
+.side-folder-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-folder-count { font-size: 12px; color: #b0b1bf; }
+.side-folder.active .side-folder-count { color: var(--a); }
+
+.side-foot {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.side-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.side-account .avatar-wrap { display: flex; }
+.side-account .nav-logout { margin-left: auto; }
+.side-foot .streak-pill { align-self: flex-start; }
+.side-foot .profile-pop { bottom: 44px; top: auto; left: 0; right: auto; }
+.side-login-btn { text-decoration: none; padding: 9px 16px; font-size: 13.5px; text-align: center; }
 
 .logo {
   display: flex;
@@ -85,33 +177,6 @@ input {
   font-family: 'Zen Kaku Gothic New', sans-serif;
   font-size: 15px;
   font-weight: 700;
-}
-
-.nav-links {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-}
-
-.nav-links a,
-.nav-links span {
-  padding: 8px 13px;
-  border-radius: 9px;
-  font-size: 14.5px;
-  font-weight: 500;
-  white-space: nowrap;
-  text-decoration: none;
-  color: #6e6f80;
-}
-
-.nav-links a.active {
-  background: var(--a-soft);
-  color: var(--a);
-}
-
-.nav-links span {
-  color: #c3c4cf;
-  cursor: default;
 }
 
 .streak-pill {
@@ -157,8 +222,18 @@ input {
 .shell {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 52px 32px 100px;
+  padding: 40px 36px 100px;
   animation: fadeUp 0.3s ease both;
+}
+
+/* 사이드바 폭만큼 본문을 오른쪽으로 — 페이지 컴포넌트 무수정 전환의 핵심.
+   (TopNav 없는 화면은 로그인뿐이고 로그인은 .shell을 안 쓴다 — 8/30 실측) */
+@media (min-width: 769px) {
+  .shell {
+    margin-left: 232px;
+    margin-right: auto;
+    max-width: 1060px;
+  }
 }
 
 @keyframes fadeUp {
@@ -921,20 +996,50 @@ button:disabled {
   cursor: default;
 }
 
-/* ── 모바일 (768px 이하) ── */
+/* ── 모바일 (768px 이하): 사이드바 DOM을 상단 헤더 + 하단 탭바로 변형 ── */
 @media (max-width: 768px) {
   .shell {
-    padding: 28px 16px 70px;
+    padding: 24px 16px 96px;   /* 하단 탭바 높이만큼 바닥 여유 */
   }
 
-  .topnav-inner {
-    padding: 12px 16px;
-    gap: 10px;
-    flex-wrap: wrap;
+  .sidenav {
+    position: static;
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 16px;
   }
 
-  .nav-links a.soon {
-    display: none;            /* 공사중 메뉴는 좁은 화면에서 숨김 */
+  .side-top {
+    flex: 1;
+    padding: 0;
+  }
+
+  .side-account-mobile { display: flex; align-items: center; gap: 8px; }
+  .side-folders { display: none; }        /* 폴더는 내 덱 화면의 칩으로 */
+  .side-foot { display: none; }           /* 로그아웃은 상단 헤더 오른쪽에 */
+
+  .side-menu {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    flex-direction: row;
+    justify-content: space-around;
+    background: #fff;
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+
+  .side-menu a {
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 10px;
+    font-size: 11px;
+    border-radius: 9px;
   }
 
   .streak-pill {
