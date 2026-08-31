@@ -31,15 +31,23 @@ export function detectLang(text: string): string {
   return 'en-US'
 }
 
+// 언어 코드 정확 매칭 — startsWith('ko')는 콘칸어(kok-IN)까지 잡는다 (8/31 폰 Chrome 실측:
+// 한국어 목록에 '코카니어 인도'가 떴음). 'ko' 그 자체이거나 'ko-'로 이어질 때만 같은 언어.
+// 일부 안드로이드는 ko_KR 언더스코어 표기라 '-'로 정규화 후 비교.
+function langMatches(voiceLang: string, base: string): boolean {
+  const l = voiceLang.toLowerCase().replace('_', '-')
+  return l === base || l.startsWith(base + '-')
+}
+
 // 설정 화면용 — 언어별 사용 가능한 음성 목록
 export function voicesFor(lang: string): SpeechSynthesisVoice[] {
   const base = lang.slice(0, 2)
-  return loadVoices().filter((v) => v.lang.toLowerCase().startsWith(base))
+  return loadVoices().filter((v) => langMatches(v.lang, base))
 }
 
 function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
   const base = lang.slice(0, 2)
-  const candidates = loadVoices().filter((v) => v.lang.toLowerCase().startsWith(base))
+  const candidates = loadVoices().filter((v) => langMatches(v.lang, base))
   const preferred = voicePreference(lang)                       // 설정에서 고른 음성이 있으면 그것부터
   if (preferred) {
     const hit = candidates.find((v) => v.name === preferred)
