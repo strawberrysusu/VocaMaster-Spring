@@ -2,6 +2,7 @@ package com.vocamaster.common;
 
 import com.vocamaster.common.ErrorResponse;
 import com.vocamaster.common.exception.BadRequestException;
+import com.vocamaster.common.exception.ConflictException;
 import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.common.exception.TooManyRequestsException;
@@ -41,6 +42,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex){
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ErrorResponse.of(400, "BAD_REQUEST", ex.getMessage()));
+    }
+
+    // 409 — 동시 요청이 먼저 처리권을 가져가 아직 확정본을 읽을 수 없는 경우 (일괄 제출 재전송 경합)
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(409, ex.getCode(), ex.getMessage()));
     }
 
     // 429 — Retry-After 헤더는 HTTP 표준 계약: "몇 초 뒤에 다시 오라"를 클라이언트가 기계적으로 읽음 (ADR-034)

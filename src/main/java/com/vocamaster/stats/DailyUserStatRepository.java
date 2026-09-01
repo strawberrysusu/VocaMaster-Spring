@@ -27,13 +27,16 @@ public interface DailyUserStatRepository extends JpaRepository<DailyUserStat, Lo
     // 오늘 줄 생성 — 동시에 다른 요청이 먼저 만들었어도(UNIQUE 충돌) INSERT가 study_count +1로 전환됨 (MySQL upsert).
     // try/catch로 제약 위반을 잡는 방식은 위반 시점(커밋/flush)과 세션 오염 문제로 불안정 → DB에 맡기는 게 정석.
     // 동시 두 요청이 같은 streak을 계산해도(둘 다 어제 행 기준) 값이 같아서 안전
+    // count는 '이번에 더할 답변 수'. 단건 경로는 1, 일괄 제출(V21)은 답변 수만큼 한 번에 더한다 —
+    // 예전처럼 +1 고정이면 200장 세션이 200번 UPDATE를 쳐야 한다 (2026-08-31)
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             insert into daily_user_stats (user_id, stat_date, study_count, streak)
-            values (:userId, :date, 1, :streak)
-            on duplicate key update study_count = study_count + 1
+            values (:userId, :date, :count, :streak)
+            on duplicate key update study_count = study_count + :count
             """, nativeQuery = true)
     void upsertTodayRow(@Param("userId") Long userId,
                         @Param("date") LocalDate date,
-                        @Param("streak") int streak);
+                        @Param("streak") int streak,
+                        @Param("count") int count);
 }

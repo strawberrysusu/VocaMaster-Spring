@@ -102,8 +102,8 @@ class StatsServiceTest extends AbstractIntegrationTest {
     @DisplayName("upsert 연속 2번 — 줄은 하나만, 두 번째 INSERT는 +1로 흡수 (동시 최초 생성 회귀)")
     void upsertTodayRow_twice_singleRowCountTwo() {
         // "첫 학습 동시 2건이 둘 다 UPDATE 0행을 본" 상황의 후속 동작을 결정적으로 재현
-        dailyUserStatRepository.upsertTodayRow(user.getId(), TODAY, 1);
-        dailyUserStatRepository.upsertTodayRow(user.getId(), TODAY, 1);
+        dailyUserStatRepository.upsertTodayRow(user.getId(), TODAY, 1, 1);
+        dailyUserStatRepository.upsertTodayRow(user.getId(), TODAY, 1, 1);
 
         DailyUserStat stat = dailyUserStatRepository
                 .findByUserIdAndStatDate(user.getId(), TODAY).orElseThrow();

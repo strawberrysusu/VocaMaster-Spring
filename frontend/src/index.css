@@ -764,7 +764,7 @@ input {
   justify-content: center;
   gap: 18px;
   padding: 40px;
-  margin-bottom: 22px;
+  margin-bottom: 14px; /* 아래에 액션 바(🔊·⭐)가 붙는다 */
 }
 
 .study-word {
@@ -1121,17 +1121,121 @@ button:disabled {
   outline: none;
 }
 
-/* 🔊를 학습 카드 밖 형제로 띄우기 (button 중첩 금지) */
-.study-card-wrap {
-  position: relative;
+.speak-btn-label {
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.study-speak {
-  position: absolute;
-  top: 18px;
-  right: 20px;
-  margin: 0;
-  opacity: 0.7;
+/* 학습 화면 액션 바 — 카드 아래 큰 버튼 2개(🔊 다시 듣기 / ⭐).
+   카드 우상단 절대배치를 대체한다: 구석의 작은 표적이라 누르기 불편했다 (2026-08-31) */
+.study-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.study-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+/* .speak-btn 기본형(작은 인라인 아이콘)을 액션 바 크기로 되돌린다 */
+.speak-btn.study-action-btn {
+  display: flex;
+  font-size: 20px;
+  opacity: 1;
+  margin-left: 0;
+}
+
+.speak-btn.study-action-btn:hover,
+.speak-btn.study-action-btn:focus-visible {
+  transform: none;
+  border-color: var(--a);
+  color: var(--a);
+}
+
+.study-action-btn:hover,
+.study-action-btn:focus-visible {
+  border-color: var(--a);
+  color: var(--a);
+  outline: none;
+}
+
+/* 클래스명이 star-action인 이유: 덱 상세 목록의 .star-btn은 30×30 아이콘 버튼이고
+   이 파일 뒤쪽(1621줄)에 정의돼 있어 같은 이름을 쓰면 폭 30px에 눌려 글자가 세로로 쪼개진다 (실측) */
+.star-action span[aria-hidden='true'] {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.star-action.on {
+  border-color: #e6b422;
+  background: #fffaeb;
+  color: #a97a06;
+}
+
+.star-action:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* 고른 답 표시 — 세션 중에는 답이 확정이 아니라 '지금 고른 것'이라 되돌아왔을 때 보여야 한다 */
+.answer-no.picked {
+  border-color: #b0485c;
+  background: #fdf3f5;
+}
+
+.answer-yes.picked {
+  box-shadow: 0 0 0 3px rgba(61, 62, 150, 0.25), 0 8px 20px -8px rgba(61, 62, 150, 0.6);
+}
+
+.study-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.nav-btn {
+  padding: 9px 16px;
+  border-radius: 11px;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nav-btn:hover:not(:disabled),
+.nav-btn:focus-visible:not(:disabled) {
+  border-color: var(--a);
+  color: var(--a);
+  outline: none;
+}
+
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.study-foot {
+  text-align: center;
+  font-size: 12.5px;
+  margin-top: 16px;
 }
 
 /* ── 퀴즈 ── */

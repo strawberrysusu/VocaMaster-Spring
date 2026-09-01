@@ -1,6 +1,8 @@
 package com.vocamaster.review;
 
 import com.vocamaster.common.CurrentUser;
+import com.vocamaster.review.dto.BatchAnswerRequest;
+import com.vocamaster.review.dto.BatchAnswerResponse;
 import com.vocamaster.review.dto.BoxCountResponse;
 import com.vocamaster.review.dto.DueCardResponse;
 import com.vocamaster.review.dto.ReviewAnswerRequest;
@@ -45,5 +47,12 @@ public class ReviewController {
     public ReviewAnswerResponse recordAnswer(@PathVariable Long cardId,
                                              @Valid @RequestBody ReviewAnswerRequest request) {
         return reviewService.recordAnswer(CurrentUser.getId(), cardId, request.getCorrect());
+    }
+
+    @PostMapping("/answers/batch")
+    @Operation(summary = "학습 세션 일괄 제출 — 세션 전체 답안을 한 트랜잭션에 반영 (V21). "
+            + "submissionId가 같으면 두 번째 요청부터는 진행도를 다시 움직이지 않는다")
+    public BatchAnswerResponse recordAnswers(@Valid @RequestBody BatchAnswerRequest request) {
+        return reviewService.recordAnswers(CurrentUser.getId(), request);
     }
 }
