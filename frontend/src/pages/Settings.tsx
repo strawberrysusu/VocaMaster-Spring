@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, clearToken, getToken } from '../api/client'
 import TopNav from '../components/TopNav'
@@ -23,6 +24,12 @@ export default function Settings() {
   const navigate = useNavigate()
   const [s, setS] = useState<SettingsT>(loadSettings)
   const [voiceTick, setVoiceTick] = useState(0)   // 음성 목록은 비동기로 채워져서 한 번 더 그린다
+  const [provider, setProvider] = useState<string | null>(null)   // null = 조회 전
+  const [pwCur, setPwCur] = useState('')
+  const [pwNew, setPwNew] = useState('')
+  const [pwNew2, setPwNew2] = useState('')
+  const [pwBusy, setPwBusy] = useState(false)
+  const [pwError, setPwError] = useState('')
   const [withdrawing, setWithdrawing] = useState(false)
   const [withdrawError, setWithdrawError] = useState('')
 
@@ -37,10 +44,55 @@ export default function Settings() {
     }
   }, [])
 
+  // 구글 가입자는 password가 null이라(AuthService) 비밀번호 변경 폼 자체가 의미 없다.
+  // TopNav 프로필 팝오버가 쓰는 것과 같은 /users/me의 provider로 가른다
+  useEffect(() => {
+    api<{ provider: string }>('/users/me')
+      .then((me) => setProvider(me.provider))
+      .catch(() => setProvider('local'))   // 조회 실패로 폼을 감추면 바꿀 길이 없어진다 — 보이는 쪽으로 실패
+  }, [])
+
   function update(patch: Partial<SettingsT>) {
     const next = { ...s, ...patch }
     setS(next)
     saveSettings(next)   // 즉시 저장 + 즉시 적용 (저장 버튼 없음)
+  }
+
+  /**
+   * 비밀번호 변경. 서버가 성공 시 <b>모든 refresh 토큰을 폐기</b>하므로 (UserService.changePassword)
+   * 지금 세션도 곧 끊긴다. 어중간하게 남겨두면 다음 갱신에서 영문 모를 로그아웃이 되니
+   * 여기서 명시적으로 로그인 화면으로 보낸다.
+   */
+  async function changePassword(e: FormEvent) {
+    e.preventDefault()
+    setPwError('')
+    if (pwNew.length < 8) {
+      setPwError('새 비밀번호는 8자 이상이어야 해요')          // 서버 @Size(min=8)와 같은 기준
+      return
+    }
+    if (pwNew !== pwNew2) {
+      setPwError('새 비밀번호가 서로 달라요')
+      return
+    }
+    if (pwNew === pwCur) {
+      setPwError('새 비밀번호가 현재 비밀번호와 같아요')
+      return
+    }
+    setPwBusy(true)
+    try {
+      await api('/users/me/password', {
+        method: 'PATCH',
+        body: JSON.stringify({ currentPassword: pwCur, newPassword: pwNew }),
+      })
+      setPwCur(''); setPwNew(''); setPwNew2('')
+      window.alert('비밀번호를 바꿨어요.\n이 기기에서는 로그아웃됩니다. 다른 기기도 로그인 토큰이 만료되면 다시 로그인해야 해요.')
+      clearToken()
+      navigate('/login', { replace: true })
+    } catch (err) {
+      setPwError((err as Error).message)
+    } finally {
+      setPwBusy(false)
+    }
   }
 
   /**
@@ -177,6 +229,34 @@ export default function Settings() {
           <h2>계정</h2>
           <p className="muted" style={{ margin: '0 0 12px' }}>{emailFromToken() || '로그인 정보 없음'}</p>
           <button className="mode-btn" onClick={logout}>로그아웃</button>
+
+          {provider === 'google' && (
+            <div className="pw-form">
+              <h3>비밀번호</h3>
+              <p className="muted pw-note">
+                구글로 가입한 계정이라 이 서비스에는 비밀번호가 없어요. 비밀번호는 구글 계정에서 관리합니다.
+              </p>
+            </div>
+          )}
+
+          {provider === 'local' && (
+          <form className="pw-form" onSubmit={changePassword}>
+            <h3>비밀번호 변경</h3>
+            <input type="password" autoComplete="current-password" placeholder="현재 비밀번호"
+                   value={pwCur} onChange={(e) => setPwCur(e.target.value)} required />
+            <input type="password" autoComplete="new-password" placeholder="새 비밀번호 (8자 이상)"
+                   value={pwNew} onChange={(e) => setPwNew(e.target.value)} required />
+            <input type="password" autoComplete="new-password" placeholder="새 비밀번호 확인"
+                   value={pwNew2} onChange={(e) => setPwNew2(e.target.value)} required />
+            {pwError && <p className="error" role="alert">{pwError}</p>}
+            <p className="muted pw-note">
+              바꾸면 이 기기에서 로그아웃돼요. 다른 기기도 로그인 토큰이 만료되면 다시 로그인해야 해요.
+            </p>
+            <button className="btn-primary" type="submit" disabled={pwBusy}>
+              {pwBusy ? '변경 중...' : '비밀번호 변경'}
+            </button>
+          </form>
+          )}
 
           <div className="danger-zone">
             <h3>회원 탈퇴</h3>
