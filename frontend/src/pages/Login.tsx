@@ -74,6 +74,10 @@ export default function Login() {
   return (
     <div className="auth-page">
       <h1>VocaMaster</h1>
+      {/* 비로그인 방문자용 — 이 서비스가 뭔지 + 정책 문서 도달 경로 (구글 OAuth 운영 요건, 9/1) */}
+      <p className="auth-tagline">
+        일본어·영어 단어장을 만들고 플래시카드·퀴즈·타이핑·듣기로 외우는 학습 서비스예요.
+      </p>
       <div className="card auth-card">
         <h2>{mode === 'login' ? '로그인' : '회원가입'}</h2>
         <input placeholder="이메일" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -124,6 +128,9 @@ export default function Login() {
           {mode === 'login' ? '계정이 없어요 → 회원가입' : '이미 계정이 있어요 → 로그인'}
         </button>
       </div>
+      <p className="auth-foot">
+        <a className="doc-link" href="/privacy.html" target="_blank" rel="noreferrer">개인정보처리방침</a>
+      </p>
     </div>
   )
 }

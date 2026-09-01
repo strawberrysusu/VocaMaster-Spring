@@ -652,6 +652,30 @@ input {
   color: var(--muted);
 }
 
+/* 정적 문서 링크 (privacy 등) — 프론트 최초의 <a href>라 전역 앵커 스타일이 없었다 (9/1).
+   전역 a {} 를 만들면 기존 Link들 색까지 흔들려서 전용 클래스로 한정한다. */
+.doc-link {
+  color: var(--sub);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.doc-link:hover {
+  color: var(--a);
+}
+
+.auth-tagline {
+  margin: 6px 0 20px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+
+.auth-foot {
+  margin: 16px 0 0;
+  font-size: 12.5px;
+}
+
 /* 임시(공사중) 화면 */
 .stub {
   text-align: center;

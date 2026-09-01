@@ -267,7 +267,8 @@ export default function Settings() {
             */}
             <p className="muted">
               탈퇴하면 계정이 즉시 비활성화되어 로그인할 수 없고, 공개한 단어장도 탐색에 노출되지 않아요.
-              남은 데이터의 완전 삭제를 원하시면 개인정보 처리방침의 메일로 요청해 주세요.
+              남은 데이터의 완전 삭제를 원하시면{' '}
+              <a className="doc-link" href="/privacy.html" target="_blank" rel="noreferrer">개인정보처리방침</a>의 메일로 요청해 주세요.
             </p>
             {withdrawError && <p className="error" role="alert">{withdrawError}</p>}
             <button className="danger-btn" disabled={withdrawing} onClick={withdraw}>
