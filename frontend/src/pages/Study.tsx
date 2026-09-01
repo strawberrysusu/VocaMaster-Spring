@@ -482,13 +482,16 @@ export default function Study() {
               </button>
             </div>
 
-            {/* 뜻을 보기 전에는 채점할 수 없다 — 이 모드는 '떠올린 뒤 자기 채점'이 전제다.
-                숨기지 않고 비활성만 하는 이유: 되돌아온 카드에서 내가 뭘 골랐는지는 보여야 한다 */}
+            {/*
+              뜻을 보지 않고도 답할 수 있다 (2026-09-01, 사용자 결정).
+              원래는 revealed일 때만 눌리게 막혀 있었는데, 아는 단어마다 '뜻 확인' 탭이 하나씩
+              더 붙는다. 복습 덱은 아는 카드가 대부분이라 그 한 탭이 매번 쌓인다.
+              자기평가 학습이라 '떠올렸으면 바로 채점'이 자연스럽고, Quizlet도 앞면에서 바로 눌린다.
+            */}
             <div className="answer-buttons">
               <button
                 className={`answer-no${picked === false ? ' picked' : ''}`}
                 aria-pressed={picked === false}
-                disabled={!revealed}
                 onClick={() => pick(false)}
               >
                 몰라요
@@ -496,7 +499,6 @@ export default function Study() {
               <button
                 className={`answer-yes${picked === true ? ' picked' : ''}`}
                 aria-pressed={picked === true}
-                disabled={!revealed}
                 onClick={() => pick(true)}
               >
                 알아요
@@ -504,7 +506,7 @@ export default function Study() {
             </div>
             {!revealed && (
               <p className="muted" style={{ textAlign: 'center', fontSize: 13.5, marginTop: 10 }}>
-                떠올린 다음 카드를 눌러 확인하세요
+                떠올렸으면 바로 답해도 되고, 카드를 눌러 뜻을 확인해도 돼요
               </p>
             )}
 
