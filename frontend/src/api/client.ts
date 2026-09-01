@@ -15,6 +15,20 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
+/** 서버가 준 HTTP status와 code를 함께 나르는 에러. Error를 상속해 기존 호출부와 호환된다 */
+export class ApiError extends Error {
+  // 생성자 파라미터 프로퍼티는 이 프로젝트의 erasableSyntaxOnly 설정에서 금지 — 필드를 명시한다
+  status: number
+  code?: string
+
+  constructor(message: string, status: number, code?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
 let refreshInFlight: Promise<boolean> | null = null
 
 // 갱신은 전역 single-flight — 홈처럼 병렬 요청 3개가 동시에 401을 맞아도 refresh는 딱 1번.
@@ -54,7 +68,10 @@ export async function api<T>(path: string, options: RequestInit = {}, retried = 
 
   if (!res.ok) {
     const body = await res.json().catch(() => null)
-    throw new Error(body?.message ?? `요청 실패 (HTTP ${res.status})`)
+    // Error를 상속하므로 기존 `(e as Error).message` 호출부는 그대로 동작한다.
+    // status/code를 실어 보내는 이유: 같은 409라도 대응이 정반대인 경우가 있어
+    // 호출부가 메시지 문자열을 파싱하는 일이 없어야 한다 (2026-09-01)
+    throw new ApiError(body?.message ?? `요청 실패 (HTTP ${res.status})`, res.status, body?.code)
   }
   // 204 또는 200+빈 본문(삭제 등) — res.json()은 빈 본문에서 터진다
   const text = await res.text()

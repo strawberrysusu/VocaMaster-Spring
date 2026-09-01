@@ -33,23 +33,47 @@ public class StatsService {
      * 호출한 쪽 트랜잭션에 합류하므로 답변 저장과 출석이 같이 성공하거나 같이 롤백된다.
      */
     public void recordStudy(Long userId, Long deckId) {
-        LocalDate today = LocalDate.now(KST);
+        recordStudy(userId, Collections.singletonList(deckId), 1);
+    }
+
+    /**
+     * 일괄 제출용 (V21, 2026-08-31). 답변 수만큼 <b>한 번</b> 더하고, 이벤트는 <b>덱마다 한 번</b>만 발행한다.
+     *
+     * <p>200장 세션에서 단건 경로를 200번 부르면 UPDATE 200회에 이벤트 200발이 나간다.
+     * 랭킹 리스너는 deck_study_days의 (user, deck, date) unique 덕에 점수가 터지진 않지만,
+     * 그 200번이 전부 덱 행에 X 잠금을 잡았다 놓는다. 캐시 리스너는 @Async라 태스크 200개가 큐에 쌓인다.</p>
+     *
+     * @param deckIds 답변한 카드들의 덱 — <b>호출 전에 중복 제거</b>해서 넘길 것
+     * @param answerCount 이번 제출의 답변 수 (오늘 답변 수에 더할 값)
+     */
+    public void recordStudy(Long userId, Collection<Long> deckIds, int answerCount) {
+        recordStudy(userId, deckIds, answerCount, LocalDate.now(KST));
+    }
+
+    /**
+     * 호출자가 '오늘'을 정해서 넘기는 형태. 일괄 제출은 카드 시각과 통계 날짜를 같은 기준에서 파생해야 한다 —
+     * 각자 now()를 부르면 자정 경계에서 카드는 어제, 출석부는 오늘로 갈린다.
+     */
+    public void recordStudy(Long userId, Collection<Long> deckIds, int answerCount, LocalDate today) {
+        if (answerCount <= 0) return;   // 더할 것이 없으면 출석 도장도 없다
 
         // 어제 줄을 보고 연속 여부 결정 (잠금 없는 일반 SELECT). 오늘 줄이 이미 있으면 streak 값은 무시됨
         int streak = dailyUserStatRepository.findByUserIdAndStatDate(userId, today.minusDays(1))
                 .map(yesterday -> yesterday.getStreak() + 1)    // 어제도 공부함 → 연속 +1
                 .orElse(1);                                     // 끊김 → 1부터 다시
 
-        // 항상 upsert 한 방: 없으면 INSERT(streak 확정), 있으면 study_count +1.
+        // 항상 upsert 한 방: 없으면 INSERT(streak 확정), 있으면 study_count += answerCount.
         // ★ 예전의 "0행 매치 UPDATE로 탐색 → 없으면 INSERT" 2단계는 InnoDB 갭 락 데드락을 냈다 (2026-08-22):
         //   같은 순간 '오늘 첫 학습'인 사용자 여럿이 0행 UPDATE로 같은 인덱스 갭에 갭 락을 쥔 채 INSERT를 기다림.
         //   Phase 6 동시성 테스트(DeckStudyRankingListenerTest 6명 동시)가 잠복 버그를 꺼냄
-        dailyUserStatRepository.upsertTodayRow(userId, today, streak);
+        dailyUserStatRepository.upsertTodayRow(userId, today, streak, answerCount);
 
         // 첫 학습이든 N번째든 반드시 도달 — 예전처럼 updated==1에서 조기 return하면
         // 오늘 두 번째 학습부터(최다 경로) 캐시가 안 지워지는 조용한 버그 (Codex 검산)
         // 발행은 트랜잭션 안에서 하지만, AFTER_COMMIT 리스너는 커밋 확정 후에야 실행된다
-        eventPublisher.publishEvent(new StudyRecordedEvent(userId, deckId, today));
+        for (Long deckId : deckIds) {
+            eventPublisher.publishEvent(new StudyRecordedEvent(userId, deckId, today));
+        }
     }
 
     // 오늘 학습 답변 수 — 출석부 오늘 줄이 없으면 0 (아직 오늘 공부 전)
