@@ -2027,3 +2027,47 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
   color: #555;
 }
 .bulk-danger { color: #b0485c !important; }
+
+/* ── 위험 구역 (되돌릴 수 없는 동작) ── */
+.danger-zone {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.danger-zone h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #b0485c;
+}
+
+.danger-zone .muted {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.danger-btn {
+  padding: 10px 18px;
+  border-radius: 11px;
+  background: #fff;
+  border: 1px solid #e0c3ca;
+  color: #b0485c;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.danger-btn:hover:not(:disabled),
+.danger-btn:focus-visible:not(:disabled) {
+  background: #fdf3f5;
+  border-color: #b0485c;
+  outline: none;
+}
+
+.danger-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
