@@ -34,7 +34,7 @@ public class UserController {
     }
 
     @PatchMapping("/me/password")
-    @Operation(summary = "비밀번호 변경 (모든 세션 강제 로그아웃)")
+    @Operation(summary = "비밀번호 변경 (모든 refresh token 폐기 — 이미 발급된 access token은 만료까지 유효)")
     public ResponseEntity<Void> changePassword(@AuthenticationPrincipal CustomUserDetails me,
                                                @Valid @RequestBody ChangePasswordRequest req) {
         userService.changePassword(me.getUserId(), req);
