@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { clearToken, getToken } from '../api/client'
+import { api, clearToken, getToken } from '../api/client'
 import TopNav from '../components/TopNav'
 import { ACCENTS, loadSettings, saveSettings, type AccentKey, type Settings as SettingsT } from '../lib/settings'
 import { isTtsSupported, speak, voicesFor } from '../lib/tts'
@@ -23,6 +23,8 @@ export default function Settings() {
   const navigate = useNavigate()
   const [s, setS] = useState<SettingsT>(loadSettings)
   const [voiceTick, setVoiceTick] = useState(0)   // 음성 목록은 비동기로 채워져서 한 번 더 그린다
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [withdrawError, setWithdrawError] = useState('')
 
   useEffect(() => {
     if (!isTtsSupported()) return
@@ -39,6 +41,36 @@ export default function Settings() {
     const next = { ...s, ...patch }
     setS(next)
     saveSettings(next)   // 즉시 저장 + 즉시 적용 (저장 버튼 없음)
+  }
+
+  /**
+   * 회원 탈퇴 — 되돌릴 수 없으므로 두 번 확인한다.
+   * 1차는 무슨 일이 벌어지는지, 2차는 이메일을 직접 입력해 '내 계정이 맞다'를 확인.
+   * 덱 삭제(window.confirm 한 번)보다 한 겹 더 두는 이유: 계정은 복구 경로가 UI에 없다.
+   */
+  async function withdraw() {
+    setWithdrawError('')   // 취소하고 다시 눌렀을 때 이전 실패 문구가 남지 않게
+    const email = emailFromToken()
+    if (!window.confirm('회원 탈퇴하면 다시 로그인할 수 없어요.\n계속할까요?')) return
+
+    const typed = window.prompt(`확인을 위해 이메일을 그대로 입력해 주세요.\n\n${email}`)
+    if (typed === null) return                        // 취소
+    if (typed.trim() !== email) {
+      setWithdrawError('이메일이 일치하지 않아 탈퇴를 진행하지 않았어요.')
+      return
+    }
+
+    setWithdrawing(true)
+    setWithdrawError('')
+    try {
+      await api('/users/me', { method: 'DELETE' })
+      clearToken()                                    // 서버가 refresh 토큰도 전부 폐기한다
+      navigate('/login', { replace: true })
+    } catch (e) {
+      setWithdrawError((e as Error).message)
+    } finally {
+      setWithdrawing(false)
+    }
   }
 
   async function logout() {
@@ -145,6 +177,23 @@ export default function Settings() {
           <h2>계정</h2>
           <p className="muted" style={{ margin: '0 0 12px' }}>{emailFromToken() || '로그인 정보 없음'}</p>
           <button className="mode-btn" onClick={logout}>로그아웃</button>
+
+          <div className="danger-zone">
+            <h3>회원 탈퇴</h3>
+            {/*
+              문구는 privacy.html의 '보관 및 파기'와 같은 말을 해야 한다 —
+              소프트 삭제라 계정이 비활성화될 뿐 남은 데이터가 즉시 파기되지는 않는다.
+              "모든 데이터가 삭제됩니다"라고 쓰면 코드가 하지 않는 약속이 된다.
+            */}
+            <p className="muted">
+              탈퇴하면 계정이 즉시 비활성화되어 로그인할 수 없고, 공개한 단어장도 탐색에 노출되지 않아요.
+              남은 데이터의 완전 삭제를 원하시면 개인정보 처리방침의 메일로 요청해 주세요.
+            </p>
+            {withdrawError && <p className="error" role="alert">{withdrawError}</p>}
+            <button className="danger-btn" disabled={withdrawing} onClick={withdraw}>
+              {withdrawing ? '처리 중...' : '회원 탈퇴'}
+            </button>
+          </div>
         </section>
       </div>
     </>
