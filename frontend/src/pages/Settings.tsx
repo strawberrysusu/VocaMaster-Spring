@@ -24,6 +24,7 @@ export default function Settings() {
   const navigate = useNavigate()
   const [s, setS] = useState<SettingsT>(loadSettings)
   const [voiceTick, setVoiceTick] = useState(0)   // 음성 목록은 비동기로 채워져서 한 번 더 그린다
+  const [provider, setProvider] = useState<string | null>(null)   // null = 조회 전
   const [pwCur, setPwCur] = useState('')
   const [pwNew, setPwNew] = useState('')
   const [pwNew2, setPwNew2] = useState('')
@@ -41,6 +42,14 @@ export default function Settings() {
       speechSynthesis.removeEventListener('voiceschanged', refresh)
       clearTimeout(t)
     }
+  }, [])
+
+  // 구글 가입자는 password가 null이라(AuthService) 비밀번호 변경 폼 자체가 의미 없다.
+  // TopNav 프로필 팝오버가 쓰는 것과 같은 /users/me의 provider로 가른다
+  useEffect(() => {
+    api<{ provider: string }>('/users/me')
+      .then((me) => setProvider(me.provider))
+      .catch(() => setProvider('local'))   // 조회 실패로 폼을 감추면 바꿀 길이 없어진다 — 보이는 쪽으로 실패
   }, [])
 
   function update(patch: Partial<SettingsT>) {
@@ -76,7 +85,7 @@ export default function Settings() {
         body: JSON.stringify({ currentPassword: pwCur, newPassword: pwNew }),
       })
       setPwCur(''); setPwNew(''); setPwNew2('')
-      window.alert('비밀번호를 바꿨어요.\n보안을 위해 모든 기기에서 로그아웃됩니다. 다시 로그인해 주세요.')
+      window.alert('비밀번호를 바꿨어요.\n이 기기에서는 로그아웃됩니다. 다른 기기도 로그인 토큰이 만료되면 다시 로그인해야 해요.')
       clearToken()
       navigate('/login', { replace: true })
     } catch (err) {
@@ -221,6 +230,16 @@ export default function Settings() {
           <p className="muted" style={{ margin: '0 0 12px' }}>{emailFromToken() || '로그인 정보 없음'}</p>
           <button className="mode-btn" onClick={logout}>로그아웃</button>
 
+          {provider === 'google' && (
+            <div className="pw-form">
+              <h3>비밀번호</h3>
+              <p className="muted pw-note">
+                구글로 가입한 계정이라 이 서비스에는 비밀번호가 없어요. 비밀번호는 구글 계정에서 관리합니다.
+              </p>
+            </div>
+          )}
+
+          {provider === 'local' && (
           <form className="pw-form" onSubmit={changePassword}>
             <h3>비밀번호 변경</h3>
             <input type="password" autoComplete="current-password" placeholder="현재 비밀번호"
@@ -230,11 +249,14 @@ export default function Settings() {
             <input type="password" autoComplete="new-password" placeholder="새 비밀번호 확인"
                    value={pwNew2} onChange={(e) => setPwNew2(e.target.value)} required />
             {pwError && <p className="error" role="alert">{pwError}</p>}
-            <p className="muted pw-note">바꾸면 모든 기기에서 로그아웃돼요.</p>
+            <p className="muted pw-note">
+              바꾸면 이 기기에서 로그아웃돼요. 다른 기기도 로그인 토큰이 만료되면 다시 로그인해야 해요.
+            </p>
             <button className="btn-primary" type="submit" disabled={pwBusy}>
               {pwBusy ? '변경 중...' : '비밀번호 변경'}
             </button>
           </form>
+          )}
 
           <div className="danger-zone">
             <h3>회원 탈퇴</h3>
