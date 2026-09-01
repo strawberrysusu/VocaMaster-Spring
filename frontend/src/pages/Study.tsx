@@ -467,7 +467,7 @@ export default function Study() {
                 text={card.reading || card.front} // 읽기가 있으면 읽기를 읽는다 — 한자 TTS 오독 방지
                 size="lg"
                 className="study-action-btn"
-                label="다시 듣기"
+                label="발음 듣기" // "다시 듣기"였으나 이 화면엔 자동 재생이 없다 — 첫 재생이 없는데 "다시"라 오해를 샀다 (9/1 사용자 지적)
               />
               <button
                 type="button"

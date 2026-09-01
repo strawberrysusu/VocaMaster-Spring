@@ -12,7 +12,7 @@ export default function SpeakButton({
   text: string
   size?: 'sm' | 'lg'
   className?: string
-  label?: string // 주면 아이콘 옆에 글자가 붙는다 (학습 화면의 큰 '다시 듣기' 버튼용)
+  label?: string // 주면 아이콘 옆에 글자가 붙는다 (학습 화면의 큰 '발음 듣기' 버튼용)
 }) {
   if (!isTtsSupported()) return null
   function onClick(e: MouseEvent<HTMLButtonElement>) {
