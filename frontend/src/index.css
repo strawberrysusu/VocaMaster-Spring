@@ -2071,3 +2071,42 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
   opacity: 0.55;
   cursor: default;
 }
+
+/* ── 설정 > 비밀번호 변경 ── */
+.pw-form {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 340px;
+}
+
+.pw-form h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.pw-form input {
+  padding: 11px 13px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 14px;
+}
+
+.pw-form input:focus-visible {
+  border-color: var(--a);
+  outline: none;
+}
+
+.pw-form .pw-note {
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.pw-form .btn-primary {
+  align-self: flex-start;
+}

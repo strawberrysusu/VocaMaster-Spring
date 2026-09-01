@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, clearToken, getToken } from '../api/client'
 import TopNav from '../components/TopNav'
@@ -23,6 +24,11 @@ export default function Settings() {
   const navigate = useNavigate()
   const [s, setS] = useState<SettingsT>(loadSettings)
   const [voiceTick, setVoiceTick] = useState(0)   // 음성 목록은 비동기로 채워져서 한 번 더 그린다
+  const [pwCur, setPwCur] = useState('')
+  const [pwNew, setPwNew] = useState('')
+  const [pwNew2, setPwNew2] = useState('')
+  const [pwBusy, setPwBusy] = useState(false)
+  const [pwError, setPwError] = useState('')
   const [withdrawing, setWithdrawing] = useState(false)
   const [withdrawError, setWithdrawError] = useState('')
 
@@ -41,6 +47,43 @@ export default function Settings() {
     const next = { ...s, ...patch }
     setS(next)
     saveSettings(next)   // 즉시 저장 + 즉시 적용 (저장 버튼 없음)
+  }
+
+  /**
+   * 비밀번호 변경. 서버가 성공 시 <b>모든 refresh 토큰을 폐기</b>하므로 (UserService.changePassword)
+   * 지금 세션도 곧 끊긴다. 어중간하게 남겨두면 다음 갱신에서 영문 모를 로그아웃이 되니
+   * 여기서 명시적으로 로그인 화면으로 보낸다.
+   */
+  async function changePassword(e: FormEvent) {
+    e.preventDefault()
+    setPwError('')
+    if (pwNew.length < 8) {
+      setPwError('새 비밀번호는 8자 이상이어야 해요')          // 서버 @Size(min=8)와 같은 기준
+      return
+    }
+    if (pwNew !== pwNew2) {
+      setPwError('새 비밀번호가 서로 달라요')
+      return
+    }
+    if (pwNew === pwCur) {
+      setPwError('새 비밀번호가 현재 비밀번호와 같아요')
+      return
+    }
+    setPwBusy(true)
+    try {
+      await api('/users/me/password', {
+        method: 'PATCH',
+        body: JSON.stringify({ currentPassword: pwCur, newPassword: pwNew }),
+      })
+      setPwCur(''); setPwNew(''); setPwNew2('')
+      window.alert('비밀번호를 바꿨어요.\n보안을 위해 모든 기기에서 로그아웃됩니다. 다시 로그인해 주세요.')
+      clearToken()
+      navigate('/login', { replace: true })
+    } catch (err) {
+      setPwError((err as Error).message)
+    } finally {
+      setPwBusy(false)
+    }
   }
 
   /**
@@ -177,6 +220,21 @@ export default function Settings() {
           <h2>계정</h2>
           <p className="muted" style={{ margin: '0 0 12px' }}>{emailFromToken() || '로그인 정보 없음'}</p>
           <button className="mode-btn" onClick={logout}>로그아웃</button>
+
+          <form className="pw-form" onSubmit={changePassword}>
+            <h3>비밀번호 변경</h3>
+            <input type="password" autoComplete="current-password" placeholder="현재 비밀번호"
+                   value={pwCur} onChange={(e) => setPwCur(e.target.value)} required />
+            <input type="password" autoComplete="new-password" placeholder="새 비밀번호 (8자 이상)"
+                   value={pwNew} onChange={(e) => setPwNew(e.target.value)} required />
+            <input type="password" autoComplete="new-password" placeholder="새 비밀번호 확인"
+                   value={pwNew2} onChange={(e) => setPwNew2(e.target.value)} required />
+            {pwError && <p className="error" role="alert">{pwError}</p>}
+            <p className="muted pw-note">바꾸면 모든 기기에서 로그아웃돼요.</p>
+            <button className="btn-primary" type="submit" disabled={pwBusy}>
+              {pwBusy ? '변경 중...' : '비밀번호 변경'}
+            </button>
+          </form>
 
           <div className="danger-zone">
             <h3>회원 탈퇴</h3>
