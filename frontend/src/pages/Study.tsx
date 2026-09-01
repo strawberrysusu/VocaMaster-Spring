@@ -28,28 +28,47 @@ type Answers = Record<number, boolean>
 interface Draft {
   submissionId: string
   answers: Answers
+  /**
+   * 실제로 POST를 시도한 순간 동결된 답안.
+   * 이게 있으면 편집을 막고, 재시도는 <b>오직 이것만</b> 보낸다.
+   * 응답이 유실돼도 무엇을 보냈는지 잃지 않기 위한 장치 — 없으면 재시도가
+   * '지금 답안'을 보내게 되어 이미 반영된 카드까지 다시 세어진다.
+   */
+  attempted?: Answers
 }
 
 /**
  * 초안 복원 — JSON 파싱 성공은 '모양이 맞다'는 뜻이 아니다.
  * 여기서 걸러내지 못한 쓰레기는 그대로 서버 payload가 되어 400을 맞는다.
  */
+function parseAnswers(v: unknown): Answers | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null
+  const clean: Answers = {}
+  for (const [key, value] of Object.entries(v as Record<string, unknown>)) {
+    const cardId = Number(key)
+    if (!Number.isInteger(cardId) || cardId <= 0) return null
+    if (typeof value !== 'boolean') return null
+    clean[cardId] = value
+  }
+  return clean
+}
+
 function parseDraft(raw: string): Draft | null {
   try {
     const d: unknown = JSON.parse(raw)
     if (!d || typeof d !== 'object') return null
-    const { submissionId, answers } = d as { submissionId?: unknown; answers?: unknown }
-    if (typeof submissionId !== 'string' || submissionId.length === 0 || submissionId.length > 36) return null
-    if (!answers || typeof answers !== 'object' || Array.isArray(answers)) return null
-
-    const clean: Answers = {}
-    for (const [key, value] of Object.entries(answers as Record<string, unknown>)) {
-      const cardId = Number(key)
-      if (!Number.isInteger(cardId) || cardId <= 0) return null
-      if (typeof value !== 'boolean') return null
-      clean[cardId] = value
+    const { submissionId, answers, attempted } = d as {
+      submissionId?: unknown; answers?: unknown; attempted?: unknown
     }
-    return { submissionId, answers: clean }
+    if (typeof submissionId !== 'string' || submissionId.length === 0 || submissionId.length > 36) return null
+
+    const cleanAnswers = parseAnswers(answers)
+    if (!cleanAnswers) return null
+
+    if (attempted === undefined) return { submissionId, answers: cleanAnswers }
+    const cleanAttempted = parseAnswers(attempted)
+    if (!cleanAttempted || Object.keys(cleanAttempted).length === 0) return null
+    return { submissionId, answers: cleanAnswers, attempted: cleanAttempted }
   } catch {
     return null
   }
@@ -86,8 +105,11 @@ export default function Study() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<BatchResult | null>(null)
   const [starring, setStarring] = useState(false)
-  // 이 제출 ID가 서버에서 이미 소비됐다 — 새 ID로 갈아끼우기 전엔 무엇을 보내도 409다
-  const [staleSubmission, setStaleSubmission] = useState(false)
+  // POST를 시도한 순간 동결된 답안. null이 아니면 '보냈는데 결과를 모르는 상태'
+  const [attempted, setAttempted] = useState<Answers | null>(null)
+  // 같은 ID에 다른 답안이 갔다는 서버 판정 — 정상 흐름에선 나올 수 없다(항상 동결본만 보내므로).
+  // 나오면 초안이 손상됐거나 프론트 버그다. 재시도는 무의미하니 버리는 길만 남긴다
+  const [retryBlocked, setRetryBlocked] = useState(false)
   const [error, setError] = useState('')
 
   // 초안 키는 입구별로 분리 — 덱 학습과 전체 복습의 답안이 섞이면 안 된다
@@ -112,7 +134,8 @@ export default function Study() {
     setReviewing(false)
     setResult(null)
     setError('')
-    setStaleSubmission(false)
+    setAttempted(null)
+    setRetryBlocked(false)
     advancing.current = false
 
     // 새로고침 복구 — 서버 성공 응답을 받은 뒤에만 지우므로, 여기 남아 있으면 아직 미제출이다
@@ -126,6 +149,7 @@ export default function Study() {
     })()
     if (raw) draft = parseDraft(raw)   // 손상된 초안은 조용히 버린다 — 학습을 막을 이유가 없다
     setAnswers(draft?.answers ?? {})
+    setAttempted(draft?.attempted ?? null)   // 있으면 아래에서 편집을 막고 재시도만 시킨다
     setSubmissionId(draft?.submissionId ?? newSubmissionId())
     draftLoaded.current = true
 
@@ -155,16 +179,36 @@ export default function Study() {
 
   useEffect(loadQueue, [loadQueue])
 
-  // 임시 답안을 매번 남긴다 — 새로고침·실수 이탈에서 살아남는 유일한 방어선
+  /** 초안 쓰기 — submit()이 네트워크보다 먼저 부를 수 있게 동기 함수로 둔다 */
+  const persistDraft = useCallback(
+    (d: Draft) => {
+      try {
+        sessionStorage.setItem(draftKey, JSON.stringify(d))
+      } catch {
+        /* 저장 실패(용량·프라이빗 모드)로 학습을 막지는 않는다 */
+      }
+    },
+    [draftKey],
+  )
+
+  const clearDraft = useCallback(() => {
+    try {
+      sessionStorage.removeItem(draftKey)
+    } catch {
+      /* 못 지워도 화면 상태는 진행한다 */
+    }
+  }, [draftKey])
+
+  // 임시 답안을 매번 남긴다 — 새로고침에서 살아남는 방어선
   useEffect(() => {
     if (!draftLoaded.current || !submissionId) return
-    try {
-      if (Object.keys(answers).length === 0) sessionStorage.removeItem(draftKey)
-      else sessionStorage.setItem(draftKey, JSON.stringify({ submissionId, answers } satisfies Draft))
-    } catch {
-      /* 저장 실패(용량·프라이빗 모드)로 학습을 막지는 않는다 */
+    if (result) return   // 제출이 확정된 뒤에는 초안을 다시 쓰지 않는다
+    if (Object.keys(answers).length === 0 && !attempted) {
+      clearDraft()
+      return
     }
-  }, [answers, submissionId, draftKey])
+    persistDraft({ submissionId, answers, ...(attempted ? { attempted } : {}) })
+  }, [answers, attempted, result, submissionId, persistDraft, clearDraft])
 
   const total = queue?.length ?? 0
   const card = queue && idx < total ? queue[idx] : null
@@ -182,7 +226,9 @@ export default function Study() {
 
   /** 답을 고른다. 이미 고른 카드도 그대로 덮어쓴다 — 이게 '제출 전 답안 수정'의 전부다 */
   function pick(correct: boolean) {
-    if (!card || advancing.current) return
+    // 제출을 한 번 시도한 뒤에는 답을 고칠 수 없다. 동결본과 달라지면
+    // 재시도가 '다른 답안'이 되어 서버가 409로 거절한다
+    if (!card || advancing.current || attempted) return
     advancing.current = true
     setAnswers((prev) => ({ ...prev, [card.cardId]: correct }))
     goNext()
@@ -201,19 +247,37 @@ export default function Study() {
     else if (idx > 0) setIdx((i) => i - 1)
   }
 
+  /**
+   * 일괄 제출. 핵심은 <b>네트워크보다 먼저 payload를 동결</b>한다는 것.
+   *
+   * <p>응답이 유실되면 서버가 처리했는지 클라이언트는 알 수 없다. 그때 '지금 답안'을 다시 보내면
+   * 그 사이 늘어난 답까지 섞여 들어가 이미 반영된 카드가 한 번 더 세어진다(박스 과승급).
+   * 보내기 직전의 payload를 그대로 저장해 두고 <b>같은 submissionId + 같은 내용</b>으로만 재시도하면,
+   * 서버의 unique 제약과 payload_hash가 비로소 제 역할을 한다 —
+   * 이미 처리됐으면 멱등 응답, 아직이면 이번에 처음 반영.</p>
+   */
   async function submit() {
     if (submitting) return
-    // payload는 queue가 아니라 '저장된 답안'에서 만든다.
-    // 커밋은 됐는데 응답만 유실된 뒤 새로고침하면, 그 카드들은 다음 복습일로 밀려 /reviews/due에서 사라진다.
-    // queue 기준으로 만들면 그 순간 재전송이 영영 불가능해진다 (Codex 검산 2026-09-01)
-    const payload = Object.entries(answers).map(([cardId, correct]) => ({
+
+    // 이미 동결된 게 있으면 그것만 보낸다. 없으면 지금 답안을 동결한다
+    let frozen = attempted
+    if (!frozen) {
+      const current = { ...answers }
+      if (Object.keys(current).length === 0) {
+        setError('아직 답한 카드가 없어요')
+        return
+      }
+      // ★ 저장이 먼저, 전송이 나중. 순서가 뒤바뀌면 응답 유실 시 '무엇을 보냈는지'를 잃는다
+      persistDraft({ submissionId, answers: current, attempted: current })
+      setAttempted(current)
+      frozen = current
+    }
+
+    const payload = Object.entries(frozen).map(([cardId, correct]) => ({
       cardId: Number(cardId),
       correct,
     }))
-    if (payload.length === 0) {
-      setError('아직 답한 카드가 없어요')
-      return
-    }
+
     setSubmitting(true)
     setError('')
     try {
@@ -221,35 +285,33 @@ export default function Study() {
         method: 'POST',
         body: JSON.stringify({ submissionId, answers: payload }),
       })
-      // 서버가 받은 뒤에만 초안을 버린다 — 순서가 바뀌면 실패 시 답안이 통째로 날아간다
-      try {
-        sessionStorage.removeItem(draftKey)
-      } catch {
-        /* 못 지워도 결과 화면은 보여준다 */
-      }
+      // 서버가 받은 뒤에만 초안을 버린다 — 순서가 바뀌면 실패 시 답안이 통째로 날아간다.
+      // answers까지 비우는 이유: 남겨두면 아래 자동저장 이펙트가 attempted 변화에 반응해
+      // 방금 지운 초안을 그대로 되살린다 (브라우저 스모크에서 실측)
+      clearDraft()
+      setAttempted(null)
+      setAnswers({})
       setResult(res)
     } catch (e) {
-      // 같은 제출 ID로 '다른 답안'이 갔다는 뜻 = 앞선 제출이 이미 서버에 반영됐다.
-      // 이 ID로는 무엇을 보내도 계속 409다. 새 ID로 갈아끼울 길을 열어주지 않으면 막다른 골목이 된다.
-      // (고아 카드 감지는 due 모드에서만 통하고, 덱 학습은 큐가 항상 전 카드라 감지되지 않는다)
-      if (e instanceof ApiError && e.code === 'SUBMISSION_MISMATCH') setStaleSubmission(true)
+      // 동결본만 보내므로 정상 흐름에서는 나올 수 없는 판정이다.
+      // 나왔다면 초안이 손상됐거나 프론트 버그 — 재시도해봐야 계속 409다
+      if (e instanceof ApiError && e.code === 'SUBMISSION_MISMATCH') setRetryBlocked(true)
       setError((e as Error).message)
     } finally {
       setSubmitting(false)
     }
   }
 
-  /**
-   * 새 제출 ID로 갈아끼워 지금 답안을 다시 보낼 수 있게 한다.
-   *
-   * <p>이미 반영된 카드가 한 번 더 세어지는 건 감수한다 — 클라이언트는 앞선 제출에 어떤 카드가
-   * 들어 있었는지 알 방법이 없기 때문이다. 대안은 영영 409에 막히는 막다른 골목이라 이쪽이 낫다.
-   * 대신 화면에 그 사실을 적고 '버리기'라는 반대 선택지를 같이 둔다.</p>
-   */
-  function submitAsNewSession() {
-    setStaleSubmission(false)
+  /** 초안을 버리고 새 세션으로 시작한다 (재시도가 막혔거나 사용자가 포기할 때) */
+  function discardDraft() {
+    clearDraft()
+    setAnswers({})
+    setAttempted(null)
+    setRetryBlocked(false)
     setSubmissionId(newSubmissionId())
     setError('')
+    setReviewing(false)
+    setIdx(0)
   }
 
   /**
@@ -306,18 +368,13 @@ export default function Study() {
   const picked = card ? answers[card.cardId] : undefined
 
   /**
-   * 초안에는 있는데 지금 큐에는 없는 카드 = 그 카드는 이미 반영돼 다음 복습일로 밀려났다는 뜻.
-   * 즉 제출이 서버에 커밋됐는데 응답만 못 받은 상황이다.
+   * 보냈는데 결과를 모르는 상태. 이때는 학습 화면을 감추고 재시도만 시킨다.
    *
-   * 'queue가 0장인가'로 판정하면 안 된다 — 10장 중 3장만 답하고 응답이 유실되면
-   * 미응답 7장이 그대로 due에 남아 큐가 0이 아니다. 그러면 복구 화면이 안 뜨는 데서 끝나지 않고,
-   * 남은 7장을 마저 답해 제출하는 순간 payload가 달라져 payload_hash 검사에 409로 걸린다.
-   * 초안을 버릴 길도 없어 막다른 골목이 된다 (Codex 검산 2026-09-01).
+   * <p>예전엔 '초안 cardId 중 큐에 없는 게 있나'로 추정했는데, 덱 학습은 큐가 항상 전 카드라
+   * 감지되지 않았다. payload를 동결하면서 추정이 필요 없어졌다 — attempted가 있다는 사실 자체가 신호다.</p>
    */
-  const orphanCount = queue
-    ? Object.keys(answers).map(Number).filter((id) => !queue.some((c) => c.cardId === id)).length
-    : 0
-  const strandedDraft = queue !== null && draftCount > 0 && !result && (orphanCount > 0 || staleSubmission)
+  const pendingRetry = attempted !== null && !result
+  const attemptedCount = attempted ? Object.keys(attempted).length : 0
 
   return (
     <>
@@ -335,45 +392,31 @@ export default function Study() {
         {queue === null && !error && <p className="muted">불러오는 중...</p>}
 
         {/* ── 미제출 초안 복구 ── */}
-        {strandedDraft && (
+        {pendingRetry && (
           <div className="result-panel">
-            <h2>{staleSubmission ? '이 세션은 이미 제출됐어요' : '제출하지 않은 답이 있어요'}</h2>
+            <h2>{retryBlocked ? '이 답안은 보낼 수 없어요' : '보낸 결과를 확인하지 못했어요'}</h2>
             <p className="result-line">
-              직전 세션의 <b>{draftCount}장</b>이 아직 서버에 반영되지 않았어요.
-              {orphanCount < draftCount && <> (그중 {draftCount - orphanCount}장은 아직 복습 목록에 남아 있어요)</>}
+              <b>{attemptedCount}장</b>을 보냈지만 서버에 반영됐는지 확인하지 못했어요.
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
-              {staleSubmission
-                ? '앞선 제출이 이미 서버에 반영됐어요. 새 제출로 보내면 이미 반영된 카드는 한 번 더 세어집니다 — 박스가 한 칸 더 오를 수 있어요. 그게 싫으면 버리세요.'
-                : '이미 반영됐는데 응답만 못 받은 것일 수도 있어요. 그런 경우 다시 보내도 진행도는 두 번 움직이지 않습니다.'}
+              {retryBlocked
+                ? '저장된 답안이 서버 기록과 맞지 않아요. 이 세션은 버리고 새로 시작해야 합니다.'
+                : '보낸 그대로 다시 보냅니다. 이미 반영됐다면 두 번 세어지지 않고, 아직이면 이번에 반영돼요. 확인될 때까지 답은 고칠 수 없어요.'}
             </p>
             <div className="answer-buttons" style={{ marginTop: 26 }}>
-              <button
-                className="answer-no"
-                onClick={() => {
-                  try {
-                    sessionStorage.removeItem(draftKey)
-                  } catch {
-                    /* 못 지워도 화면 상태는 비운다 */
-                  }
-                  setAnswers({})
-                  setSubmissionId(newSubmissionId())
-                }}
-              >
+              <button className="answer-no" onClick={discardDraft}>
                 버리기
               </button>
-              <button
-                className="answer-yes"
-                disabled={submitting}
-                onClick={staleSubmission ? submitAsNewSession : submit}
-              >
-                {submitting ? '제출 중...' : staleSubmission ? '새 제출로 보내기' : '제출 재시도'}
-              </button>
+              {!retryBlocked && (
+                <button className="answer-yes" disabled={submitting} onClick={submit}>
+                  {submitting ? '보내는 중...' : '다시 보내기'}
+                </button>
+              )}
             </div>
           </div>
         )}
 
-        {queue !== null && total === 0 && !strandedDraft && !result && (
+        {queue !== null && total === 0 && !pendingRetry && !result && (
           <div className="stub">
             <h2>{deckId ? (starredOnly ? '★ 표시한 카드가 없어요' : '이 덱에는 카드가 없어요') : '지금 복습할 카드가 없어요 🎉'}</h2>
             <p>
@@ -383,7 +426,7 @@ export default function Study() {
         )}
 
         {/* ── 학습 중 (복구가 필요한 상태면 그것부터 처리시킨다) ── */}
-        {!result && !reviewing && !strandedDraft && card && (
+        {!result && !reviewing && !pendingRetry && card && (
           <>
             <div className="study-top">
               <Link to={backTo} className="hero-secondary" onClick={confirmQuit}>← 그만하기</Link>
@@ -479,7 +522,7 @@ export default function Study() {
         )}
 
         {/* ── 제출 전 검토 ── */}
-        {!result && reviewing && !strandedDraft && queue !== null && total > 0 && (
+        {!result && reviewing && !pendingRetry && queue !== null && total > 0 && (
           <div className="result-panel">
             <h2>제출할까요?</h2>
             <p className="result-line">
