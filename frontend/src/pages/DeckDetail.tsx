@@ -224,9 +224,12 @@ export default function DeckDetail() {
             ) : (
               <button className="btn-primary" disabled title="카드를 먼저 추가하세요">복습 학습 (Leitner)</button>
             )}
+            {/* 별표 카드만 골라 Leitner 복습을 '시작'하는 유일한 진입점 (9/3 문구 정정).
+                Study 화면에는 카드별 별표 토글은 있지만 '별표만 골라 시작'하는 범위 선택이 없다 —
+                이 버튼을 없애면 별표 복습 진입 경로 자체가 사라진다. 로직 무변경, 표시만 변경 */}
             {deck !== null && deck.starredCount > 0 && (
               <Link to={`/study?deckId=${id}&starredOnly=1`} className="mode-btn" title={`★ 표시한 ${deck.starredCount}장만 복습`}>
-                ⭐만
+                ⭐ 별표 복습
               </Link>
             )}
             {cards.length >= 2 ? (
@@ -293,7 +296,7 @@ export default function DeckDetail() {
                 </div>
               </div>
             ) : (
-              <div key={c.id} className="word-row">
+              <div key={c.id} className="word-row owned-card-row">   {/* owned-card-row: 모바일 2줄 배치는 덱 상세 일반 행에만 (전역 .word-row 무변경) */}
                 <span className="word-idx">{i + 1}</span>
                 <span className="word-front"><Ruby front={c.front} reading={c.reading} /> <SpeakButton text={c.reading || c.front} /></span>
                 <span className="word-back">{c.back}</span>
