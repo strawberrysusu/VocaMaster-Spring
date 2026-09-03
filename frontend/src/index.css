@@ -893,12 +893,14 @@ input {
 /* ── 탐색 ── */
 .sort-tabs {
   display: flex;
+  flex-wrap: wrap;        /* 9/3: 폰에서 가져오기 구분자 버튼 6개가 한 줄에 못 들어가 글자가 세로 기둥으로 깨졌다 — 넘치면 줄바꿈 */
   gap: 6px;
   margin-bottom: 18px;
 }
 
 .sort-tabs button {
   padding: 8px 16px;
+  white-space: nowrap;    /* 버튼 안 글자는 절대 줄바꿈하지 않는다 (좁아지면 버튼이 다음 줄로) */
   border-radius: 99px;
   font-size: 13.5px;
   font-weight: 500;
@@ -1370,6 +1372,7 @@ button:disabled {
 
 .setup-row {
   display: flex;
+  flex-wrap: wrap;        /* 9/3: 라벨 + 탭이 한 줄에 못 들어가면 탭 묶음이 다음 줄로 */
   align-items: center;
   gap: 18px;
 }
