@@ -33,3 +33,4 @@ tmp/
 
 # React 빌드 산출물 (vite build가 생성 — bat/CI가 만들고 jar에 포함)
 src/main/resources/static/app/
+.codex-resume-audit/   # Codex 외부 검산 작업 폴더 — 커밋 금지
