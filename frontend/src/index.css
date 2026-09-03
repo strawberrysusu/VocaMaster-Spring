@@ -1125,6 +1125,44 @@ button:disabled {
   .create-row {
     flex-direction: column;
     padding: 14px;
+    gap: 8px;
+  }
+  /* 9/3: column 방향에서 .reading-input의 flex-basis 220px가 '높이' 220px로 먹혀 폼이 397px로 늘어졌고,
+     테두리 없는 입력칸이 세로로 쌓이면 빈 공간처럼 보였다(운영 스크린샷). 폰에서는 칸마다 테두리를 준다.
+     .create-row는 Decks·Explore의 검색/생성 줄도 쓰므로 세 화면 모두 같은 규칙 */
+  .create-row input,
+  .create-row input.reading-input {   /* 뒤쪽(1539행 근처)의 .create-row .reading-input { flex: 0 1 220px }보다 높은 특이도로 덮음 */
+    flex: 0 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .create-row .btn-primary {
+    width: 100%;
+  }
+  /* 9/3: 카드 수정 행 — 한 줄 flex라 입력칸 3개가 40px 폭으로 짜부됨. 폰에서는 번호 | 입력칸 세로 3개 + 액션 */
+  .word-row.row-edit {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 8px;
+    align-items: start;
+  }
+  .word-row.row-edit .word-idx {
+    grid-row: 1 / span 4;
+    padding-top: 8px;
+  }
+  .word-row.row-edit input {
+    grid-column: 2;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .word-row.row-edit .row-actions {
+    grid-column: 2;
+    justify-content: flex-end;
+    margin-left: 0;
   }
 
   .page-head {

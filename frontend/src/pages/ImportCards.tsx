@@ -80,7 +80,7 @@ export default function ImportCards() {
   }
 
   const lineCount = text.split('\n').filter((l) => l.trim()).length
-  // 등록 버튼은 위(입력 옆)·아래(미리보기 목록 끝) 두 곳 — 조건·라벨은 한 곳에서
+  // 등록 버튼 조건·라벨 (한 곳에서 관리)
   const importDisabled = busy || !preview || previewStale || preview.cards.length === 0
   const importLabel = preview && !previewStale ? `2. ${preview.cards.length}장 실제 등록` : '2. 실제 등록 (먼저 미리보기)'
 
@@ -160,7 +160,8 @@ export default function ImportCards() {
         {preview && !result && (
           <div style={{ marginTop: 18 }}>
             {/* 9/3: 미리보기 목록이 덱 카드 목록과 같은 모양이라 '저장됐다'로 오해한 사례(덱 172, 등록 요청 0회).
-                목록 위에 '아직 저장 안 됨'을 명시하고, 긴 목록 아래에도 같은 등록 버튼을 둔다. 저장 조건·스냅샷 로직은 그대로 */}
+                목록 위에 '아직 저장 안 됨'을 명시한다. (목록 아래 두 번째 등록 버튼은 같은 날 사용자 피드백 "어색하다"로 제거 —
+                오해 방지는 이 띠가 담당) 저장 조건·스냅샷 로직은 그대로 */}
             <p className="preview-notice" role="status">
               미리보기예요 — <b>아직 저장되지 않았습니다.</b> 「2. 실제 등록」을 눌러야 덱에 들어갑니다.
             </p>
@@ -181,11 +182,6 @@ export default function ImportCards() {
                   <span className="word-back" style={{ color: '#b0485c' }}>구분 실패: {f.content}</span>
                 </div>
               ))}
-            </div>
-            <div className="answer-buttons" style={{ marginTop: 14 }}>
-              <button className="answer-yes" disabled={importDisabled} onClick={doImport}>
-                {importLabel}
-              </button>
             </div>
           </div>
         )}
