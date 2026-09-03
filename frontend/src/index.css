@@ -748,6 +748,38 @@ input {
   color: var(--sub);
 }
 
+/* ── 덱 상세 카드 행, 모바일 2줄 (9/3) ──
+   데스크톱 flex 한 줄(번호·단어·뜻·액션)을 폰에서 그대로 쓰면 단어 칸이 내용 폭 이하로 안 줄어
+   뜻 칸이 한 글자 폭까지 짜부됐다(운영 스크린샷). 전역 .word-row는 가져오기·공개 덱도 쓰므로
+   덱 상세 일반 행(.owned-card-row)에만 한정: 1행 번호|단어|액션, 2행 뜻(단어부터 오른쪽 끝까지) */
+@media (max-width: 768px) {
+  .word-row.owned-card-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "idx front actions"
+      "idx back back";
+    column-gap: 12px;
+    row-gap: 4px;
+    align-items: center;
+  }
+  .word-row.owned-card-row .word-idx { grid-area: idx; align-self: start; padding-top: 4px; }
+  .word-row.owned-card-row .word-front { grid-area: front; min-width: 0; overflow-wrap: anywhere; }
+  .word-row.owned-card-row .word-back { grid-area: back; min-width: 0; overflow-wrap: anywhere; }
+  .word-row.owned-card-row .row-actions { grid-area: actions; margin-left: 0; opacity: 1; }   /* 터치엔 hover가 없어 항상 표시 */
+}
+
+/* 가져오기 미리보기 안내 띠 (9/3) — 목록이 덱 카드 목록과 같은 모양이라 저장으로 오해하던 것 차단 */
+.preview-notice {
+  margin: 0 0 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fff7e6;
+  border: 1px solid #f3d89a;
+  color: #7a5a12;
+  font-size: 14px;
+}
+
 /* ── 플래시카드 학습 ── */
 .study-shell {
   max-width: 720px;
