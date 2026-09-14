@@ -132,6 +132,7 @@ export default function ImportCards() {
               placeholder={SAMPLE}
               rows={12}
               spellCheck={false}
+              disabled={busy}
             />
             <div className="setup-row">
               <span className="setup-label">구분자</span>

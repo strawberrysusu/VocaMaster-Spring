@@ -404,7 +404,7 @@ export default function Study() {
                 : '보낸 그대로 다시 보냅니다. 이미 반영됐다면 두 번 세어지지 않고, 아직이면 이번에 반영돼요. 확인될 때까지 답은 고칠 수 없어요.'}
             </p>
             <div className="answer-buttons" style={{ marginTop: 26 }}>
-              <button className="answer-no" onClick={discardDraft}>
+              <button className="answer-no" disabled={submitting} onClick={discardDraft}>
                 버리기
               </button>
               {!retryBlocked && (
