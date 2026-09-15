@@ -434,14 +434,18 @@ export default function Study() {
                 {idx + 1} / {total} · 답함 {answeredInQueue}
               </span>
             </div>
+            {/* 막대 = 지금 위치(idx+1 / total). 답해서 넘어가든 화살표로 넘어가든 오르고, 이전으로 가면 준다.
+                답한 수는 위 '답함 N'과 제출 전 검토 화면이 보여준다 — 아는 카드를 답 없이 넘기면
+                답 기준 막대는 멈춰 보였다 (2026-09-15) */}
             <div
               className="progress-track"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={total}
-              aria-valuenow={answeredInQueue}
+              aria-valuenow={idx + 1}
+              aria-valuetext={`${total}장 중 ${idx + 1}번째, ${answeredInQueue}장 답함`}
             >
-              <div className="progress-fill" style={{ width: `${(answeredInQueue / total) * 100}%` }} />
+              <div className="progress-fill" style={{ width: `${((idx + 1) / total) * 100}%` }} />
             </div>
 
             {/* 카드는 앞↔뒤 토글. 뜻을 본 뒤 다시 앞면으로 돌려 스스로 떠올려 볼 수 있어야 한다 */}
