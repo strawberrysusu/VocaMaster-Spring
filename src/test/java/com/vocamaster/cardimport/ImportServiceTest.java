@@ -158,4 +158,30 @@ class ImportServiceTest extends AbstractIntegrationTest {
         assertEquals(3, result.getFailedCount(), "4칸·뜻 256자·읽기 201자");
         assertEquals(1, cardRepository.countByDeckId(deck.getId()));
     }
+
+    @Test
+    @DisplayName("F2 — 탭을 명시하면 자동 감지로 빠지지 않는다. 탭 없는 줄은 실패 줄")
+    void explicitTab_isNotAutoDetected() {
+        ImportRequest req = new ImportRequest();
+        req.setText("mother-in-law meaning");
+        req.setSeparator("\t");
+
+        PreviewResponse result = importService.preview(req);
+
+        assertEquals(0, result.getTotalParsed(), "하이픈으로 쪼개져 성공하면 안 된다");
+        assertEquals(1, result.getFailedCount());
+    }
+
+    @Test
+    @DisplayName("F3 — 첫 칸·마지막 칸이 빈 줄은 2칸으로 통과하지 않고 실패 줄")
+    void emptyEdgeColumn_isFailedLine() {
+        ImportRequest req = new ImportRequest();
+        req.setText("\tよみ\t뜻\n단어\tよみ\t\n会議\tかいぎ\t회의");
+        req.setSeparator("\t");
+
+        PreviewResponse result = importService.preview(req);
+
+        assertEquals(1, result.getTotalParsed(), "정상 3칸 줄만");
+        assertEquals(2, result.getFailedCount(), "첫 칸 빈 줄과 마지막 칸 빈 줄");
+    }
 }
