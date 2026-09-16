@@ -125,16 +125,17 @@ public class ImportService {
             throw new BadRequestException(
                     "한 번에 최대  " + MAX_LINES + "줄까지 등록할 수 있습니다. 현재 " + lines.length + "줄입니다.");
         }
-        String sep = (separator == null || separator.isBlank())
+        String sep = (separator == null || separator.isEmpty())
                 ? detectSeparator(lines)
                 : separator;
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
+            String raw = lines[i].replace("\r", "");   // 원본. 양끝 탭 보존 — 줄 전체 trim이 빈 칸을 숨겼다 (9/5 감사 F3)
             if (line.isEmpty()) continue;
 
             // 2칸 = 단어 | 뜻, 3칸 = 단어 | 읽기 | 뜻 (읽기는 요미가나, V14).
             // limit 없이 split — 예전 split(…, 3)은 a|b|c|d를 [a, b, "c|d"]로 합쳐 '4칸 실패' 약속을 안 지켰다 (Codex 감사)
-            String[] parts = line.split(Pattern.quote(sep), -1);
+            String[] parts = raw.split(Pattern.quote(sep), -1);
             String front = parts[0].trim();
             String back = parts.length >= 2 ? parts[parts.length - 1].trim() : "";
             String reading = parts.length == 3 ? parts[1].trim() : "";
