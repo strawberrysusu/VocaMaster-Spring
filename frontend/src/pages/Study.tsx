@@ -512,7 +512,7 @@ export default function Study() {
   return (
     <>
       <TopNav />
-      <div className="shell study-shell">
+      <div className="shell study-shell study-fit">   {/* study-fit: 한 화면 맞추기 규칙은 이 클래스에만 (study-shell은 퀴즈·타이핑과 공용, 9/17) */}
         {error && <p className="error" role="alert">{error}</p>}
         {/* 몰입 모드(사이드바 없음)에서 최초 로딩이 실패하면 갇힌다 — 탈출·재시도 제공 (Codex UI 검산) */}
         {error && queue === null && (

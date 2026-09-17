@@ -784,7 +784,10 @@ input {
 /* 9/17 한 화면 맞추기 (사용자: "스크롤이 생각보다 거슬린다"). 학습은 몰입 모드라 헤더·탭바가 없다 →
    셸을 뷰포트 높이로 잡고 카드가 남는 높이를 전부 쓴다. 고정 부분(상단·버튼·안내)이 뷰포트보다 크면 그때만 스크롤 */
 .study-shell {
-  max-width: 720px;
+  max-width: 720px;   /* 퀴즈·타이핑과 공용 — 아래 한 화면 규칙은 복습 전용 .study-fit에만 (9/17 점검에서 새는 걸 잡음) */
+}
+
+.study-fit {
   min-height: 100vh;
   min-height: 100dvh;   /* 폰 주소창이 줄어들 때도 실제 보이는 높이 */
   box-sizing: border-box;
@@ -793,47 +796,47 @@ input {
 }
 
 /* .shell과 같은 특이도면 뒤에 오는 모바일 .shell{padding:… 96px}가 이긴다 → 두 클래스로 특이도를 올린다 (9/17 실측: 96px 그대로였음) */
-.shell.study-shell {
+.shell.study-fit {
   padding-bottom: 40px;   /* .shell의 100px(탭바 여유)은 여기선 필요 없다 */
 }
 
-.study-shell > * {
+.study-fit > * {
   flex: 0 0 auto;
 }
 
-.study-shell .study-card {
+.study-fit .study-card {
   flex: 1 1 auto;
   min-height: 200px;   /* 기본 320px 고정이 스크롤의 원인이었다 — 남는 높이만큼 늘고, 좁으면 여기까지 준다 */
 }
 
 @media (max-width: 768px) {
-  .shell.study-shell {
+  .shell.study-fit {
     padding-bottom: 24px;   /* 모바일 .shell의 96px(탭바 자리)도 필요 없다 */
   }
 }
 
 /* 세로가 짧은 화면: 여백을 줄이고 맨 아래 안내문은 숨긴다 (내용은 '아직 답하지 않음' 표시가 대신한다) */
 @media (max-height: 720px) {
-  .study-shell .progress-track { margin-bottom: 18px; }
-  .study-shell .study-card { padding: 24px; }
-  .study-shell .study-foot { display: none; }
+  .study-fit .progress-track { margin-bottom: 18px; }
+  .study-fit .study-card { padding: 24px; }
+  .study-fit .study-foot { display: none; }
 }
 
 /* 더 짧은 화면(PC에서 브라우저 확대·윈도우 배율 125%면 CSS 기준 600px대가 흔하다, 9/17 사용자 스크린샷 실측 617px):
    여백을 한 단계 더 깎고 안내문 한 줄을 숨겨 600px까지 한 화면에 넣는다 */
 @media (max-height: 660px) {
-  .shell.study-shell { padding-top: 16px; padding-bottom: 16px; }
-  .study-shell .study-top { margin-bottom: 8px; }
-  .study-shell .progress-track { margin-bottom: 12px; }
-  .study-shell .study-card { min-height: 160px; padding: 16px; margin-bottom: 10px; gap: 12px; }
-  .study-shell .study-word { font-size: 40px; }
-  .study-shell .study-actions { margin-bottom: 10px; }
-  .study-shell .study-action-btn { padding: 10px; }
-  .study-shell .answer-no,
-  .study-shell .answer-yes { padding: 12px 14px; }
-  .study-shell .study-tip { display: none; }
-  .study-shell .study-nav { margin-top: 10px; }
-  .study-shell .kbd-hint { margin-top: 4px; }
+  .shell.study-fit { padding-top: 16px; padding-bottom: 16px; }
+  .study-fit .study-top { margin-bottom: 8px; }
+  .study-fit .progress-track { margin-bottom: 12px; }
+  .study-fit .study-card { min-height: 160px; padding: 16px; margin-bottom: 10px; gap: 12px; }
+  .study-fit .study-word { font-size: min(40px, 9vw); }   /* 작은 폰(320px)에선 9vw가 더 작다 — 모바일 clamp 규칙과 역전 안 나게 */
+  .study-fit .study-actions { margin-bottom: 10px; }
+  .study-fit .study-action-btn { padding: 10px; }
+  .study-fit .answer-no,
+  .study-fit .answer-yes { padding: 12px 14px; }
+  .study-fit .study-tip { display: none; }
+  .study-fit .study-nav { margin-top: 10px; }
+  .study-fit .kbd-hint { margin-top: 4px; }
 }
 
 .study-top {
