@@ -60,6 +60,11 @@ function pickVoice(lang: string): SpeechSynthesisVoice | undefined {
   return candidates[0]
 }
 
+// 카드를 넘기거나 화면을 떠날 때 — 이전 단어를 끝까지 읽는 '늦은 재생'을 끊는다
+export function stopSpeaking(): void {
+  if (isTtsSupported()) speechSynthesis.cancel()
+}
+
 export function speak(text: string, lang = detectLang(text)): void {
   if (!isTtsSupported() || !text.trim()) return
   speechSynthesis.cancel() // 연타 시 겹침 방지

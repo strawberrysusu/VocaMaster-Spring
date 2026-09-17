@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { MouseEvent } from 'react'
+import type { MouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { fetchAllCards } from '../api/cards'
 import { recordRecentStudy } from '../lib/recent'
+import { loadSettings, saveSettings } from '../lib/settings'
+import { isTtsSupported, speak, stopSpeaking } from '../lib/tts'
 import TopNav from '../components/TopNav'
-import SpeakButton from '../components/SpeakButton'
 
 interface StudyCard {
   cardId: number
@@ -111,6 +112,11 @@ export default function Study() {
   // 나오면 초안이 손상됐거나 프론트 버그다. 재시도는 무의미하니 버리는 길만 남긴다
   const [retryBlocked, setRetryBlocked] = useState(false)
   const [error, setError] = useState('')
+  // 9/17 뒤집으면 자동 발음 — 설정(localStorage)과 같은 값. 이 화면의 🔊 스위치가 설정을 바꾼다
+  const [autoSpeak, setAutoSpeak] = useState(() => loadSettings().autoSpeak)
+  // 9/17 스와이프 — 카드가 손가락을 따라간 거리(px). 0이면 제자리
+  const [dragX, setDragX] = useState(0)
+  const [dragging, setDragging] = useState(false)
 
   // 초안 키는 입구별로 분리 — 덱 학습과 전체 복습의 답안이 섞이면 안 된다
   const draftKey = `vm.study.draft.${deckId ?? 'due'}${starredOnly ? '.starred' : ''}`
@@ -119,6 +125,10 @@ export default function Study() {
   // 카드 전환 잠금 — 알아요를 빠르게 두 번 누르면 setIdx가 두 번 돌아 카드를 건너뛰고,
   // idx가 total을 넘으면 어느 블록도 안 그려져 화면이 하얘진다 (Codex 검산 2026-09-01)
   const advancing = useRef(false)
+  // 스와이프 진행 상태. axis는 첫 12px 이동으로 가로/세로를 한 번만 판정 — 세로면 스크롤에 양보한다
+  const swipe = useRef<{ id: number; x: number; y: number; axis: 'h' | 'v' | null } | null>(null)
+  // 밀었다 놓으면 브라우저가 click까지 쏜다 — 그 click이 카드를 뒤집지 않게 한 번 삼킨다
+  const suppressClick = useRef(false)
 
   function newSubmissionId() {
     // crypto.randomUUID는 보안 컨텍스트(https/localhost)에서만 있다 — 없으면 충분히 흩어지는 대체값
@@ -217,8 +227,12 @@ export default function Study() {
   // 겸사겸사 포커스를 카드로 옮겨 Enter 연타가 방금 누른 버튼을 다시 때리지 않게 한다.
   useEffect(() => {
     advancing.current = false
+    setDragX(0)   // 스와이프로 넘어왔으면 새 카드는 제자리에서 시작
     if (card) cardRef.current?.focus({ preventScroll: true })
   }, [idx, reviewing, card])
+
+  // 화면을 떠나면 읽던 발음을 끊는다
+  useEffect(() => () => stopSpeaking(), [])
 
   /** 초안에 담긴 답의 수. queue와 무관하다 — 응답 유실 후 queue가 비어도 이 값은 남는다 */
   const draftCount = Object.keys(answers).length
@@ -235,12 +249,14 @@ export default function Study() {
   }
 
   function goNext() {
+    stopSpeaking()   // 이전 카드 발음이 다음 카드 위에서 계속 나오지 않게
     setRevealed(false)
     if (idx + 1 >= total) setReviewing(true)   // 마지막 카드를 지나면 제출 전 검토
     else setIdx((i) => i + 1)
   }
 
   function goPrev() {
+    stopSpeaking()
     setRevealed(false)
     advancing.current = false
     if (reviewing) setReviewing(false)
@@ -338,6 +354,74 @@ export default function Study() {
     }
   }
 
+  const speakText = card ? card.reading || card.front : ''   // 읽기가 있으면 읽기를 읽는다 — 한자 TTS 오독 방지
+
+  /**
+   * 카드 앞↔뒤. 뒤로 넘어갈 때 자동 발음(켜져 있으면). 다시 뒤집으면 다시 읽어 준다 —
+   * 그래서 별도의 '다시 듣기' 버튼이 없다 (9/17, 사용자 제안: 버튼은 켜기/끄기 스위치로).
+   */
+  function flip() {
+    if (!card) return
+    const next = !revealed
+    setRevealed(next)
+    if (next && autoSpeak) speak(speakText)
+    else if (!next) stopSpeaking()
+  }
+
+  /** 🔊 스위치 — 설정과 같은 값(설정 화면에도 보인다). 켜는 순간 뒷면이면 바로 읽어 줘서 켜졌다는 걸 귀로 안다 */
+  function toggleSound() {
+    const next = !autoSpeak
+    setAutoSpeak(next)
+    saveSettings({ ...loadSettings(), autoSpeak: next })
+    if (next && revealed && card) speak(speakText)
+    if (!next) stopSpeaking()
+  }
+
+  // ── 스와이프 (9/17, Quizlet식): 오른쪽 = 알아요, 왼쪽 = 몰라요 ──
+  const SWIPE_DECIDE = 12   // 이만큼 움직여야 가로/세로를 판정한다 (그 전까지는 탭)
+  const SWIPE_COMMIT = 90   // 이만큼 밀고 놓으면 답으로 확정, 덜 밀면 제자리로 돌아간다
+
+  function onCardPointerDown(e: ReactPointerEvent<HTMLButtonElement>) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    swipe.current = { id: e.pointerId, x: e.clientX, y: e.clientY, axis: null }
+    suppressClick.current = false
+  }
+
+  function onCardPointerMove(e: ReactPointerEvent<HTMLButtonElement>) {
+    const s = swipe.current
+    if (!s || s.id !== e.pointerId) return
+    const dx = e.clientX - s.x
+    const dy = e.clientY - s.y
+    if (!s.axis) {
+      if (Math.abs(dx) < SWIPE_DECIDE && Math.abs(dy) < SWIPE_DECIDE) return
+      s.axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'   // 세로가 이기면 스크롤에 양보 (CSS touch-action: pan-y)
+      if (s.axis === 'h') {
+        e.currentTarget.setPointerCapture(e.pointerId)   // 손가락이 카드 밖으로 나가도 move/up을 계속 받는다
+        setDragging(true)
+      }
+    }
+    if (s.axis !== 'h') return
+    suppressClick.current = true
+    setDragX(dx)
+  }
+
+  function onCardPointerEnd(e: ReactPointerEvent<HTMLButtonElement>, commit: boolean) {
+    const s = swipe.current
+    if (!s || s.id !== e.pointerId) return
+    swipe.current = null
+    setDragging(false)
+    if (s.axis === 'h') {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+      const dx = e.clientX - s.x
+      if (commit && Math.abs(dx) >= SWIPE_COMMIT) {
+        setDragX(0)
+        pick(dx > 0)   // pick이 전환 중·제출 시도 후 잠금을 그대로 적용한다
+        return
+      }
+    }
+    setDragX(0)   // 덜 밀었으면 제자리로 (CSS transition)
+  }
+
   const backTo = deckId ? `/decks/${deckId}` : '/'
 
   /**
@@ -375,6 +459,34 @@ export default function Study() {
    */
   const pendingRetry = attempted !== null && !result
   const attemptedCount = attempted ? Object.keys(attempted).length : 0
+
+  // ── 키보드 단축키 (9/17): Space 뒤집기 · A 몰라요 · D 알아요 · S 별표 · ← → 이동 ──
+  // e.code를 쓴다 — 한글 IME면 e.key가 'ㅁ'·'ㅇ'으로 오지만 code는 KeyA·KeyD 그대로다 (Quizlet과 같은 배치).
+  // 등록을 매 렌더마다 갈아끼우는 건 Quiz.tsx와 같은 방식 — 최신 상태를 클로저로 잡기 위해
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!card || result || reviewing || pendingRetry) return
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return   // 꾹 누름·조합키는 무시
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      // Space·Enter가 버튼·링크 위에 있으면 브라우저의 클릭 활성화에 맡긴다 — 우리까지 처리하면 두 번 실행된다.
+      // 카드 자체도 button이라, 카드에 포커스가 있을 때의 Space 뒤집기는 카드의 onClick이 담당한다
+      // 실제 키보드는 code가 항상 채워져 온다. 일부 자동화·가상 키보드는 비워 보내므로 key로 보정 (9/17 실측)
+      const code = e.code || ({ ' ': 'Space', a: 'KeyA', d: 'KeyD', s: 'KeyS' } as Record<string, string>)[e.key.toLowerCase()] || e.key
+      if ((code === 'Space' || code === 'Enter') && (tag === 'BUTTON' || tag === 'A')) return
+      switch (code) {
+        case 'Space': e.preventDefault(); flip(); break   // preventDefault: 페이지 스크롤 방지
+        case 'KeyA': pick(false); break
+        case 'KeyD': pick(true); break
+        case 'KeyS': void toggleStar(); break
+        case 'ArrowLeft': if (idx > 0) goPrev(); break
+        case 'ArrowRight': goNext(); break
+        default: return
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   return (
     <>
@@ -449,7 +561,23 @@ export default function Study() {
             </div>
 
             {/* 카드는 앞↔뒤 토글. 뜻을 본 뒤 다시 앞면으로 돌려 스스로 떠올려 볼 수 있어야 한다 */}
-            <button ref={cardRef} className="study-card" onClick={() => setRevealed((r) => !r)}>
+            <button
+              ref={cardRef}
+              className={`study-card${dragging ? ' dragging' : ''}`}
+              style={dragX ? { transform: `translateX(${dragX}px) rotate(${dragX / 22}deg)` } : undefined}
+              onClick={(e) => {
+                // 밀었다 놓은 뒤에 따라오는 click은 뒤집기가 아니다
+                if (suppressClick.current) { suppressClick.current = false; e.preventDefault(); return }
+                flip()
+              }}
+              onPointerDown={onCardPointerDown}
+              onPointerMove={onCardPointerMove}
+              onPointerUp={(e) => onCardPointerEnd(e, true)}
+              onPointerCancel={(e) => onCardPointerEnd(e, false)}
+            >
+              {/* 스와이프 중 방향 표시 — 민 거리에 비례해 진해진다 */}
+              <span className="swipe-tag yes" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, dragX) / SWIPE_COMMIT) }}>알아요</span>
+              <span className="swipe-tag no" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, -dragX) / SWIPE_COMMIT) }}>몰라요</span>
               {/* 읽기는 답의 절반(한자→읽기 회상 훈련) — 뜻 확인 후에만 공개. 읽기 없는 카드(영어 등)는 표시 없음 */}
               {revealed && card.reading && <span className="reading">{card.reading}</span>}
               <span className="study-word">{card.front}</span>
@@ -467,12 +595,23 @@ export default function Study() {
               탭을 발음에 뺏기면 폰에서 카드를 뒤집을 동작이 사라진다.
             */}
             <div className="study-actions">
-              <SpeakButton
-                text={card.reading || card.front} // 읽기가 있으면 읽기를 읽는다 — 한자 TTS 오독 방지
-                size="lg"
-                className="study-action-btn"
-                label="발음 듣기" // "다시 듣기"였으나 이 화면엔 자동 재생이 없다 — 첫 재생이 없는데 "다시"라 오해를 샀다 (9/1 사용자 지적)
-              />
+              {/*
+                9/17: '발음 듣기'(수동 재생)를 자동 재생 스위치로. 뒤집을 때 읽어 주니 수동 버튼이 필요 없고,
+                한 번 더 듣고 싶으면 카드를 다시 뒤집는다. 끄면 이 화면에서 소리가 전혀 안 난다 (설정 화면과 같은 값).
+                TTS가 없는 브라우저면 스위치도 없다 — 예전 SpeakButton과 같은 처리
+              */}
+              {isTtsSupported() && (
+                <button
+                  type="button"
+                  className={`study-action-btn sound-action${autoSpeak ? '' : ' off'}`}
+                  onClick={toggleSound}
+                  aria-pressed={autoSpeak}
+                  title={autoSpeak ? '뒤집을 때 발음 자동 재생 — 누르면 끔' : '소리 꺼짐 — 누르면 켬'}
+                >
+                  <span aria-hidden="true">{autoSpeak ? '🔊' : '🔇'}</span>
+                  <span>{autoSpeak ? '소리 켬' : '소리 끔'}</span>
+                </button>
+              )}
               <button
                 type="button"
                 className={`study-action-btn star-action${card.starred ? ' on' : ''}`}
@@ -511,6 +650,7 @@ export default function Study() {
             {!revealed && (
               <p className="muted" style={{ textAlign: 'center', fontSize: 13.5, marginTop: 10 }}>
                 떠올렸으면 바로 답해도 되고, 카드를 눌러 뜻을 확인해도 돼요
+                <span className="only-touch"> · 옆으로 밀어서 답할 수도 있어요</span>
               </p>
             )}
 
@@ -521,6 +661,10 @@ export default function Study() {
               </span>
               <button className="nav-btn" onClick={goNext}>다음 →</button>
             </div>
+            {/* 마우스·키보드 환경에서만 보인다 (CSS hover:hover) */}
+            <p className="muted kbd-hint" aria-hidden="true">
+              <kbd>Space</kbd> 뒤집기 · <kbd>A</kbd> 몰라요 · <kbd>D</kbd> 알아요 · <kbd>S</kbd> 별표 · <kbd>←</kbd> <kbd>→</kbd> 이동
+            </p>
             <p className="muted study-foot">
               답은 아직 저장되지 않았어요. 되돌아가서 얼마든지 고칠 수 있고, 마지막에 한 번에 제출됩니다.
             </p>

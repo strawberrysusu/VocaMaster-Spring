@@ -1297,6 +1297,73 @@ button:disabled {
   box-shadow: 0 0 0 3px rgba(61, 62, 150, 0.25), 0 8px 20px -8px rgba(61, 62, 150, 0.6);
 }
 
+/* ── 9/17 복습 카드 스와이프 (Quizlet식: 오른쪽 = 알아요, 왼쪽 = 몰라요) ──
+   touch-action: pan-y — 세로 스크롤은 브라우저가, 가로 이동만 우리가 받는다 */
+.study-card {
+  position: relative;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.18s ease, box-shadow 0.12s ease;
+}
+
+.study-card.dragging {
+  transition: none;
+  cursor: grabbing;
+}
+
+.swipe-tag {
+  position: absolute;
+  top: 18px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 2px solid currentColor;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.swipe-tag.yes {
+  right: 18px;
+  color: var(--a);
+  transform: rotate(8deg);
+}
+
+.swipe-tag.no {
+  left: 18px;
+  color: #b0485c;
+  transform: rotate(-8deg);
+}
+
+.sound-action.off {
+  color: var(--muted);
+}
+
+/* 입력 장치별 안내: 손가락이면 스와이프 안내, 마우스·키보드면 단축키 안내 */
+.only-touch { display: none; }
+.kbd-hint { display: none; }
+@media (pointer: coarse) {
+  .only-touch { display: inline; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .kbd-hint {
+    display: block;
+    text-align: center;
+    font-size: 12.5px;
+    margin-top: 6px;
+  }
+  .kbd-hint kbd {
+    font-family: inherit;
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    background: #fff;
+  }
+}
+
 .study-nav {
   display: flex;
   align-items: center;
@@ -1569,6 +1636,12 @@ button:disabled {
   margin-bottom: 2px;
 }
 
+/* 9/17: 복습 카드의 읽기가 15px라 단어(52px)·뜻(24px) 옆에서 너무 작았다 (사용자 지적 9/14).
+   폰은 단어가 clamp라 읽기도 clamp여야 역전이 안 난다. 학습 카드 안에서만 키운다 */
+.study-card .reading {
+  font-size: clamp(17px, 4.2vw, 24px);
+}
+
 .reading-inline {
   display: block;
   font-size: 12px;
@@ -1755,7 +1828,7 @@ button:disabled {
   display: flex;
   gap: 6px;
   margin-left: 8px;
-  opacity: 0.35;
+  opacity: 1;   /* 9/17: 0.35였는데 폰·PC 모두 버튼이 있는지 안 보였다 (사용자 지적 9/14) — 항상 표시 */
   transition: opacity 0.12s ease;
 }
 
@@ -1776,7 +1849,7 @@ button:disabled {
 }
 
 .star-btn {
-  color: #c3c4cf;
+  color: var(--muted);   /* 9/17: #c3c4cf는 흰 배경에서 거의 안 보였다 */
 }
 
 .star-btn.on {
