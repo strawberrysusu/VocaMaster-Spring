@@ -819,6 +819,23 @@ input {
   .study-shell .study-foot { display: none; }
 }
 
+/* 더 짧은 화면(PC에서 브라우저 확대·윈도우 배율 125%면 CSS 기준 600px대가 흔하다, 9/17 사용자 스크린샷 실측 617px):
+   여백을 한 단계 더 깎고 안내문 한 줄을 숨겨 600px까지 한 화면에 넣는다 */
+@media (max-height: 660px) {
+  .shell.study-shell { padding-top: 16px; padding-bottom: 16px; }
+  .study-shell .study-top { margin-bottom: 8px; }
+  .study-shell .progress-track { margin-bottom: 12px; }
+  .study-shell .study-card { min-height: 160px; padding: 16px; margin-bottom: 10px; gap: 12px; }
+  .study-shell .study-word { font-size: 40px; }
+  .study-shell .study-actions { margin-bottom: 10px; }
+  .study-shell .study-action-btn { padding: 10px; }
+  .study-shell .answer-no,
+  .study-shell .answer-yes { padding: 12px 14px; }
+  .study-shell .study-tip { display: none; }
+  .study-shell .study-nav { margin-top: 10px; }
+  .study-shell .kbd-hint { margin-top: 4px; }
+}
+
 .study-top {
   display: flex;
   justify-content: space-between;
