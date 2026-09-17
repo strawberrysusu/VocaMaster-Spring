@@ -132,6 +132,9 @@ export default function Study() {
   // 카드가 화면 밖으로 날아가는 중 — 그 220ms 동안은 입력을 받지 않는다
   const flying = useRef(false)
   const [flyingCls, setFlyingCls] = useState(false)
+  const flyTimer = useRef<number | null>(null)
+  // 지금 화면에 있는 카드 id — 날아간 뒤 도착하는 '늦은 채점'이 그 사이 바뀐 카드에 적용되지 않게 대조한다
+  const currentCardId = useRef<number | null>(null)
 
   function newSubmissionId() {
     // crypto.randomUUID는 보안 컨텍스트(https/localhost)에서만 있다 — 없으면 충분히 흩어지는 대체값
@@ -225,6 +228,7 @@ export default function Study() {
 
   const total = queue?.length ?? 0
   const card = queue && idx < total ? queue[idx] : null
+  currentCardId.current = card ? card.cardId : null
 
   // 카드가 실제로 바뀐 뒤에야 잠금을 푼다 — 타이머로 풀면 느린 기기에서 여전히 두 칸 넘어간다.
   // 겸사겸사 포커스를 카드로 옮겨 Enter 연타가 방금 누른 버튼을 다시 때리지 않게 한다.
@@ -235,8 +239,11 @@ export default function Study() {
     if (card) cardRef.current?.focus({ preventScroll: true })
   }, [idx, reviewing, card])
 
-  // 화면을 떠나면 읽던 발음을 끊는다
-  useEffect(() => () => stopSpeaking(), [])
+  // 화면을 떠나면 읽던 발음을 끊고, 날아가는 중이던 카드의 늦은 채점 예약도 취소한다
+  useEffect(() => () => {
+    stopSpeaking()
+    if (flyTimer.current !== null) window.clearTimeout(flyTimer.current)
+  }, [])
 
   /** 초안에 담긴 답의 수. queue와 무관하다 — 응답 유실 후 queue가 비어도 이 값은 남는다 */
   const draftCount = Object.keys(answers).length
@@ -246,13 +253,17 @@ export default function Study() {
   function pick(correct: boolean) {
     // 제출을 한 번 시도한 뒤에는 답을 고칠 수 없다. 동결본과 달라지면
     // 재시도가 '다른 답안'이 되어 서버가 409로 거절한다
-    if (!card || advancing.current || attempted) return
+    // flying: 카드가 날아가는 0.22초 동안은 채점·이동을 전부 막는다. 안 막으면 버튼이 먼저 카드를 넘기고,
+    // 뒤늦게 도착한 스와이프 채점이 '옛 화면 기준'으로 한 번 더 넘겨 인덱스가 범위를 벗어난다(화면이 빔).
+    // 몰라요를 눌렀다면 같은 카드에 알아요를 덮어쓰기도 했다 (9/17 Codex 재현, PR #10 회귀)
+    if (!card || advancing.current || attempted || flying.current) return
     advancing.current = true
     setAnswers((prev) => ({ ...prev, [card.cardId]: correct }))
     goNext()
   }
 
   function goNext() {
+    if (flying.current) return
     stopSpeaking()   // 이전 카드 발음이 다음 카드 위에서 계속 나오지 않게
     setRevealed(false)
     if (idx + 1 >= total) setReviewing(true)   // 마지막 카드를 지나면 제출 전 검토
@@ -260,6 +271,7 @@ export default function Study() {
   }
 
   function goPrev() {
+    if (flying.current) return
     stopSpeaking()
     setRevealed(false)
     advancing.current = false
@@ -389,15 +401,18 @@ export default function Study() {
   function flyOut(dir: 1 | -1) {
     if (flying.current) return
     flying.current = true
+    const flownId = card ? card.cardId : null   // 이 카드에 대한 채점이다 — 도착했을 때 화면의 카드가 다르면 버린다
     setFlyingCls(true)
     setDragX(dir * Math.max(window.innerWidth, 480))
-    window.setTimeout(() => {
+    flyTimer.current = window.setTimeout(() => {
+      flyTimer.current = null
       flying.current = false
       // 세 호출이 한 틱에 묶여 다음 카드는 처음부터 transform 0으로 그려진다. 카드 요소는 key={cardId}라
       // 카드마다 새로 만들어지므로 날아간 자리에서 미끄러져 들어오는 전환 자체가 없다
       // (예전 방식: 한 프레임짜리 플래그 + requestAnimationFrame — 안 보이는 탭에선 rAF가 멈춰 플래그가 안 풀렸다, 9/17 실측)
       setFlyingCls(false)
       setDragX(0)
+      if (currentCardId.current !== flownId) return   // 그 사이 카드가 바뀌었다면 늦은 채점은 적용하지 않는다 (이중 안전장치)
       pick(dir > 0)
     }, 220)
   }
@@ -658,6 +673,7 @@ export default function Study() {
                 className={`answer-no${picked === false ? ' picked' : ''}`}
                 aria-pressed={picked === false}
                 onClick={() => pick(false)}
+                disabled={flyingCls}
               >
                 몰라요
               </button>
@@ -665,6 +681,7 @@ export default function Study() {
                 className={`answer-yes${picked === true ? ' picked' : ''}`}
                 aria-pressed={picked === true}
                 onClick={() => pick(true)}
+                disabled={flyingCls}
               >
                 알아요
               </button>
@@ -677,11 +694,11 @@ export default function Study() {
             )}
 
             <div className="study-nav">
-              <button className="nav-btn" onClick={goPrev} disabled={idx === 0}>← 이전</button>
+              <button className="nav-btn" onClick={goPrev} disabled={idx === 0 || flyingCls}>← 이전</button>
               <span className="muted" style={{ fontSize: 12.5 }}>
                 {picked === undefined ? '아직 답하지 않음' : picked ? '알아요로 표시함' : '몰라요로 표시함'}
               </span>
-              <button className="nav-btn" onClick={goNext}>다음 →</button>
+              <button className="nav-btn" onClick={goNext} disabled={flyingCls}>다음 →</button>
             </div>
             {/* 마우스·키보드 환경에서만 보인다 (CSS hover:hover) */}
             <p className="muted kbd-hint" aria-hidden="true">
