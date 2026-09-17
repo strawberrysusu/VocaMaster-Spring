@@ -129,6 +129,9 @@ export default function Study() {
   const swipe = useRef<{ id: number; x: number; y: number; axis: 'h' | 'v' | null } | null>(null)
   // 밀었다 놓으면 브라우저가 click까지 쏜다 — 그 click이 카드를 뒤집지 않게 한 번 삼킨다
   const suppressClick = useRef(false)
+  // 카드가 화면 밖으로 날아가는 중 — 그 220ms 동안은 입력을 받지 않는다
+  const flying = useRef(false)
+  const [flyingCls, setFlyingCls] = useState(false)
 
   function newSubmissionId() {
     // crypto.randomUUID는 보안 컨텍스트(https/localhost)에서만 있다 — 없으면 충분히 흩어지는 대체값
@@ -227,7 +230,8 @@ export default function Study() {
   // 겸사겸사 포커스를 카드로 옮겨 Enter 연타가 방금 누른 버튼을 다시 때리지 않게 한다.
   useEffect(() => {
     advancing.current = false
-    setDragX(0)   // 스와이프로 넘어왔으면 새 카드는 제자리에서 시작
+    setDragX(0)   // 화살표·버튼으로 넘어온 경우의 안전장치 (스와이프는 flyOut이 pick 전에 이미 0으로 돌린다)
+    setFlyingCls(false)
     if (card) cardRef.current?.focus({ preventScroll: true })
   }, [idx, reviewing, card])
 
@@ -381,7 +385,25 @@ export default function Study() {
   const SWIPE_DECIDE = 12   // 이만큼 움직여야 가로/세로를 판정한다 (그 전까지는 탭)
   const SWIPE_COMMIT = 90   // 이만큼 밀고 놓으면 답으로 확정, 덜 밀면 제자리로 돌아간다
 
+  /** 확정된 스와이프 — 밀던 방향으로 날려 보낸 뒤 답을 기록한다. 시간은 CSS .flying의 0.22s와 맞춘다 */
+  function flyOut(dir: 1 | -1) {
+    if (flying.current) return
+    flying.current = true
+    setFlyingCls(true)
+    setDragX(dir * Math.max(window.innerWidth, 480))
+    window.setTimeout(() => {
+      flying.current = false
+      // 세 호출이 한 틱에 묶여 다음 카드는 처음부터 transform 0으로 그려진다. 카드 요소는 key={cardId}라
+      // 카드마다 새로 만들어지므로 날아간 자리에서 미끄러져 들어오는 전환 자체가 없다
+      // (예전 방식: 한 프레임짜리 플래그 + requestAnimationFrame — 안 보이는 탭에선 rAF가 멈춰 플래그가 안 풀렸다, 9/17 실측)
+      setFlyingCls(false)
+      setDragX(0)
+      pick(dir > 0)
+    }, 220)
+  }
+
   function onCardPointerDown(e: ReactPointerEvent<HTMLButtonElement>) {
+    if (flying.current) return
     if (e.pointerType === 'mouse' && e.button !== 0) return
     swipe.current = { id: e.pointerId, x: e.clientX, y: e.clientY, axis: null }
     suppressClick.current = false
@@ -414,8 +436,7 @@ export default function Study() {
       if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
       const dx = e.clientX - s.x
       if (commit && Math.abs(dx) >= SWIPE_COMMIT) {
-        setDragX(0)
-        pick(dx > 0)   // pick이 전환 중·제출 시도 후 잠금을 그대로 적용한다
+        flyOut(dx > 0 ? 1 : -1)   // pick은 날아간 뒤에 — 전환 중·제출 시도 후 잠금은 pick이 그대로 적용한다
         return
       }
     }
@@ -465,7 +486,7 @@ export default function Study() {
   // 등록을 매 렌더마다 갈아끼우는 건 Quiz.tsx와 같은 방식 — 최신 상태를 클로저로 잡기 위해
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (!card || result || reviewing || pendingRetry) return
+      if (!card || result || reviewing || pendingRetry || flying.current) return
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return   // 꾹 누름·조합키는 무시
       const tag = (e.target as HTMLElement | null)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
@@ -562,8 +583,9 @@ export default function Study() {
 
             {/* 카드는 앞↔뒤 토글. 뜻을 본 뒤 다시 앞면으로 돌려 스스로 떠올려 볼 수 있어야 한다 */}
             <button
+              key={card.cardId}
               ref={cardRef}
-              className={`study-card${dragging ? ' dragging' : ''}`}
+              className={`study-card${dragging ? ' dragging' : ''}${flyingCls ? ' flying' : ''}`}
               style={dragX ? { transform: `translateX(${dragX}px) rotate(${dragX / 22}deg)` } : undefined}
               onClick={(e) => {
                 // 밀었다 놓은 뒤에 따라오는 click은 뒤집기가 아니다
