@@ -9,6 +9,9 @@ import com.vocamaster.deck.dto.CreateDeckRequest;
 import com.vocamaster.deck.dto.DeckResponse;
 import com.vocamaster.user.User;
 import com.vocamaster.user.UserRepository;
+import jakarta.persistence.EntityManager;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +27,7 @@ class DeckServiceTest extends AbstractIntegrationTest {
     @Autowired private DeckRepository deckRepository;
     @Autowired private CardRepository cardRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private EntityManager em;
 
     private User user;
     private Deck deck;
@@ -174,5 +178,43 @@ class DeckServiceTest extends AbstractIntegrationTest {
 
         assertEquals(0, result.getCardCount());
         assertTrue(cardRepository.findByDeckId(result.getId()).isEmpty());
+    }
+
+    // ── 덱 목록 N+1 회귀 (2026-09-17) ──
+    // 예전 findAll은 덱마다 countByDeckId를 불러 덱 169개 계정에서 쿼리 170번이 나갔다(프런트가 한 페이지에서 두 번 호출 → 340번).
+    // 지금은 GROUP BY 한 번. 이 테스트는 "숫자가 맞다"와 "덱이 늘어도 쿼리 수가 안 는다"를 같이 잠근다.
+    @Test
+    @DisplayName("덱 목록 — 카드 수가 맞고(0장 덱은 0), 덱이 4개여도 쿼리는 2번 (N+1 회귀)")
+    void findAll_cardCountsWithoutNPlusOne() {
+        Deck two = deckRepository.save(Deck.builder().title("two").user(user).build());
+        Deck one = deckRepository.save(Deck.builder().title("one").user(user).build());
+        Deck empty = deckRepository.save(Deck.builder().title("empty").user(user).build());
+        cardRepository.save(Card.builder().front("a").back("1").deck(two).build());
+        cardRepository.save(Card.builder().front("b").back("2").deck(two).build());
+        cardRepository.save(Card.builder().front("c").back("3").deck(one).build());
+
+        // 테스트는 한 트랜잭션 안이라 위 INSERT가 아직 DB로 안 나갔다. 여기서 밀어내지 않으면
+        // findAll의 조회 직전에 자동 flush가 일어나 INSERT까지 쿼리 수에 섞인다
+        em.flush();
+        em.clear();
+
+        Statistics stats = em.getEntityManagerFactory().unwrap(SessionFactory.class).getStatistics();
+        stats.setStatisticsEnabled(true);
+        stats.clear();
+
+        List<DeckResponse> result = deckService.findAll(user.getId());
+
+        long statements = stats.getPrepareStatementCount();
+        stats.setStatisticsEnabled(false);
+
+        assertEquals(4, result.size(), "setUp의 덱 1개 + 여기서 만든 3개");
+        assertEquals(2, cardCountOf(result, two.getId()));
+        assertEquals(1, cardCountOf(result, one.getId()));
+        assertEquals(0, cardCountOf(result, empty.getId()), "카드 0장 덱은 GROUP BY 결과에 줄이 없다 — get이면 NPE, getOrDefault라 0");
+        assertTrue(statements <= 2, "덱 목록 1번 + 카드 수 GROUP BY 1번이어야 한다. 실제 " + statements + "번 — 덱마다 count를 부르면 덱 4개에 5번이 된다");
+    }
+
+    private long cardCountOf(List<DeckResponse> list, Long deckId) {
+        return list.stream().filter(r -> r.getId().equals(deckId)).findFirst().orElseThrow().getCardCount();
     }
 }

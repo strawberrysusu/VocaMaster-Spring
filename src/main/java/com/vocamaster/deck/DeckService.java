@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.vocamaster.common.exception.NotFoundException;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -42,8 +44,13 @@ public class DeckService {
 
     public List<DeckResponse> findAll(Long userId) {
         List<Deck> decks = deckRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        Map<Long, Long> counts = new HashMap<>();
+        for (Object[] row : cardRepository.countByDeckForUser(userId)) {
+            counts.put((Long) row[0], ((Number) row[1]).longValue());
+        }
         return decks.stream()
-                .map(d -> DeckResponse.listOf(d, cardRepository.countByDeckId(d.getId())))
+                .map(d -> DeckResponse.listOf(d, counts.getOrDefault(d.getId(), 0L)))
                 .toList();
     }
 
