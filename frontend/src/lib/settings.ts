@@ -16,11 +16,12 @@ export interface Settings {
   quizAutoAdvance: boolean
   quizChoices: 4 | 5 | 6         // 퀴즈 선택지 수 (한국 시험 스타일 5지, 최대 6지)
   voices: Partial<Record<'en' | 'ja' | 'ko', string>>   // 언어별 선호 음성 이름 (없으면 tts.ts 우선순위 규칙)
+  autoSpeak: boolean             // 복습에서 카드를 뒤집으면 발음 자동 재생 (9/17, 복습 화면의 🔊 스위치와 같은 값)
 }
 
 const KEY = 'vm.settings'
 
-const DEFAULTS: Settings = { accent: 'indigo', deckColumns: 3, quizAutoAdvance: false, quizChoices: 4, voices: {} }
+const DEFAULTS: Settings = { accent: 'indigo', deckColumns: 3, quizAutoAdvance: false, quizChoices: 4, voices: {}, autoSpeak: true }
 
 export function loadSettings(): Settings {
   try {

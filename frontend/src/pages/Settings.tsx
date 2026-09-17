@@ -203,6 +203,14 @@ export default function Settings() {
             </label>
           </div>
           <div className="setup-row" style={{ marginBottom: 12 }}>
+            <span className="setup-label">복습</span>
+            <label className="toggle-row">
+              <input type="checkbox" checked={s.autoSpeak} onChange={(e) => update({ autoSpeak: e.target.checked })} />
+              카드를 뒤집으면 발음 자동 재생
+            </label>
+            <span className="muted" style={{ fontSize: 12.5 }}>복습 화면의 🔊 버튼으로도 켜고 끌 수 있어요 (같은 설정)</span>
+          </div>
+          <div className="setup-row" style={{ marginBottom: 12 }}>
             <span className="setup-label">선택지 수</span>
             <div className="sort-tabs">
               {([4, 5, 6] as const).map((n) => (
