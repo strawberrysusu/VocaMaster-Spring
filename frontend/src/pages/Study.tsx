@@ -670,7 +670,7 @@ export default function Study() {
               </button>
             </div>
             {!revealed && (
-              <p className="muted" style={{ textAlign: 'center', fontSize: 13.5, marginTop: 10 }}>
+              <p className="muted study-tip" style={{ textAlign: 'center', fontSize: 13.5, marginTop: 10 }}>
                 떠올렸으면 바로 답해도 되고, 카드를 눌러 뜻을 확인해도 돼요
                 <span className="only-touch"> · 옆으로 밀어서 답할 수도 있어요</span>
               </p>
