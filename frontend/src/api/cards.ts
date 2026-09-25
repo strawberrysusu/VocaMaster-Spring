@@ -1,11 +1,16 @@
 import { api } from './client'
 
+export type LearningStatus = 'UNKNOWN' | 'KNOWN'
+
 export interface CardDto {
   id: number
   front: string
   back: string
   reading?: string | null   // 읽기(요미가나) — 없으면 null
   starred: boolean
+  learningStatus: LearningStatus
+  correctStreak: number
+  wrongCount: number
 }
 
 interface PageResp {

@@ -1,6 +1,6 @@
 package com.vocamaster.typing;
 
-import com.vocamaster.stats.StatsService;
+import com.vocamaster.review.ReviewService;
 
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
@@ -32,7 +32,7 @@ public class TypingService {
     private final CardRepository cardRepository;
     private final DeckService deckService;
     private final UserRepository userRepository;
-    private final StatsService statsService;
+    private final ReviewService reviewService;
 
     /**
      * 세션 시작 — N문제 미리 생성 (ADR-026, Quiz Eager 패턴 재사용 + 선택지 없음).
@@ -163,7 +163,8 @@ public class TypingService {
             session.setEndedAt(LocalDateTime.now());
         }
 
-        statsService.recordStudy(userId, session.getDeck().getId());   // 출석 도장 (연속 학습일)
+        // 오답도 복습과 동일하게 연속 정답을 끊고, 출석은 공통 경로에서 한 번만 센다.
+        reviewService.recordAnswer(userId, question.getCard().getId(), isCorrect);
 
         return SubmitTypedAnswerResponse.builder()
                 .correct(isCorrect)

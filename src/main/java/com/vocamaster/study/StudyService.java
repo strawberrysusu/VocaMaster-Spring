@@ -1,6 +1,8 @@
 package com.vocamaster.study;
 
-import com.vocamaster.stats.StatsService;
+import com.vocamaster.review.ReviewService;
+import com.vocamaster.review.CardProgress;
+import com.vocamaster.review.CardProgressRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.vocamaster.card.Card;
@@ -24,6 +26,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * <h2>Flashcard 학습 모드 서비스</h2>
@@ -54,7 +59,8 @@ public class StudyService {
     private final UserRepository userRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizSessionRepository quizSessionRepository;
-    private final StatsService statsService;
+    private final ReviewService reviewService;
+    private final CardProgressRepository cardProgressRepository;
 
     // 학습 세션 시작
     public StudySessionResponse startSession(Long deckId, Long userId, StartStudyRequest req) {
@@ -86,7 +92,7 @@ public class StudyService {
         return StudySessionResponse.builder()
                 .sessionId(session.getId())
                 .direction(session.getDirection())
-                .cards(cards.stream().map(CardResponse::from).toList())
+                .cards(cardResponses(cards, userId))
                 .totalCards(cards.size())
                 .build();
     }
@@ -116,7 +122,7 @@ public class StudyService {
                 .build();
 
         recordRepository.save(record);
-        statsService.recordStudy(userId, session.getDeck().getId());   // 출석 도장 (연속 학습일)
+        reviewService.recordAnswer(userId, card.getId(), req.getKnown());
         return StudyRecordResponse.from(record);
     }
 
@@ -137,10 +143,10 @@ public class StudyService {
         long total = records.size();
         long known = records.stream().filter(StudyRecord::getKnown).count();
 
-        List<CardResponse> unknownCards = records.stream()
+        List<CardResponse> unknownCards = cardResponses(records.stream()
                 .filter(r -> !r.getKnown())
-                .map(r -> CardResponse.from(r.getCard()))
-                .toList();
+                .map(StudyRecord::getCard)
+                .toList(), userId);
 
         return StudySummaryResponse.builder()
                 .sessionId(session.getId())
@@ -152,6 +158,14 @@ public class StudyService {
                 .accuracy(total > 0 ? Math.round((double) known / total * 100) : 0)
                 .unknownCards(unknownCards)
                 .build();
+    }
+
+    private List<CardResponse> cardResponses(List<Card> cards, Long userId) {
+        if (cards.isEmpty()) return List.of();
+        Map<Long, CardProgress> progress = cardProgressRepository
+                .findByUserIdAndCardIdIn(userId, cards.stream().map(Card::getId).distinct().toList())
+                .stream().collect(Collectors.toMap(p -> p.getCard().getId(), Function.identity()));
+        return cards.stream().map(card -> CardResponse.from(card, progress.get(card.getId()))).toList();
     }
 
     // 덱별 학습 통계 (플래시카드 + 퀴즈 통합)

@@ -3,6 +3,7 @@ package com.vocamaster.stats;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.deck.DeckRepository;
 import com.vocamaster.review.CardProgressRepository;
+import com.vocamaster.review.LearningStatus;
 import com.vocamaster.stats.dto.StatsOverviewResponse;
 import com.vocamaster.study.event.StudyRecordedEvent;
 import lombok.RequiredArgsConstructor;
@@ -86,7 +87,6 @@ public class StatsService {
 
     // ── 통계 화면 (2026-08-23) ──
     static final int OVERVIEW_DAYS = 28;     // 최근 4주
-    static final int MASTERED_BOX = 5;       // 박스 5 이상 = 14일+ 간격 = "숙달" (기준 바꾸려면 여기 하나)
 
     private final DeckRepository deckRepository;
     private final CardRepository cardRepository;
@@ -118,7 +118,7 @@ public class StatsService {
             cardCounts.put((Long) row[0], ((Number) row[1]).longValue());
         }
         Map<Long, long[]> progress = new HashMap<>();
-        for (Object[] row : cardProgressRepository.progressByDeck(userId, MASTERED_BOX)) {
+        for (Object[] row : cardProgressRepository.progressByDeck(userId, LearningStatus.KNOWN_STREAK)) {
             progress.put((Long) row[0], new long[]{((Number) row[1]).longValue(), ((Number) row[2]).longValue()});
         }
         List<StatsOverviewResponse.DeckProgress> decks = deckRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()

@@ -655,7 +655,7 @@ export default function Study() {
                 onClick={toggleStar}
                 disabled={starring}
                 aria-pressed={card.starred}
-                title={card.starred ? '별표 해제' : '모르는 단어로 표시'}
+                title={card.starred ? '별표 해제' : '다시 보고 싶은 단어로 표시'}
               >
                 <span aria-hidden="true">{card.starred ? '★' : '☆'}</span>
                 <span>{card.starred ? '별표됨' : '별표'}</span>
@@ -696,7 +696,7 @@ export default function Study() {
             <div className="study-nav">
               <button className="nav-btn" onClick={goPrev} disabled={idx === 0 || flyingCls}>← 이전</button>
               <span className="muted" style={{ fontSize: 12.5 }}>
-                {picked === undefined ? '아직 답하지 않음' : picked ? '알아요로 표시함' : '몰라요로 표시함'}
+                {picked === undefined ? '아직 답하지 않음' : picked ? '이번 답변: 알아요' : '이번 답변: 몰라요'}
               </span>
               <button className="nav-btn" onClick={goNext} disabled={flyingCls}>다음 →</button>
             </div>
@@ -719,7 +719,7 @@ export default function Study() {
               {answeredInQueue < total && <> · 미응답 {total - answeredInQueue}장</>}
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
-              지금 제출하면 답한 카드만 Leitner 박스에 반영됩니다. 미응답 카드는 그대로 남아요.
+              학습 완료를 누르면 답한 카드의 복습 일정과 학습 상태가 저장돼요. 미응답 카드는 그대로 남아요.
             </p>
             <div className="answer-buttons" style={{ marginTop: 26 }}>
               <button className="answer-no" onClick={() => { setReviewing(false); setIdx(0) }}>
@@ -737,12 +737,16 @@ export default function Study() {
           <div className="result-panel">
             <h2>복습 완료 🎉</h2>
             <p className="result-line">
-              {result.total}장 중 <b>알아요 {result.known}</b> · <b>몰라요 {result.unknown}</b>
+              이번 답변 {result.total}장 · <b>알아요 {result.known}</b> · <b>몰라요 {result.unknown}</b>
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
               {result.alreadySubmitted
                 ? '이미 제출된 세션이라 진행도는 다시 움직이지 않았어요.'
-                : '알아요 카드는 다음 박스로 승급, 몰라요 카드는 박스 1로 — 10분 뒤 다시 만나요.'}
+                : '이번 답변을 학습 상태와 복습 일정에 반영했어요.'}
+            </p>
+            <p className="muted" style={{ fontSize: 13.5 }}>
+              누적 학습 상태는 3회 연속 정답이면 ‘알아요’, 한 번이라도 틀리면 ‘몰라요’가 돼요.
+              {deckId && <> <Link to={backTo} style={{ color: 'var(--a)' }}>덱에서 학습 상태 확인 →</Link></>}
             </p>
             <div className="answer-buttons" style={{ marginTop: 26 }}>
               <Link to="/" className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>

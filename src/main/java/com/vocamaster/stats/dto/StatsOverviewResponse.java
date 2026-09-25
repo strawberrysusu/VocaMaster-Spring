@@ -44,6 +44,6 @@ public class StatsOverviewResponse {
         private String title;
         private long cardCount;      // 전체
         private long started;        // 한 번이라도 답한 카드 (CardProgress 존재)
-        private long mastered;       // 박스 5 이상 (14일+ 간격) — 기준은 StatsService.MASTERED_BOX
+        private long mastered;       // 알아요: LearningStatus.KNOWN_STREAK 이상 연속 정답 (API 필드명 호환 유지)
     }
 }

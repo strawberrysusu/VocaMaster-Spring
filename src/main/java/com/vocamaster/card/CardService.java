@@ -7,11 +7,18 @@ import com.vocamaster.common.PageableUtils;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckService;
+import com.vocamaster.review.CardProgress;
+import com.vocamaster.review.CardProgressRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +26,7 @@ public class CardService {
 
     private final CardRepository cardRepository;
     private final DeckService deckService;
+    private final CardProgressRepository cardProgressRepository;
 
     public CardResponse create(Long deckId, Long userId, CreateCardRequest req) {
         Deck deck = deckService.verifyOwner(deckId, userId);
@@ -43,14 +51,20 @@ public class CardService {
         PageRequest pageable = PageableUtils.safe(page, size, sortOrder);
         String safeKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
         Page<Card> cards = cardRepository.search(deckId, safeKeyword, starredOnly, pageable);
-        return cards.map(CardResponse::from);
-
+        if (cards.isEmpty()) {
+            return cards.map(CardResponse::from);
+        }
+        List<Long> cardIds = cards.getContent().stream().map(Card::getId).toList();
+        Map<Long, CardProgress> progressByCard = cardProgressRepository
+                .findByUserIdAndCardIdIn(userId, cardIds).stream()
+                .collect(Collectors.toMap(progress -> progress.getCard().getId(), Function.identity()));
+        return cards.map(card -> CardResponse.from(card, progressByCard.get(card.getId())));
     }
 
     public CardResponse findOne(Long id, Long userId) {
         Card card = getCard(id);
         deckService.verifyOwner(card.getDeck().getId(), userId);
-        return CardResponse.from(card);
+        return withProgress(card, userId);
     }
 
     public CardResponse update(Long id, Long userId, UpdateCardRequest req) {
@@ -63,7 +77,7 @@ public class CardService {
         if (req.getExampleSentence() != null) card.setExampleSentence(req.getExampleSentence());
         if (req.getMemo() != null) card.setMemo(req.getMemo());
         if (req.getPosition() != null) card.setPosition(req.getPosition());
-        return CardResponse.from(cardRepository.save(card));
+        return withProgress(cardRepository.save(card), userId);
     }
 
     public void remove(Long id, Long userId) {
@@ -76,7 +90,12 @@ public class CardService {
         Card card = getCard(id);
         deckService.verifyOwner(card.getDeck().getId(), userId);
         card.setStarred(!card.getStarred());
-        return CardResponse.from(cardRepository.save(card));
+        return withProgress(cardRepository.save(card), userId);
+    }
+
+    private CardResponse withProgress(Card card, Long userId) {
+        return CardResponse.from(card,
+                cardProgressRepository.findByUserIdAndCardId(userId, card.getId()).orElse(null));
     }
     private Sort resolveSort(String sort) {
         if (sort == null) {

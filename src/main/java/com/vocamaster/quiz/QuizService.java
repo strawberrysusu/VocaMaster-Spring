@@ -1,6 +1,6 @@
 package com.vocamaster.quiz;
 
-import com.vocamaster.stats.StatsService;
+import com.vocamaster.review.ReviewService;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -41,7 +41,7 @@ public class QuizService {
     private final DeckService deckService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
-    private final StatsService statsService;
+    private final ReviewService reviewService;
 
     // ============================================================
     // ADR-024: 퀴즈 세션 단위 관리 (Eager 생성)
@@ -278,7 +278,8 @@ public class QuizService {
             session.setEndedAt(LocalDateTime.now());
         }
 
-        statsService.recordStudy(userId, session.getDeck().getId());   // 출석 도장 (연속 학습일)
+        // 채점 결과와 공통 카드 진행도·출석을 같은 트랜잭션에서 한 번만 반영한다.
+        reviewService.recordAnswer(userId, question.getCard().getId(), isCorrect);
 
         return SubmitToSessionResponse.builder()
                 .correct(isCorrect)
