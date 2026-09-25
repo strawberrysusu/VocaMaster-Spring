@@ -296,7 +296,10 @@ export default function Study() {
     if (!frozen) {
       const current = { ...answers }
       if (Object.keys(current).length === 0) {
-        setError('아직 답한 카드가 없어요')
+        // 카드만 훑어본 세션도 끝낼 수 있다. 답안이 없으므로 서버에는 제출하지 않는다.
+        clearDraft()
+        setError('')
+        setResult({ total: 0, known: 0, unknown: 0, alreadySubmitted: false })
         return
       }
       // ★ 저장이 먼저, 전송이 나중. 순서가 뒤바뀌면 응답 유실 시 '무엇을 보냈는지'를 잃는다
@@ -495,22 +498,25 @@ export default function Study() {
    */
   const pendingRetry = attempted !== null && !result
   const attemptedCount = attempted ? Object.keys(attempted).length : 0
+  const browsedOnly = result?.total === 0
 
-  // ── 키보드 단축키 (9/17): Space 뒤집기 · A 몰라요 · D 알아요 · S 별표 · ← → 이동 ──
+  // ── 키보드 단축키: Space·↑ 뒤집기 · A 몰라요 · D 알아요 · S 별표 · ← → 이동 ──
   // e.code를 쓴다 — 한글 IME면 e.key가 'ㅁ'·'ㅇ'으로 오지만 code는 KeyA·KeyD 그대로다 (Quizlet과 같은 배치).
   // 등록을 매 렌더마다 갈아끼우는 건 Quiz.tsx와 같은 방식 — 최신 상태를 클로저로 잡기 위해
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (!card || result || reviewing || pendingRetry || flying.current) return
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return   // 꾹 누름·조합키는 무시
-      const tag = (e.target as HTMLElement | null)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName
+      if (target?.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
       // Space·Enter가 버튼·링크 위에 있으면 브라우저의 클릭 활성화에 맡긴다 — 우리까지 처리하면 두 번 실행된다.
       // 카드 자체도 button이라, 카드에 포커스가 있을 때의 Space 뒤집기는 카드의 onClick이 담당한다
       // 실제 키보드는 code가 항상 채워져 온다. 일부 자동화·가상 키보드는 비워 보내므로 key로 보정 (9/17 실측)
       const code = e.code || ({ ' ': 'Space', a: 'KeyA', d: 'KeyD', s: 'KeyS' } as Record<string, string>)[e.key.toLowerCase()] || e.key
       if ((code === 'Space' || code === 'Enter') && (tag === 'BUTTON' || tag === 'A')) return
       switch (code) {
+        case 'ArrowUp':
         case 'Space': e.preventDefault(); flip(); break   // preventDefault: 페이지 스크롤 방지
         case 'KeyA': pick(false); break
         case 'KeyD': pick(true); break
@@ -702,7 +708,7 @@ export default function Study() {
             </div>
             {/* 마우스·키보드 환경에서만 보인다 (CSS hover:hover) */}
             <p className="muted kbd-hint" aria-hidden="true">
-              <kbd>Space</kbd> 뒤집기 · <kbd>A</kbd> 몰라요 · <kbd>D</kbd> 알아요 · <kbd>S</kbd> 별표 · <kbd>←</kbd> <kbd>→</kbd> 이동
+              <kbd>Space</kbd> / <kbd>↑</kbd> 뒤집기 · <kbd>A</kbd> 몰라요 · <kbd>D</kbd> 알아요 · <kbd>S</kbd> 별표 · <kbd>←</kbd> <kbd>→</kbd> 이동
             </p>
             <p className="muted study-foot">
               답은 아직 저장되지 않았어요. 되돌아가서 얼마든지 고칠 수 있고, 마지막에 한 번에 제출됩니다.
@@ -713,17 +719,19 @@ export default function Study() {
         {/* ── 제출 전 검토 ── */}
         {!result && reviewing && !pendingRetry && queue !== null && total > 0 && (
           <div className="result-panel">
-            <h2>제출할까요?</h2>
+            <h2>{draftCount === 0 ? '카드 보기를 마칠까요?' : '제출할까요?'}</h2>
             <p className="result-line">
               {total}장 중 <b>{answeredInQueue}장</b> 답함
               {answeredInQueue < total && <> · 미응답 {total - answeredInQueue}장</>}
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
-              학습 완료를 누르면 답한 카드의 복습 일정과 학습 상태가 저장돼요. 미응답 카드는 그대로 남아요.
+              {draftCount === 0
+                ? '답하지 않고 카드만 봐도 완료할 수 있어요. 학습 상태와 복습 일정은 변경되지 않아요.'
+                : '학습 완료를 누르면 답한 카드의 복습 일정과 학습 상태가 저장돼요. 미응답 카드는 그대로 남아요.'}
             </p>
             <div className="answer-buttons" style={{ marginTop: 26 }}>
               <button className="answer-no" onClick={() => { setReviewing(false); setIdx(0) }}>
-                돌아가서 고치기
+                {draftCount === 0 ? '돌아가서 더 보기' : '돌아가서 고치기'}
               </button>
               <button className="answer-yes" disabled={submitting} onClick={submit}>
                 {submitting ? '제출 중...' : '학습 완료'}
@@ -735,19 +743,25 @@ export default function Study() {
         {/* ── 제출 완료 ── */}
         {result && (
           <div className="result-panel">
-            <h2>복습 완료 🎉</h2>
+            <h2>{browsedOnly ? '카드 보기 완료' : '복습 완료 🎉'}</h2>
             <p className="result-line">
-              이번 답변 {result.total}장 · <b>알아요 {result.known}</b> · <b>몰라요 {result.unknown}</b>
+              {browsedOnly
+                ? '답변 없이 카드 보기를 마쳤어요.'
+                : <>이번 답변 {result.total}장 · <b>알아요 {result.known}</b> · <b>몰라요 {result.unknown}</b></>}
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
-              {result.alreadySubmitted
-                ? '이미 제출된 세션이라 진행도는 다시 움직이지 않았어요.'
-                : '이번 답변을 학습 상태와 복습 일정에 반영했어요.'}
+              {browsedOnly
+                ? '알아요·몰라요를 선택하지 않아 학습 상태와 복습 일정은 변경하지 않았어요.'
+                : result.alreadySubmitted
+                  ? '이미 제출된 세션이라 진행도는 다시 움직이지 않았어요.'
+                  : '이번 답변을 학습 상태와 복습 일정에 반영했어요.'}
             </p>
-            <p className="muted" style={{ fontSize: 13.5 }}>
-              누적 학습 상태는 3회 연속 정답이면 ‘알아요’, 한 번이라도 틀리면 ‘몰라요’가 돼요.
-              {deckId && <> <Link to={backTo} style={{ color: 'var(--a)' }}>덱에서 학습 상태 확인 →</Link></>}
-            </p>
+            {!browsedOnly && (
+              <p className="muted" style={{ fontSize: 13.5 }}>
+                누적 학습 상태는 3회 연속 정답이면 ‘알아요’, 한 번이라도 틀리면 ‘몰라요’가 돼요.
+                {deckId && <> <Link to={backTo} style={{ color: 'var(--a)' }}>덱에서 학습 상태 확인 →</Link></>}
+              </p>
+            )}
             <div className="answer-buttons" style={{ marginTop: 26 }}>
               <Link to="/" className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>
                 홈으로
