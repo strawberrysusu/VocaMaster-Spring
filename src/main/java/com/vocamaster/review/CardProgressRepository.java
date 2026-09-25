@@ -13,6 +13,9 @@ public interface CardProgressRepository extends JpaRepository<CardProgress, Long
 
     Optional<CardProgress> findByUserIdAndCardId(Long userId, Long cardId);
 
+    // 현재 페이지에 있는 카드들의 본인 진도만 한 번에 조회한다.
+    List<CardProgress> findByUserIdAndCardIdIn(Long userId, List<Long> cardIds);
+
     // 복습 대상(due) 조회 — join fetch로 카드까지 한 쿼리에 (N+1 방지).
     // 새 카드(progress 없음)는 CardProgress에서 시작하므로 애초에 후보가 아님 (A 결정)
     @Query("""
@@ -51,12 +54,14 @@ public interface CardProgressRepository extends JpaRepository<CardProgress, Long
             """)
     List<BoxCountResponse> countByBoxLevel(@Param("userId") Long userId);
 
-    // 통계 화면 — 덱별 [deckId, 시작한 카드 수, 숙달(박스 >= :masteredBox) 수] GROUP BY 한 방 (덱마다 count 도는 N+1 회피)
+    // 통계 화면 — 덱별 [deckId, 답변한 카드 수, 알아요(연속 정답 >= :knownStreak) 수].
+    // 생성만 된 진도는 미학습으로 제외하고, 카드 목록과 같은 학습 상태 기준을 사용한다.
     @Query("""
-            select c.deck.id, count(p), sum(case when p.boxLevel >= :masteredBox then 1 else 0 end)
+            select c.deck.id, count(p), sum(case when p.correctStreak >= :knownStreak then 1 else 0 end)
             from CardProgress p join p.card c
             where p.user.id = :userId
+              and p.lastReviewedAt is not null
             group by c.deck.id
             """)
-    List<Object[]> progressByDeck(@Param("userId") Long userId, @Param("masteredBox") int masteredBox);
+    List<Object[]> progressByDeck(@Param("userId") Long userId, @Param("knownStreak") int knownStreak);
 }

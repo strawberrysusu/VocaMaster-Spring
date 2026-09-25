@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
-import { fetchAllCards, type CardDto } from '../api/cards'
+import { fetchAllCards, type CardDto, type LearningStatus } from '../api/cards'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
 import Ruby from '../components/Ruby'
@@ -15,11 +15,20 @@ interface Deck {
   starredCount: number
 }
 
+const STATUS_LABEL: Record<LearningStatus, string> = {
+  UNKNOWN: '몰라요',
+  KNOWN: '알아요',
+}
+const STATUS_GROUPS: LearningStatus[] = ['UNKNOWN', 'KNOWN']
+
 export default function DeckDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [deck, setDeck] = useState<Deck | null>(null)
   const [cards, setCards] = useState<CardDto[]>([])
+  const [cardsLoading, setCardsLoading] = useState(true)
+  const [cardsLoaded, setCardsLoaded] = useState(false)
+  const loadRequest = useRef({ version: 0 })
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
   const [reading, setReading] = useState('')   // 읽기(요미가나) — 선택
@@ -37,13 +46,39 @@ export default function DeckDetail() {
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(() => {
-    api<Deck>(`/decks/${id}`).then(setDeck).catch((e) => setError(e.message))
-    fetchAllCards(id!)
-      .then(({ cards }) => setCards(cards))
-      .catch((e) => setError(e.message))
+    const requests = loadRequest.current
+    const request = ++requests.version
+    setCardsLoading(true)
+    setCardsLoaded(false)
+    setError('')
+    Promise.all([api<Deck>(`/decks/${id}`), fetchAllCards(id!)])
+      .then(([nextDeck, { cards: nextCards }]) => {
+        if (request !== requests.version) return
+        setDeck(nextDeck)
+        setCards(nextCards)
+        setCardsLoaded(true)
+      })
+      .catch((e) => {
+        if (request === requests.version) setError(e.message)
+      })
+      .finally(() => {
+        if (request === requests.version) setCardsLoading(false)
+      })
   }, [id])
 
-  useEffect(load, [load])
+  useEffect(() => {
+    const requests = loadRequest.current
+    setDeck(null)
+    setEditingCardId(null)
+    load()
+    return () => { requests.version++ }
+  }, [load])
+
+  const cardGroups = STATUS_GROUPS.map((status) => ({
+    status,
+    cards: cards.map((card, index) => ({ card, number: index + 1 }))
+      .filter(({ card }) => card.learningStatus === status),
+  }))
 
   async function addCard() {
     if (adding || !front.trim() || !back.trim()) return // 더블클릭 중복 등록 방어
@@ -202,7 +237,7 @@ export default function DeckDetail() {
             )}
             {!editingDeck && deck?.description && <p className="deck-desc">{deck.description}</p>}
             <p className="sub" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              카드 {cards.length}장{deck ? ` · 별표 ${deck.starredCount}장` : ''}
+              {cardsLoaded ? `카드 ${cards.length}장 · 별표 ${deck?.starredCount ?? 0}장` : cardsLoading ? '카드 불러오는 중...' : '카드를 불러오지 못했어요'}
               <select
                 className="vis-select"
                 value={deck?.visibility ?? 'PRIVATE'}
@@ -217,7 +252,7 @@ export default function DeckDetail() {
             </p>
           </div>
           <div className="mode-buttons">
-            {cards.length > 0 ? (
+            {cardsLoaded && cards.length > 0 ? (
               <Link to={`/study?deckId=${id}`} className="btn-primary" style={{ textDecoration: 'none' }}>
                 복습 학습 (Leitner)
               </Link>
@@ -227,22 +262,22 @@ export default function DeckDetail() {
             {/* 별표 카드만 골라 Leitner 복습을 '시작'하는 유일한 진입점 (9/3 문구 정정).
                 Study 화면에는 카드별 별표 토글은 있지만 '별표만 골라 시작'하는 범위 선택이 없다 —
                 이 버튼을 없애면 별표 복습 진입 경로 자체가 사라진다. 로직 무변경, 표시만 변경 */}
-            {deck !== null && deck.starredCount > 0 && (
+            {cardsLoaded && deck !== null && deck.starredCount > 0 && (
               <Link to={`/study?deckId=${id}&starredOnly=1`} className="mode-btn" title={`★ 표시한 ${deck.starredCount}장만 복습`}>
                 ⭐ 별표 복습
               </Link>
             )}
-            {cards.length >= 2 ? (
+            {cardsLoaded && cards.length >= 2 ? (
               <Link to={`/quiz/${id}`} className="mode-btn">퀴즈</Link>
             ) : (
               <button className="mode-stub" disabled title="퀴즈는 카드 2장부터 (오답지가 필요해요)">퀴즈</button>
             )}
-            {cards.length >= 1 ? (
+            {cardsLoaded && cards.length >= 1 ? (
               <Link to={`/typing/${id}`} className="mode-btn">타이핑</Link>
             ) : (
               <button className="mode-stub" disabled title="카드를 먼저 추가하세요">타이핑</button>
             )}
-            {cards.length >= 1 ? (
+            {cardsLoaded && cards.length >= 1 ? (
               <Link to={`/listening/${id}`} className="mode-btn">듣기</Link>
             ) : (
               <button className="mode-stub" disabled title="카드를 먼저 추가하세요">듣기</button>
@@ -282,40 +317,67 @@ export default function DeckDetail() {
 
         {error && <p className="error" role="alert">{error}</p>}
 
-        <div className="word-list">
-          {cards.map((c, i) =>
-            c.id === editingCardId ? (
-              <div key={c.id} className="word-row row-edit">
-                <span className="word-idx">{i + 1}</span>
-                <input aria-label="단어" value={eFront} onChange={(e) => setEFront(e.target.value)} maxLength={255} autoFocus />
-                <input aria-label="읽기" className="reading-input" placeholder="읽기 (선택)" value={eReading} onChange={(e) => setEReading(e.target.value)} maxLength={200} />
-                <input aria-label="뜻" value={eBack} onChange={(e) => setEBack(e.target.value)} maxLength={255} onKeyDown={(e) => e.key === 'Enter' && saveCard()} />
-                <div className="row-actions">
-                  <button className="btn-primary btn-sm" disabled={saving || !eFront.trim() || !eBack.trim()} onClick={saveCard}>저장</button>
-                  <button className="btn-ghost-link" disabled={saving} onClick={() => setEditingCardId(null)}>취소</button>
-                </div>
-              </div>
-            ) : (
-              <div key={c.id} className="word-row owned-card-row">   {/* owned-card-row: 모바일 2줄 배치는 덱 상세 일반 행에만 (전역 .word-row 무변경) */}
-                <span className="word-idx">{i + 1}</span>
-                <span className="word-front"><Ruby front={c.front} reading={c.reading} /> <SpeakButton text={c.reading || c.front} /></span>
-                <span className="word-back">{c.back}</span>
-                <div className="row-actions">
-                  <button className="edit-btn" title="카드 수정" aria-label={`${c.front} 수정`} onClick={() => startCardEdit(c)}>
-                    수정
-                  </button>
-                  <button className={`star-btn ${c.starred ? 'on' : ''}`} title={c.starred ? '별표 해제' : '별표'} aria-pressed={c.starred} onClick={() => toggleStar(c.id)}>
-                    ★
-                  </button>
-                  <button className="del-btn" title="카드 삭제" aria-label={`${c.front} 삭제`} onClick={() => removeCard(c.id, c.front)}>
-                    🗑
-                  </button>
-                </div>
-              </div>
-            )
+        <section className="learning-summary" aria-labelledby="learning-title" aria-busy={cardsLoading}>
+          <h2 id="learning-title">이 덱의 단어{cardsLoaded ? ` (${cards.length})` : ''}</h2>
+          <p className="learning-rule">
+            3회 연속 맞히면 알아요, 한 번 틀리면 다시 몰라요. 처음 보는 단어도 몰라요에 포함돼요.
+          </p>
+        </section>
+
+        <div aria-busy={cardsLoading}>
+          {cardsLoading && <p className="word-list-message muted" role="status">단어와 학습 상태를 불러오는 중...</p>}
+          {!cardsLoading && !cardsLoaded && (
+            <div className="word-list-message">
+              <p className="muted">단어와 학습 상태를 확인하지 못했어요.</p>
+              <button className="btn-primary btn-sm" onClick={load}>다시 시도</button>
+            </div>
           )}
-          {cards.length === 0 && (
-            <p className="muted" style={{ padding: '24px 4px' }}>
+          {cardsLoaded && cards.length > 0 && cardGroups.map((group) => (
+            <section key={group.status} className="learning-group" aria-labelledby={`group-${group.status}`}>
+              <h3 id={`group-${group.status}`} className={`learning-group-title status-${group.status.toLowerCase()}`}>
+                {STATUS_LABEL[group.status]} ({group.cards.length})
+              </h3>
+              {group.cards.length === 0 ? (
+                <p className="muted learning-group-empty">아직 ‘{STATUS_LABEL[group.status]}’ 상태인 단어가 없어요.</p>
+              ) : (
+                <div className="word-list">
+                  {group.cards.map(({ card: c, number }) =>
+                    c.id === editingCardId ? (
+                      <div key={c.id} className="word-row row-edit">
+                        <span className="word-idx">{number}</span>
+                        <input aria-label="단어" value={eFront} onChange={(e) => setEFront(e.target.value)} maxLength={255} autoFocus />
+                        <input aria-label="읽기" className="reading-input" placeholder="읽기 (선택)" value={eReading} onChange={(e) => setEReading(e.target.value)} maxLength={200} />
+                        <input aria-label="뜻" value={eBack} onChange={(e) => setEBack(e.target.value)} maxLength={255} onKeyDown={(e) => e.key === 'Enter' && saveCard()} />
+                        <div className="row-actions">
+                          <button className="btn-primary btn-sm" disabled={saving || !eFront.trim() || !eBack.trim()} onClick={saveCard}>저장</button>
+                          <button className="btn-ghost-link" disabled={saving} onClick={() => setEditingCardId(null)}>취소</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={c.id} className="word-row owned-card-row">   {/* owned-card-row: 모바일 2줄 배치는 덱 상세 일반 행에만 (전역 .word-row 무변경) */}
+                        <span className="word-idx">{number}</span>
+                        <span className="word-front"><Ruby front={c.front} reading={c.reading} /> <SpeakButton text={c.reading || c.front} /></span>
+                        <span className="word-back">{c.back}</span>
+                        <div className="row-actions">
+                          <button className="edit-btn" title="카드 수정" aria-label={`${c.front} 수정`} onClick={() => startCardEdit(c)}>
+                            수정
+                          </button>
+                          <button className={`star-btn ${c.starred ? 'on' : ''}`} title={c.starred ? '별표 해제' : '별표'} aria-pressed={c.starred} onClick={() => toggleStar(c.id)}>
+                            ★
+                          </button>
+                          <button className="del-btn" title="카드 삭제" aria-label={`${c.front} 삭제`} onClick={() => removeCard(c.id, c.front)}>
+                            🗑
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+            </section>
+          ))}
+          {cardsLoaded && cards.length === 0 && (
+            <p className="muted word-list-message">
               아직 카드가 없어요 — 위에서 첫 단어를 추가하면 학습을 시작할 수 있어요.
             </p>
           )}

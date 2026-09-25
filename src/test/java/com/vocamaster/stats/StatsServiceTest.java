@@ -124,9 +124,10 @@ class StatsServiceTest extends AbstractIntegrationTest {
     @Autowired private com.vocamaster.deck.DeckRepository deckRepository;
     @Autowired private com.vocamaster.card.CardRepository cardRepository;
     @Autowired private com.vocamaster.review.CardProgressRepository cardProgressRepository;
+    @Autowired private com.vocamaster.review.ReviewService reviewService;
 
     @Test
-    @DisplayName("overview — 28일 0 채움·누적 집계·덱별 진행률(시작/숙달)이 GROUP BY 결과와 일치")
+    @DisplayName("overview — 28일 0 채움·누적 집계·덱별 진행률(시작/알아요)이 GROUP BY 결과와 일치")
     void overview_aggregatesCorrectly() {
         saveStat(TODAY.minusDays(40), 9, 1);      // 창 밖 — days엔 없고 누적엔 포함
         saveStat(TODAY.minusDays(2), 4, 1);
@@ -139,9 +140,9 @@ class StatsServiceTest extends AbstractIntegrationTest {
         cardRepository.save(com.vocamaster.card.Card.builder().front("c").back("3").deck(deck).build());   // 아직 안 본 카드
         var now = java.time.LocalDateTime.now();
         cardProgressRepository.save(com.vocamaster.review.CardProgress.builder()
-                .user(user).card(c1).boxLevel(2).correctStreak(1).wrongCount(0).nextReviewAt(now).build());
+                .user(user).card(c1).boxLevel(2).correctStreak(1).wrongCount(0).nextReviewAt(now).lastReviewedAt(now).build());
         cardProgressRepository.save(com.vocamaster.review.CardProgress.builder()
-                .user(user).card(c2).boxLevel(6).correctStreak(5).wrongCount(0).nextReviewAt(now).build());
+                .user(user).card(c2).boxLevel(6).correctStreak(5).wrongCount(0).nextReviewAt(now).lastReviewedAt(now).build());
 
         var res = statsService.getOverview(user.getId());
 
@@ -157,7 +158,31 @@ class StatsServiceTest extends AbstractIntegrationTest {
         var d = res.getDecks().stream().filter(x -> x.getDeckId().equals(deck.getId())).findFirst().orElseThrow();
         assertEquals(3, d.getCardCount());
         assertEquals(2, d.getStarted(), "진행 기록 있는 카드 2장");
-        assertEquals(1, d.getMastered(), "박스 5 이상 1장");
+        assertEquals(1, d.getMastered(), "3연속 정답 이상 1장");
         assertTrue(res.getBoxes().stream().anyMatch(b -> b.getBox() == 6 && b.getCount() == 1));
+    }
+
+    @Test
+    @DisplayName("덱 알아요 집계는 3연속 정답부터 늘고 오답 즉시 줄어든다")
+    void overview_knownThresholdAndWrongReset() {
+        var deck = deckRepository.save(com.vocamaster.deck.Deck.builder().title("상태 집계").user(user).build());
+        var card = cardRepository.save(com.vocamaster.card.Card.builder().front("word").back("단어").deck(deck).build());
+        var untouched = cardRepository.save(com.vocamaster.card.Card.builder().front("new").back("새로운").deck(deck).build());
+        cardProgressRepository.save(com.vocamaster.review.CardProgress.builder()
+                .user(user).card(untouched).boxLevel(1).nextReviewAt(java.time.LocalDateTime.now()).build());
+
+        reviewService.recordAnswer(user.getId(), card.getId(), true);
+        reviewService.recordAnswer(user.getId(), card.getId(), true);
+        var before = statsService.getOverview(user.getId()).getDecks().get(0);
+        assertEquals(1, before.getStarted(), "답변 없는 progress 행은 미학습");
+        assertEquals(0, before.getMastered(), "2연속 정답은 학습 중");
+
+        reviewService.recordAnswer(user.getId(), card.getId(), true);
+        assertEquals(1, statsService.getOverview(user.getId()).getDecks().get(0).getMastered());
+
+        reviewService.recordAnswer(user.getId(), card.getId(), false);
+        var after = statsService.getOverview(user.getId()).getDecks().get(0);
+        assertEquals(1, after.getStarted());
+        assertEquals(0, after.getMastered(), "오답 한 번이면 알아요에서 빠짐");
     }
 }

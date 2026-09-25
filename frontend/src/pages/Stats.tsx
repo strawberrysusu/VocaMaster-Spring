@@ -96,7 +96,7 @@ export default function Stats() {
             <div className="stat-card" style={{ marginTop: 16 }}>
               <div className="ladder-head">
                 <span className="title">덱별 진행률</span>
-                <span className="hint">진행 = 한 번이라도 답한 카드 · 숙달 = 박스 5 이상(14일+)</span>
+                <span className="hint">진행 = 한 번이라도 답한 카드 · 알아요 = 3회 이상 연속 정답</span>
               </div>
               {/* 학습을 시작한 덱만 — 임포트만 해둔 덱 수십 개가 0% 행으로 쏟아지는 소음 방지 (8/28 사용자 피드백) */}
               {data.decks.filter((d) => d.started > 0).length === 0 && (
@@ -110,7 +110,7 @@ export default function Stats() {
                     <div className="deck-progress-head">
                       <Link to={`/decks/${d.deckId}`} className="deck-progress-title">{d.title}</Link>
                       <span className="muted" style={{ fontSize: 12.5 }}>
-                        {d.started}/{d.cardCount} 진행 · 숙달 {d.mastered}
+                        {d.started}/{d.cardCount} 진행 · 알아요 {d.mastered}
                       </span>
                     </div>
                     <div className="progress-track" aria-label={`${d.title} 진행률`}>
