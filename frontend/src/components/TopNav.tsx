@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { api, clearToken, getToken } from '../api/client'
+import { api, getToken, logout as clientLogout } from '../api/client'
 
 type Me = { id: number; email: string; nickname: string; provider: string; createdAt?: string }
 
@@ -134,8 +134,7 @@ export default function TopNav({ streak }: { streak?: number }) {
   }, [open])
 
   async function logout() {
-    await fetch('/auth/logout', { method: 'POST' }).catch(() => {})
-    clearToken()
+    await clientLogout()   // 진행 중인 토큰 갱신이 끝난 뒤 로그아웃하고 토큰을 지운다 (A1)
     navigate('/login')   // basename(/app)을 라우터가 처리 — 절대경로 /login은 API 보안에 걸림 (Codex 검산)
   }
 

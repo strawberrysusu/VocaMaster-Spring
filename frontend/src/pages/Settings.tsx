@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, clearToken, getToken } from '../api/client'
+import { api, clearToken, getToken, logout as clientLogout } from '../api/client'
 import TopNav from '../components/TopNav'
 import { ACCENTS, loadSettings, saveSettings, type AccentKey, type Settings as SettingsT } from '../lib/settings'
 import { isTtsSupported, speak, voicesFor } from '../lib/tts'
@@ -126,8 +126,7 @@ export default function Settings() {
   }
 
   async function logout() {
-    await fetch('/auth/logout', { method: 'POST' }).catch(() => {})
-    clearToken()
+    await clientLogout()   // 진행 중인 토큰 갱신이 끝난 뒤 로그아웃하고 토큰을 지운다 (A1)
     navigate('/login')
   }
 
