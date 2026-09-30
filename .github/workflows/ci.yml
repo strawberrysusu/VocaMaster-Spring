@@ -102,6 +102,7 @@ jobs:
     timeout-minutes: 25
     concurrency:
       group: deploy-prod
+      queue: max                                 # docs push가 대기 중인 앱 배포를 취소하지 않게 유지
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
