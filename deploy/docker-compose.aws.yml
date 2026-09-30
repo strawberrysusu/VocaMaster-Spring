@@ -1,0 +1,104 @@
+# AWS Lightsail production configuration (Seoul, 2GB).
+# First restore needs the saved production JAR and Dockerfile.restore.
+# CI loads an image separately and recreates only app with --no-deps --no-build.
+name: vocamaster-aws
+
+services:
+  mysql:
+    image: ${MYSQL_IMAGE:-mysql:8.0.46}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?required}
+      MYSQL_DATABASE: vocamaster
+      MYSQL_USER: vocamaster
+      MYSQL_PASSWORD: ${DB_PASSWORD:?required}
+      TZ: Asia/Seoul
+    command:
+      - --performance-schema=OFF
+      - --innodb-buffer-pool-size=128M
+      - --max-connections=50
+      - --table-open-cache=256
+      - --tmp-table-size=16M
+      - --max-heap-table-size=16M
+    mem_limit: 640m
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$${MYSQL_ROOT_PASSWORD}\" mysql -h127.0.0.1 -uroot -Nse 'SELECT 1' >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.2.16-alpine}
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - 48mb
+      - --maxmemory-policy
+      - noeviction
+    mem_limit: 128m
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  app:
+    image: vocamaster:aws-restored
+    build:
+      context: .
+      dockerfile: Dockerfile.restore
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_OPTS: "-Xms128m -Xmx448m -Duser.timezone=Asia/Seoul"
+      DB_URL: "jdbc:mysql://mysql:3306/vocamaster?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
+      DB_USERNAME: vocamaster
+      DB_PASSWORD: ${DB_PASSWORD:?required}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      JWT_SECRET: ${JWT_SECRET:?required}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?required}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?required}
+      # The existing production profile uses true when this variable is absent.
+      RANKING_POPULAR_ENABLED: ${RANKING_POPULAR_ENABLED:-true}
+    mem_limit: 768m
+    healthcheck:
+      # Existing runtime's bash TCP check; application requests must also be tested.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+      start_period: 90s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  mysql-data:
+    name: vocamaster-aws-mysql-data
+  redis-data:
+    name: vocamaster-aws-redis-data

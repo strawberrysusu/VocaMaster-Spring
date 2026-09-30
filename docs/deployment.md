@@ -1,5 +1,9 @@
 # 배포 운영 가이드 (Phase 7 ⑤·⑥, ADR-045)
 
+> **2026-09-30 현재 운영은 AWS Lightsail 서울 2GB 서버로 이전했다.**
+> 현재 절차는 [AWS 운영 가이드](deployment-aws.md)를 따른다.
+> 아래 Oracle 구성과 명령은 이전 환경의 기록이며 현재 운영 서버에 적용하지 않는다.
+
 > 실제 IP·시크릿은 이 문서에 없다 (공개 레포). IP는 Oracle 콘솔 → Compute → Instances에서 확인.
 
 ## 서버 구성 (Oracle Cloud, Tokyo, Always Free — 월 0원)
