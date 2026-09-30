@@ -1,11 +1,18 @@
 # CI/CD (Phase 7 ①+CD, ADR-041)
 # CI: 모든 push/PR에서 전체 테스트(Testcontainers MySQL+Redis) + jar 빌드.
-# CD: master 푸시가 테스트를 통과하면(needs: build) 도쿄 서버에 자동 배포 —
+# CD: master 푸시가 테스트를 통과하면(needs: build) 서울 AWS 서버에 앱만 자동 배포 —
 #     사람이 손으로 하던 "docker build → save|ssh|load → compose up"을 그대로 기계화.
 #     docs만 바뀐 푸시는 배포 생략 (재시작 다운타임 ~40초를 문서 커밋마다 낼 이유 없음)
 name: CI/CD
 
 on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: '테스트 통과 후 master의 앱을 AWS에 배포'
+        type: boolean
+        required: true
+        default: false
   push:
     branches: [master]
   pull_request:
@@ -52,10 +59,14 @@ jobs:
         run: |
           docker compose -f docker-compose.prod.yml config --quiet
           docker compose -f deploy/docker-compose.app.yml config --quiet
+          docker compose -f deploy/docker-compose.aws.yml config --quiet
 
       # Windows에서 커밋돼 실행 비트가 없음 (git mode 100644) — 러너에서 부여
       - name: Make gradlew executable
         run: chmod +x gradlew
+
+      - name: AWS 배포 스크립트 문법 검사
+        run: python3 -m py_compile deploy/deploy-aws.py
 
       - name: Test + Build (React 번들 포함 jar)
         run: ./gradlew test bootJar --no-daemon
@@ -85,68 +96,136 @@ jobs:
           retention-days: 7
 
   deploy:
-    needs: build                                  # 테스트 통과 없이는 배포 없음
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    needs: build
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     concurrency:
-      group: deploy-prod                          # 연속 푸시 시 배포가 겹치지 않게 직렬화
+      group: deploy-prod
+      queue: max                                 # docs push가 대기 중인 앱 배포를 취소하지 않게 유지
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0                          # push 범위 전체 diff — 마지막 커밋만 보면 "코드+문서" 푸시를 docs-only로 오판 (Codex 검산 8/29)
+          fetch-depth: 0
 
-      - name: 앱 변경 감지 (docs·md만이면 배포 생략)
+      - name: 실행 코드 변경 감지 (CI·운영·문서 변경만이면 배포 생략)
         id: diff
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          FORCE_DEPLOY: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
         run: |
-          # push 전체 범위 비교. before가 zero-sha(새 브랜치·force push)면 안전하게 전체를 변경으로 간주
-          BEFORE="${{ github.event.before }}"
           if [ -z "$BEFORE" ] || echo "$BEFORE" | grep -q '^0*$'; then
             CHANGED=$(git ls-files)
           else
-            CHANGED=$(git diff --name-only "$BEFORE" "${{ github.sha }}" 2>/dev/null || git ls-files)
+            CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null || git ls-files)
           fi
-          echo "$CHANGED"
-          if echo "$CHANGED" | grep -qvE '^(docs/|.*\.md$)'; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$CHANGED"
+          # CI/deploy-only migration commits must leave the restored production JAR intact.
+          # Test-only edits still run the build job without restarting production.
+          APP_CHANGED=$(printf '%s\n' "$CHANGED" | grep -vE '(^docs/|\.md$)' | grep -E '^(src/main/|frontend/|Dockerfile$|\.dockerignore$|build\.gradle$|settings\.gradle$|gradle/|gradlew$|gradlew\.bat$)' || true)
+          if [ "$FORCE_DEPLOY" = 'true' ] || [ -n "$APP_CHANGED" ]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
           else
-            echo "deploy=false" >> "$GITHUB_OUTPUT"; echo "docs-only push — 배포 생략"
+            echo 'deploy=false' >> "$GITHUB_OUTPUT"
+            echo '앱 실행 코드 변경 없음 — 배포 생략'
           fi
 
-      - name: Docker build (배포용 이미지 — 로컬과 같은 Dockerfile)
-        if: steps.diff.outputs.deploy == 'true'
-        run: docker build -t vocamaster:prod .
-
-      - name: SSH 키 준비
+      - name: Docker build (서버와 같은 amd64, 커밋별 불변 이미지)
         if: steps.diff.outputs.deploy == 'true'
         run: |
+          docker build --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "vocamaster:$GITHUB_SHA" .
+          docker save "vocamaster:$GITHUB_SHA" | gzip -1 > "$RUNNER_TEMP/vocamaster-image.tar.gz"
+          sha256sum "$RUNNER_TEMP/vocamaster-image.tar.gz" | cut -d ' ' -f1 > "$RUNNER_TEMP/vocamaster-image.sha256"
+
+      - name: SSH 키와 고정 호스트키 준비
+        if: steps.diff.outputs.deploy == 'true'
+        env:
+          AWS_SSH_KEY: ${{ secrets.AWS_SSH_KEY }}
+          AWS_SSH_KNOWN_HOSTS: ${{ vars.AWS_SSH_KNOWN_HOSTS }}
+        run: |
+          test -n "$AWS_SSH_KEY"
+          test -n "$AWS_SSH_KNOWN_HOSTS"
           mkdir -p ~/.ssh
-          echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          chmod 700 ~/.ssh
+          printf '%s\n' "$AWS_SSH_KEY" > ~/.ssh/vocamaster_aws
+          printf '%s\n' "$AWS_SSH_KNOWN_HOSTS" > ~/.ssh/vocamaster_aws_known_hosts
+          chmod 600 ~/.ssh/vocamaster_aws ~/.ssh/vocamaster_aws_known_hosts
 
-      - name: 이미지 전송 + compose 갱신 + 재기동
+      - name: 이미지 전송 및 앱만 갱신 (실패 시 직전 이미지로 앱 롤백)
         if: steps.diff.outputs.deploy == 'true'
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
         run: |
-          SSH="ssh -o StrictHostKeyChecking=accept-new ubuntu@${{ secrets.ORACLE_HOST }}"
-          docker save vocamaster:prod | gzip -1 | $SSH 'gunzip | docker load'
-          # compose 파일도 매번 동봉 — "서버 compose가 구버전"이던 8/26 사고의 재발 방지
-          scp -o StrictHostKeyChecking=accept-new deploy/docker-compose.app.yml ubuntu@${{ secrets.ORACLE_HOST }}:~/
-          $SSH 'docker compose -f docker-compose.app.yml up -d'
+          set -euo pipefail
+          # Host and generated paths are validated before use in the remote shell.
+          [[ "$AWS_HOST" =~ ^[A-Za-z0-9.-]+$ ]]
+          [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$GITHUB_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$GITHUB_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          REMOTE="/home/ubuntu/vocamaster-aws/incoming/$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          CHECKSUM=$(cat "$RUNNER_TEMP/vocamaster-image.sha256")
+          [[ "$CHECKSUM" =~ ^[a-f0-9]{64}$ ]]
+          SSH_OPTS=(-i "$HOME/.ssh/vocamaster_aws" -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$HOME/.ssh/vocamaster_aws_known_hosts")
+          assert_current_master() {
+            local latest_master latest_sha ancestor_status changed_since_release non_doc_changes
+            if ! latest_master=$(git ls-remote --exit-code origin refs/heads/master); then
+              echo 'master 현재 커밋 확인 실패 — 배포 중단' >&2
+              exit 1
+            fi
+            if [[ ! "$latest_master" =~ ^([a-f0-9]{40})[[:space:]]+refs/heads/master$ ]]; then
+              echo 'master 조회 결과 검증 실패 — 배포 중단' >&2
+              exit 1
+            fi
+            latest_sha="${BASH_REMATCH[1]}"
+            if [ "$latest_sha" = "$GITHUB_SHA" ]; then
+              return 0
+            fi
+            # A separate docs-only push must not erase a still-pending app deployment.
+            # Fetch the exact observed commit, never compare against a moving ref.
+            if ! git fetch --no-tags origin "$latest_sha"; then
+              echo '최신 master 커밋 fetch 실패 — 배포 중단' >&2
+              exit 1
+            fi
+            if ! git cat-file -e "$latest_sha^{commit}"; then
+              echo '최신 master 커밋 확인 실패 — 배포 중단' >&2
+              exit 1
+            fi
+            if git merge-base --is-ancestor "$GITHUB_SHA" "$latest_sha"; then
+              :
+            else
+              ancestor_status=$?
+              if [ "$ancestor_status" -eq 1 ]; then
+                echo 'master 이력이 달라 이전 실행의 앱 배포 생략'
+                exit 0
+              fi
+              echo 'master 이력 확인 실패 — 배포 중단' >&2
+              exit 1
+            fi
+            if ! changed_since_release=$(git diff --name-only "$GITHUB_SHA" "$latest_sha" --); then
+              echo '최신 master 변경 확인 실패 — 배포 중단' >&2
+              exit 1
+            fi
+            non_doc_changes=$(printf '%s\n' "$changed_since_release" | grep -vE '^($|docs/|.*\.md$)' || true)
+            if [ -n "$non_doc_changes" ]; then
+              echo '최신 master에 문서 외 변경이 있어 이전 실행의 앱 배포 생략'
+              exit 0
+            fi
+            echo '최신 master는 문서만 변경됨 — 같은 실행 코드의 배포 계속'
+          }
+          # Slow builds must not replace a newer commit that has already been deployed.
+          assert_current_master
+          ssh "${SSH_OPTS[@]}" "ubuntu@$AWS_HOST" "umask 077; mkdir -p '$REMOTE'"
+          scp "${SSH_OPTS[@]}" "$RUNNER_TEMP/vocamaster-image.tar.gz" "ubuntu@$AWS_HOST:$REMOTE/image.tar.gz"
+          scp "${SSH_OPTS[@]}" deploy/deploy-aws.py "ubuntu@$AWS_HOST:$REMOTE/deploy-aws.py"
+          # Recheck immediately before the SSH command that can replace the app.
+          assert_current_master
+          ssh "${SSH_OPTS[@]}" "ubuntu@$AWS_HOST" \
+            "python3 '$REMOTE/deploy-aws.py' --release '$GITHUB_SHA' --archive '$REMOTE/image.tar.gz' --sha256 '$CHECKSUM'"
 
-      - name: 헬스 확인 (healthy 못 되면 배포 실패로 표시)
-        if: steps.diff.outputs.deploy == 'true'
-        run: |
-          ssh -o StrictHostKeyChecking=accept-new ubuntu@${{ secrets.ORACLE_HOST }} '
-            for i in $(seq 1 30); do
-              st=$(docker inspect -f "{{.State.Health.Status}}" vocamaster-app-app-1 2>/dev/null)
-              [ "$st" = "healthy" ] && echo "healthy ✓" && exit 0
-              sleep 5
-            done
-            echo "--- 앱 로그 꼬리 ---"; docker logs --tail 30 vocamaster-app-app-1; exit 1'
-
-      # 컨테이너 healthy(TCP)를 넘어 실제 HTTP 응답까지 — nginx→앱 전 구간 스모크 (Codex 검산 8/29).
-      # 실패 시 수동 복구 절차는 docs/deployment.md "배포 실패 시 복구" 참고 (자동 롤백은 백로그)
-      - name: HTTP 스모크 (실경로 200 확인)
-        if: steps.diff.outputs.deploy == 'true'
-        run: curl -fsS --retry 5 --retry-delay 5 --max-time 15 "https://vocamaster-app.duckdns.org/public/decks?size=1" > /dev/null && echo "HTTP 200 ✓"
+      - name: 러너의 접속 키 정리
+        if: always()
+        run: rm -f ~/.ssh/vocamaster_aws ~/.ssh/vocamaster_aws_known_hosts
