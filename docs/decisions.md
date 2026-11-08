@@ -1626,6 +1626,8 @@ ARM(arm64) 도커 빌드 경험이 이력서 거리.
 
 **보안 헤더:** HSTS(1년)·nosniff·X-Frame·Referrer-Policy. 공개 후 외부 경로 실측: HTTPS 200 / HTTP→301 / Swagger 404 / **HTTPS 경유 JWT 로그인 왕복 200** (Secure 쿠키도 이제 유효).
 
+**정정 (2026-11-09):** 위 헤더를 nginx와 앱(Spring Security)이 둘 다 붙여 응답마다 두 벌씩 나가고 있었다(X-Frame-Options는 `DENY`·`SAMEORIGIN` 두 값). 브라우저가 실제로 쓰던 값이 앱 쪽이므로 nosniff·X-Frame-Options(DENY)·HSTS(1년, includeSubDomains)는 앱 한 곳으로 두고, 앱이 안 붙이는 Referrer-Policy만 nginx에 남겼다. 같은 날 nginx에서 HTTP/2를 켜고, 클라이언트가 보낸 `Forwarded`·`X-Forwarded-Host/Port/Prefix/Ssl`을 지우고, `X-Forwarded-For`는 실제 접속 주소 하나로 덮어쓰게 했다. Spring `ForwardedHeaderFilter`가 이 헤더들을 믿기 때문에, 그대로 두면 요청자가 리다이렉트 주소를 바꾸고 앱의 HSTS를 끌 수 있었다(운영 실측). 적용 후 실측: 보안 헤더 각 1줄, ALPN `h2`, 위조 헤더를 보내도 기준과 같은 Location·HSTS, 구글 `redirect_uri`도 https 그대로.
+
 **기록:** 8/25 계정 생성 → 8/26 자정 A1 사냥 개시 → 개강 전날 밤 공개까지 만 24시간.
 
 ---
