@@ -955,7 +955,7 @@ review:summary:{userId}:{date}  TTL 5분
 - [x] **[SHOULD]** nginx 리버스 프록시 (호스트 설치, 127.0.0.1:8080 프록시) ✅ 8/26
 - [x] **[SHOULD]** Let's Encrypt 인증서 — vocamaster-app.duckdns.org, 자동 갱신 타이머 active ✅ 8/26
 - [x] **[SHOULD]** HTTPS 강제 리다이렉트 (301) + HSTS 1년 ✅ 8/26
-- [x] **[SHOULD]** 보안 헤더 4종 — 외부 경로 실측 ✅ 8/26
+- [x] **[SHOULD]** 보안 헤더 4종 — 외부 경로 실측 ✅ 8/26 → 11/9 앱·nginx 중복 정리(nosniff·X-Frame·HSTS는 앱, Referrer-Policy는 nginx, ADR-046 정정)
 
 ### 🔄 GitHub Actions CI/CD
 - [x] **[MUST]** `.github/workflows/ci.yml` — test + build ✅ 8/25. 도입 첫날 3결함 검거: ①시간대 의존 테스트(UTC 러너, -Putc 재현 스위치로 실증) ②비동기 폴링 3초 부족 ③caller-runs 테스트의 공유 실행기 간섭(전용 실행기로 격리). 5차 만에 그린 — gh CLI 인증으로 로그 직접 판독 체계 확보

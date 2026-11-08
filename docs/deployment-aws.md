@@ -7,6 +7,10 @@
 
 - Ubuntu 24.04, x86_64, 2GB RAM, 2 vCPU, 60GB SSD, swap 2GiB.
 - nginx가 HTTPS를 처리하고 `127.0.0.1:8080`의 Spring 앱으로 전달한다.
+  - HTTP/2를 쓴다. 보안 헤더 nosniff·X-Frame-Options·HSTS는 앱이 붙이고, nginx는 Referrer-Policy만 붙인다.
+  - 앱이 믿는 전달 헤더는 nginx가 정한다. `X-Forwarded-For`는 실제 접속 주소 하나, `X-Forwarded-Proto`는 `$scheme`이다.
+  - 클라이언트가 보낸 `Forwarded`·`X-Forwarded-Host/Port/Prefix/Ssl`은 nginx가 지운다. 앞에 CDN·로드밸런서를 두면 이 규칙을 다시 정해야 한다.
+  - 2026-11-09 변경 전 원본은 서버 `/home/ubuntu/nginx-backup/vocamaster.20261109.orig`에 있다(ADR-046 정정).
 - 앱·MySQL·Redis는 같은 서버의 Docker 네트워크에서 연결한다.
 - MySQL과 Redis는 인터넷에 포트를 공개하지 않는다.
 - 앱 768MiB, MySQL 640MiB, Redis 128MiB 제한. JVM 최대 힙은 448MiB다.
