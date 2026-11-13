@@ -51,6 +51,7 @@
 - **ADR-024:** Quiz 세션 — Eager 생성
 - **ADR-025:** 테스트 인프라 (Testcontainers + MySQL)
 - **ADR-026:** Typing 모드 — Quiz Eager 재사용 + 채점 정책
+- **ADR-051:** 타이핑·듣기 채점 — 괄호 설명·품사 표시를 걷어내고 비교 (서버·프론트 같은 사례표로 검증)
 - **ADR-027:** Flashcard 명확화 — 리네임 대신 javadoc + 문서 (이 문서)
 
 ## 향후 확장

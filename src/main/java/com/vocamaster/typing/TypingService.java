@@ -4,6 +4,7 @@ import com.vocamaster.review.ReviewService;
 
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
+import com.vocamaster.common.AnswerMatcher;
 import com.vocamaster.common.Direction;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.ForbiddenException;
@@ -147,7 +148,7 @@ public class TypingService {
             throw new BadRequestException("이미 답한 문제입니다");
         }
 
-        // 3) 채점 — 정규화 + 쉼표 복수 정답 매칭 (핵심)
+        // 3) 채점 — 복수 정답 매칭, 괄호 설명·품사 표시는 걷어내고 비교 (ADR-026 B → ADR-051)
         String typed = req.getTypedAnswer() == null ? "" : req.getTypedAnswer().trim();
         boolean isCorrect = isAnswerMatch(typed, question.getCorrectAnswer());
 
@@ -240,16 +241,11 @@ public class TypingService {
     }
 
     /**
-     * 쉼표 복수 정답 매칭 — ADR-026 결정 B.
-     * "사과, 능금" → split → 각 trim → 사용자 입력과 하나라도 일치하면 정답.
+     * 복수 정답 매칭 — ADR-026 결정 B, ADR-051에서 확장.
+     * "사과, 능금" → 둘 중 하나, "멸사봉공 (설명)" → "멸사봉공", "n. 바닥, 아래" → "바닥"·"아래".
+     * 규칙 본체는 {@link AnswerMatcher} (듣기 모드 프론트와 같은 규칙).
      */
     private boolean isAnswerMatch(String typed, String correctAnswer) {
-        if (typed.isBlank()) return false;
-        for (String candidate : correctAnswer.split(",")) {
-            if (typed.equalsIgnoreCase(candidate.trim())) {
-                return true;
-            }
-        }
-        return false;
+        return AnswerMatcher.matches(typed, correctAnswer);
     }
 }

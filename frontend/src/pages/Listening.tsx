@@ -4,12 +4,13 @@ import { recordRecentStudy } from '../lib/recent'
 import { fetchAllCards, type CardDto } from '../api/cards'
 import TopNav from '../components/TopNav'
 import { isTtsSupported, speakTimes } from '../lib/tts'
+import { matchesAnswer, normalizeAnswer } from '../lib/answerMatch'
 
 // 듣기 받아쓰기 (백로그 ⑭, 8/28 시험지 개편) — 어학원 시험 그대로:
 // 문제 N개가 세로로 쭉 깔리고, "전체 재생"이 1번부터 순서대로 불러준다.
 // 학생은 Tab으로 내려가며 받아쓰고 → 마지막에 "채점하기" 한 방.
 //  · 스펠링: 단어(front) 또는 읽기(reading) 어느 쪽을 쳐도 정답
-//  · 뜻: 쉼표로 나뉜 후보 중 하나면 정답 (타이핑 모드와 같은 규칙, ADR-026)
+//  · 뜻: 여러 뜻 중 하나면 정답, 괄호 설명·품사 표시는 안 쳐도 됨 (타이핑 모드와 같은 규칙, ADR-051)
 // v1 = 연습 모드 (기록 저장 없음 — 세션 저장은 백로그)
 
 interface Item {
@@ -20,17 +21,19 @@ interface Item {
   meaningOk?: boolean
 }
 
-const norm = (s: string) => s.trim().toLowerCase()
-
 function meaningMatch(typed: string, back: string): boolean {
-  if (!typed.trim()) return false
-  return back.split(',').some((c) => norm(c) === norm(typed))
+  return matchesAnswer(typed, back)
 }
 
 function spellingMatch(typed: string, card: CardDto): boolean {
-  if (!typed.trim()) return false
-  const t = norm(typed)
-  return t === norm(card.front) || (!!card.reading && t === norm(card.reading))
+  const t = normalizeAnswer(typed)
+  if (!t) return false
+  // 예전 규칙(단어·읽기 통째로) + 공통 규칙(예문 괄호 문맥 "(開催が)危ぶまれる", 표기 두 가지 "器械/機械" 등)
+  return (
+    t === normalizeAnswer(card.front) ||
+    (!!card.reading && t === normalizeAnswer(card.reading)) ||
+    matchesAnswer(typed, card.front, card.reading)
+  )
 }
 
 export default function Listening() {

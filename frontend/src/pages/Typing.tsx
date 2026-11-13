@@ -5,7 +5,7 @@ import { recordRecentStudy } from '../lib/recent'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
 
-// 백엔드(Phase 2 타이핑 세션 API) 계약 — direction 소문자, 채점은 서버(쉼표 복수 정답·대소문자 무시, ADR-026)
+// 백엔드(Phase 2 타이핑 세션 API) 계약 — direction 소문자, 채점은 서버(복수 정답·대소문자 무시·괄호 설명 제외, ADR-026 → ADR-051)
 type Direction = 'front_to_back' | 'back_to_front'
 
 interface Question {
@@ -148,7 +148,7 @@ export default function Typing() {
         {!session && (
           <div className="quiz-setup">
             <h2>타이핑</h2>
-            <p className="muted">직접 쳐서 답해요 · 대소문자·앞뒤 공백 무시 · 뜻이 "사과, 능금"처럼 여러 개면 하나만 맞아도 정답</p>
+            <p className="muted">직접 쳐서 답해요 · 대소문자·앞뒤 공백 무시 · 뜻이 "사과, 능금"처럼 여러 개면 하나만 맞아도 정답 · 괄호 안 설명과 n. v. 같은 품사 표시는 안 쳐도 돼요</p>
             <div className="setup-row">
               <span className="setup-label">방향</span>
               <div className="sort-tabs">

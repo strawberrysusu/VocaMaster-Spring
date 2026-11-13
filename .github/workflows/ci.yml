@@ -45,6 +45,10 @@ jobs:
       - name: Frontend lint (TypeScript 타입 오류 포함)
         run: npm run lint --prefix frontend
 
+      # 듣기 모드 채점 규칙(answerMatch.ts)이 서버 AnswerMatcher와 같은 사례표를 통과하는지 (ADR-051)
+      - name: Frontend unit test (채점 규칙)
+        run: npm test --prefix frontend
+
       # 운영 compose 문법·필수 변수 검증 — 배포 날이 아니라 매 커밋마다 (더미 값은 검증용일 뿐).
       # 실배포가 쓰는 deploy/docker-compose.app.yml도 함께 — 루트만 검사하던 구멍 (Codex 검산 8/29)
       - name: Compose config check
