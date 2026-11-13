@@ -136,6 +136,25 @@ class TypingServiceTest extends AbstractIntegrationTest {
         assertTrue(res.isCorrect(), "쉼표 복수 정답 중 하나 맞히면 정답");
     }
 
+    @Test
+    @DisplayName("submit - 괄호 설명·영어 품사 표시는 안 쳐도 정답 (ADR-051)")
+    void submit_ignoresParenthesesAndPartOfSpeech() {
+        addCard("滅私奉公", "멸사봉공 (사사로운 이익을 버리고 나라·조직을 위해 힘씀)");
+        addCard("bottom", "n. 바닥, 아래 v. 근거를 두다");
+        addCard("w1", "정답1");
+        em.flush();
+
+        StartTypingSessionResponse start = typingService.startSession(deck.getId(), user.getId(), startReq(3));
+        List<TypingQuestion> qs = typingQuestionRepository.findBySessionIdOrderByQuestionOrderAsc(start.getSessionId());
+        TypingQuestion kanjiQ = qs.stream().filter(q -> "滅私奉公".equals(q.getQuestionText())).findFirst().orElseThrow();
+        TypingQuestion englishQ = qs.stream().filter(q -> "bottom".equals(q.getQuestionText())).findFirst().orElseThrow();
+
+        assertTrue(typingService.submitTypedAnswer(deck.getId(), start.getSessionId(), user.getId(),
+                submitReq(kanjiQ.getId(), "멸사봉공")).isCorrect(), "괄호 설명 없이 핵심 뜻만 쳐도 정답");
+        assertTrue(typingService.submitTypedAnswer(deck.getId(), start.getSessionId(), user.getId(),
+                submitReq(englishQ.getId(), "근거를 두다")).isCorrect(), "품사 표시 v. 뒤의 뜻도 정답");
+    }
+
     // ─────────────────────────────────────────────────────────────
     // 4. 빈 입력 오답
     // ─────────────────────────────────────────────────────────────
