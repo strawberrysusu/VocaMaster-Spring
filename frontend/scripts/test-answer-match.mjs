@@ -2,15 +2,11 @@
 // 테스트 러너를 새로 들이지 않고, 이미 있는 typescript 로 .ts 를 JS로 바꿔 불러온다 (CI Node 20에서도 동작).
 //   npm test --prefix frontend
 import { readFileSync } from 'node:fs'
-import ts from 'typescript'
+import { loadTs } from './load-ts.mjs'
 
 const here = (p) => new URL(p, import.meta.url)
 
-const source = readFileSync(here('../src/lib/answerMatch.ts'), 'utf8')
-const { outputText } = ts.transpileModule(source, {
-  compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 },
-})
-const mod = await import('data:text/javascript;base64,' + Buffer.from(outputText).toString('base64'))
+const mod = await loadTs(here('../src/lib/answerMatch.ts'))
 
 const cases = JSON.parse(readFileSync(here('../../src/test/resources/answer-match-cases.json'), 'utf8'))
 

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "node scripts/test-answer-match.mjs",
+    "test": "node scripts/test-answer-match.mjs && node scripts/test-test-sheet.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
