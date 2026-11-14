@@ -26,6 +26,33 @@ test('덱 화면: 설명 줄이 뜻 아래 보이고, 추가 줄에서 설명까
   expect(saved).toMatchObject({ reading: 'うんゆ', back: '운수', memo: '사람·화물을 실어 나름' })
 })
 
+// 11/14 검토: 맥·아이폰 Safari는 입력기 변환을 확정하는 Enter를 keyCode 229 keydown으로 보낸다 —
+// 그걸 '저장'으로 치면 설명을 다 쓰기 전에 카드가 저장됐다 (lib/keys.ts isPlainEnter)
+test('덱 화면: 입력기 변환 확정 Enter로는 카드가 저장되지 않고, 진짜 Enter로 저장된다', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '입력기', ['感謝|かんしゃ|감사'])
+  await page.goto(`/app/decks/${deckId}`)
+  const add = page.locator('.create-row')
+  await add.getByLabel('단어').fill('運輸')
+  await add.getByLabel('뜻').fill('운수')
+  await add.getByLabel('설명').fill('사람·화물을 실어 나름')
+  await add.getByLabel('설명').dispatchEvent('keydown', { key: 'Enter', keyCode: 229 }) // Safari의 변환 확정 Enter
+  await page.waitForTimeout(500)
+  expect(await listCards(request, deckId)).toHaveLength(1)
+
+  await add.getByLabel('설명').press('Enter')
+  await expect(page.locator('.word-memo', { hasText: '사람·화물을 실어 나름' })).toBeVisible()
+  expect(await listCards(request, deckId)).toHaveLength(2)
+})
+
+// 11/14 검토: 두 번째 클릭이 막 열린 창의 바깥 영역에 떨어져 창이 바로 닫혔다
+test('시험지 버튼을 더블클릭해도 창이 열린 채로 있다', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '시험지더블', ['感謝|かんしゃ|감사'])
+  await page.goto(`/app/decks/${deckId}`)
+  await page.locator('.mode-buttons').getByRole('button', { name: /시험지/ }).dblclick()
+  await page.waitForTimeout(500)
+  await expect(page.getByRole('dialog', { name: '시험지 만들기' })).toBeVisible()
+})
+
 test('학습 카드: 뒤집으면 뜻 아래 설명 줄이 보인다', async ({ page, request }) => {
   const deckId = await makeEmptyDeck(request, '학습')
   await addCard(request, deckId, { front: '会議', reading: 'かいぎ', back: '회의', memo: '여럿이 모여 의논함' })

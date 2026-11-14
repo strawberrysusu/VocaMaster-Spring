@@ -5,6 +5,7 @@ import { fetchAllCards, setStarred, type CardDto } from '../api/cards'
 import TopNav from '../components/TopNav'
 import { buildSheet, type SheetRow, type SheetScope } from '../lib/testSheet'
 import { matchesAnswer, matchesReading } from '../lib/answerMatch'
+import { isPlainEnter } from '../lib/keys'
 
 // 온라인 시험지 (3단계, 11/14) — 종이 시험지와 같은 문항을 화면에서 풀고 한 번에 채점.
 //  · 읽기(한자가 있는 단어만): 자동 채점, 가타카나로 써도 정답, 읽기가 두 가지면 하나만
@@ -30,6 +31,8 @@ interface Draft {
   optsKey: string
   order: number[]
   answers: Answer[]
+  /** 이 시험이 이미 켠 ⭐ — '다시 풀기' 중에 새로고침해도 '맞음으로'가 끌 수 있게 (11/14 검토). 첫 풀이엔 빈 배열 */
+  added?: number[]
 }
 
 const rowOk = (r: RowResult) => r.override || ((r.readingOk ?? true) && r.meaningOk)
@@ -88,12 +91,9 @@ export default function OnlineTest() {
       .then(([deck, { cards }]) => {
         if (cancelled) return
         setTitle(deck.title)
-        starredAtLoad.current = new Set(cards.filter((c) => c.starred).map((c) => c.id))
-        attemptRef.current += 1
-        setAddedStars(new Set())
-        setStarState('idle')
         let built: { rows: SheetRow[]; japanese: boolean } | null = null
         let restored: Answer[] | null = null
+        let restoredAdded: number[] = []
         const draft = readDraft(draftKey)
         if (draft && draft.optsKey === optsKey) {
           const byId = new Map<number, CardDto>(cards.map((c) => [c.id, c]))
@@ -101,8 +101,15 @@ export default function OnlineTest() {
           if (ordered.length === draft.order.length && draft.answers.length === ordered.length) {
             built = buildSheet(ordered, { scope: 'all', count: 'all', shuffle: false })
             restored = draft.answers
+            restoredAdded = Array.isArray(draft.added) ? draft.added.filter((id) => byId.has(id)) : []
           }
         }
+        // 시험을 열 때 이미 ⭐였던 카드 — 단, 이어 푸는 시험(다시 풀기 중 새로고침)이 앞서 켠 ⭐는 이 시험의 것
+        const added = new Set(restoredAdded)
+        starredAtLoad.current = new Set(cards.filter((c) => c.starred && !added.has(c.id)).map((c) => c.id))
+        attemptRef.current += 1
+        setAddedStars(added)
+        setStarState('idle')
         if (!built) built = buildSheet(cards, { scope, count, shuffle })
         setRows(built.rows)
         setJapanese(built.japanese)
@@ -120,12 +127,12 @@ export default function OnlineTest() {
   useEffect(() => {
     if (results || rows.length === 0) return
     try {
-      const draft: Draft = { v: 1, optsKey, order: rows.map((r) => r.cardId), answers }
+      const draft: Draft = { v: 1, optsKey, order: rows.map((r) => r.cardId), answers, added: [...addedStars] }
       sessionStorage.setItem(draftKey, JSON.stringify(draft))
     } catch {
       /* 저장 공간이 막혀도 시험은 계속 */
     }
-  }, [answers, rows, results, optsKey, draftKey])
+  }, [answers, rows, results, optsKey, draftKey, addedStars])
 
   const blanks = useMemo(
     () => rows.reduce((n, r, i) => n + ((askReading(r) && !answers[i]?.reading.trim()) || !answers[i]?.meaning.trim() ? 1 : 0), 0),
@@ -138,9 +145,9 @@ export default function OnlineTest() {
     setAnswers((prev) => prev.map((a, j) => (j === i ? { ...a, [field]: value } : a)))
   }
 
-  // Enter = 다음 칸 (일본어 입력기 변환 중의 Enter는 건드리지 않는다)
+  // Enter = 다음 칸 (입력기 변환을 확정하는 Enter는 건드리지 않는다 — lib/keys.ts)
   function onEnter(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+    if (!isPlainEnter(e)) return
     e.preventDefault()
     const inputs = Array.from(sheetRef.current?.querySelectorAll<HTMLInputElement>('input.otest-input') ?? [])
     const next = inputs[inputs.indexOf(e.currentTarget) + 1]

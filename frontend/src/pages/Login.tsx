@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { setToken } from '../api/client'
+import { isPlainEnter } from '../lib/keys'
 
 export default function Login() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -86,7 +87,7 @@ export default function Login() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && submit()}
+          onKeyDown={(e) => isPlainEnter(e) && submit()}
         />
         {mode === 'register' && (
           <>
@@ -95,7 +96,7 @@ export default function Login() {
               type="password"
               value={password2}
               onChange={(e) => setPassword2(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && submit()}
+              onKeyDown={(e) => isPlainEnter(e) && submit()}
               aria-label="비밀번호 확인"
             />
             {password2 !== '' && password !== password2 && (
@@ -105,7 +106,7 @@ export default function Login() {
               placeholder="닉네임"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && submit()}
+              onKeyDown={(e) => isPlainEnter(e) && submit()}
             />
           </>
         )}

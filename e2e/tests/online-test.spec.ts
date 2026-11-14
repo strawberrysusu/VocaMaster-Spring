@@ -54,6 +54,24 @@ test('폰 화면: 채점 뒤 정답·설명 줄이 붙어도 가로로 넘치지
   expect(await overflowX(page)).toBe(0)
 })
 
+// 11/14 검토 워크플로가 찾음: 다시 풀기 중 새로고침하면 '이 시험이 켠 ⭐' 기록을 잃어 맞음으로가 ⭐를 못 껐다
+test('다시 풀기 중에 새로고침해도 이 시험이 켠 ⭐는 맞음으로가 끈다', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '이어풀기', ['感謝|かんしゃ|감사', '会議|かいぎ|회의'])
+  await open(page, deckId)
+  await grade(page) // 둘 다 비움 → 둘 다 ⭐
+  await expect(summary(page)).toContainText('⭐ 완료')
+  await page.getByRole('button', { name: /다시 풀기/ }).click()
+  await expect(page.locator('.otest-row')).toHaveCount(2)
+
+  await page.reload() // 답안 임시 저장에서 다시 풀기 문항이 돌아온다
+  await expect(page.locator('.otest-row')).toHaveCount(2)
+  await grade(page)
+  await expect(summary(page)).toContainText('⭐ 완료')
+  await row(page, '会議').getByRole('button', { name: '맞음으로' }).click()
+  await expect(row(page, '会議').getByRole('button', { name: '다시 오답으로' })).toBeVisible()
+  expect(await isStarred(request, deckId, '会議')).toBe(false)
+})
+
 // ── 회귀: Codex 검산(11/14)이 찾은 3건. PR #26에서 test.fail로 고치기 전 동작을 재현했고(3건 모두 실패 확인),
 //    PR #27에서 고친 뒤 표시를 뗐다 — 이제 다시 생기면 이 테스트가 막는다
 test.describe('회귀 — 온라인 시험 별표 (Codex 검산 11/14)', () => {

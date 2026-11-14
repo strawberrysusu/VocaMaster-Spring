@@ -15,7 +15,8 @@ docker run -d --name vm-e2e-mysql -e MYSQL_DATABASE=vocamaster -e MYSQL_ROOT_PAS
 docker run -d --name vm-e2e-redis -p 16379:6379 redis:7.2-alpine
 
 # 2) 앱 jar (React 번들 포함) — 또는 CI의 vocamaster-jar 아티팩트를 받아 E2E_JAR_DIR로 지정
-./gradlew bootJar
+#    Gradle 8.7은 JDK 17~21에서 돈다 — 기본 JDK가 더 새것이면 JAVA_HOME을 잠깐 바꿔서
+./gradlew bootJar -x test
 
 # 3) 테스트 (webServer 설정이 jar를 띄우고 끝나면 내린다)
 cd e2e && npm ci && npx playwright install chromium
