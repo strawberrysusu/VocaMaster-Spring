@@ -599,4 +599,19 @@ export const en: Messages = {
   "검색어를 입력하세요": "Enter a search term",
   "\"{q}\" 검색 결과": "Results for \"{q}\"",
   "언어는 화면 오른쪽 위 🌐에서 바꿔요": "Change the language from 🌐 at the top right",
+  // ── 11/14 덱 화면 학습 버튼: 낱말카드 → 전체 복습 / 별표만 복습
+  "낱말카드": "Flashcards",
+  "전체 복습": "Review all",
+  "별표만 복습 ({n}장)": "Review starred only ({n})",
+  "별표만 복습": "Review starred only",
+  // ── 11/14 카드 학습(채점 없이 넘겨 보기) — 덱 화면 낱말카드 메뉴·학습 화면
+  "카드 학습": "Browse cards",
+  "뒤집어 보기만 · 기록 안 남음": "Just flip through · nothing is saved",
+  "알아요·몰라요로 복습 일정 관리": "Mark Know / Don’t know to schedule reviews",
+  "⭐ 표시한 카드만": "Only the cards you starred",
+  "카드를 눌러 뒤집고, 화살표나 옆으로 밀어 넘겨요": "Tap a card to flip it; use the arrows or swipe to move",
+  "카드 학습은 기록을 남기지 않아요. 복습 일정은 그대로예요.": "Browsing saves nothing. Your review schedule stays the same.",
+  "{n}장을 다 봤어요": "You went through all {n} cards",
+  // ── 11/14 검색 화면 → 탐색에서 더 보기 (Codex 검산)
+  "탐색에서 더 보기 →": "See more in Explore →",
 }

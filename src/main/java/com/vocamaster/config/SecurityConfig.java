@@ -44,7 +44,8 @@ public class SecurityConfig {
                     "/oauth2/**", "/login/oauth2/**",           // 구글 로그인 시작·콜백 (ADR-047)
                     "/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**",
                     "/", "/app/**",                             // React SPA (정적 번들 + 딥링크 fallback)
-                    "/privacy.html"                             // 개인정보처리방침 — 구글 OAuth 게시 요건 (ADR-047)
+                    "/privacy.html",                            // 개인정보처리방침 — 구글 OAuth 게시 요건 (ADR-047)
+                    "/favicon.svg", "/favicon.ico"              // 루트 아이콘 → /app/favicon.svg로 돌려보냄 (SpaConfig, 11/14)
                 ).permitAll()
                 // 공개 표면은 '조회'만 익명 — 쓰기(좋아요 등)는 로그인 필수 (ADR-032)
                 .requestMatchers(HttpMethod.GET, "/public/**").permitAll()

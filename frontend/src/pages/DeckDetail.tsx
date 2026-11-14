@@ -6,7 +6,9 @@ import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
 import Ruby from '../components/Ruby'
 import TestSheetDialog from '../components/TestSheetDialog'
+import { ICON } from '../components/icons'
 import { isPlainEnter } from '../lib/keys'
+import { useDropdown } from '../lib/useDropdown'
 import { t } from '../i18n'
 
 interface Deck {
@@ -50,6 +52,7 @@ export default function DeckDetail() {
   const [eMemo, setEMemo] = useState('')
   const [saving, setSaving] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)   // 📝 종이 시험지 (Word) 설정 창
+  const studyMenu = useDropdown()   // 낱말카드 → 전체 복습 / 별표만 복습 (11/14)
 
   const load = useCallback(() => {
     const requests = loadRequest.current
@@ -260,42 +263,71 @@ export default function DeckDetail() {
             </p>
           </div>
           <div className="mode-buttons">
+            {/* 낱말카드 = Leitner 복습 (11/14 사용자 요청: '복습 학습 (Leitner)'와 '⭐ 별표 복습' 두 버튼은 구분이 어려웠다).
+                누르면 범위를 고른다 — 전체 복습 / 별표만 복습. 별표만 골라 '시작'하는 진입점은 여기 하나뿐이다
+                (학습 화면엔 카드별 별표 토글만 있다, 9/3) */}
             {cardsLoaded && cards.length > 0 ? (
-              <Link to={`/study?deckId=${id}`} className="btn-primary" style={{ textDecoration: 'none' }}>
-                {t('복습 학습 (Leitner)')}
-              </Link>
+              <div className="menu-wrap mode-menu-wrap" ref={studyMenu.ref}>
+                <button
+                  type="button"
+                  className="btn-primary mode-primary"
+                  aria-haspopup="menu"
+                  aria-expanded={studyMenu.open}
+                  onClick={() => studyMenu.setOpen(!studyMenu.open)}
+                >
+                  {ICON.cards} {t('낱말카드')} {ICON.chevronDown}
+                </button>
+                {studyMenu.open && (
+                  <div className="top-menu" role="menu">
+                    {/* 카드 학습 = 채점 없이 넘겨 보기 (11/14 사용자: '순수하게 카드만 보고 싶을 때도 있다') */}
+                    <Link role="menuitem" className="menu-2line" to={`/study?deckId=${id}&mode=browse`}>
+                      {ICON.cards}
+                      <span>{t('카드 학습')}<small>{t('뒤집어 보기만 · 기록 안 남음')}</small></span>
+                    </Link>
+                    <Link role="menuitem" className="menu-2line" to={`/study?deckId=${id}`}>
+                      {ICON.review}
+                      <span>{t('전체 복습')}<small>{t('알아요·몰라요로 복습 일정 관리')}</small></span>
+                    </Link>
+                    {deck !== null && deck.starredCount > 0 ? (
+                      <Link role="menuitem" className="menu-2line" to={`/study?deckId=${id}&starredOnly=1`}>
+                        {ICON.star}
+                        <span>{t('별표만 복습 ({n}장)', { n: deck.starredCount })}<small>{t('⭐ 표시한 카드만')}</small></span>
+                      </Link>
+                    ) : (
+                      <span role="menuitem" aria-disabled="true" className="menu-disabled menu-2line" title={t('별표한 카드가 없어요')}>
+                        {ICON.star}
+                        <span>{t('별표만 복습')}<small>{t('별표한 카드가 없어요')}</small></span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             ) : (
-              <button className="btn-primary" disabled title={t('카드를 먼저 추가하세요')}>{t('복습 학습 (Leitner)')}</button>
-            )}
-            {/* 별표 카드만 골라 Leitner 복습을 '시작'하는 유일한 진입점 (9/3 문구 정정).
-                Study 화면에는 카드별 별표 토글은 있지만 '별표만 골라 시작'하는 범위 선택이 없다 —
-                이 버튼을 없애면 별표 복습 진입 경로 자체가 사라진다. 로직 무변경, 표시만 변경 */}
-            {cardsLoaded && deck !== null && deck.starredCount > 0 && (
-              <Link to={`/study?deckId=${id}&starredOnly=1`} className="mode-btn" title={t('★ 표시한 {n}장만 복습', { n: deck.starredCount })}>
-                {t('⭐ 별표 복습')}
-              </Link>
+              <button className="btn-primary mode-primary" disabled title={t('카드를 먼저 추가하세요')}>
+                {ICON.cards} {t('낱말카드')}
+              </button>
             )}
             {cardsLoaded && cards.length >= 2 ? (
-              <Link to={`/quiz/${id}`} className="mode-btn">{t('퀴즈')}</Link>
+              <Link to={`/quiz/${id}`} className="mode-btn">{ICON.quiz} {t('퀴즈')}</Link>
             ) : (
-              <button className="mode-stub" disabled title={t('퀴즈는 카드 2장부터 (오답지가 필요해요)')}>{t('퀴즈')}</button>
+              <button className="mode-stub" disabled title={t('퀴즈는 카드 2장부터 (오답지가 필요해요)')}>{ICON.quiz} {t('퀴즈')}</button>
             )}
             {cardsLoaded && cards.length >= 1 ? (
-              <Link to={`/typing/${id}`} className="mode-btn">{t('타이핑')}</Link>
+              <Link to={`/typing/${id}`} className="mode-btn">{ICON.keyboard} {t('타이핑')}</Link>
             ) : (
-              <button className="mode-stub" disabled title={t('카드를 먼저 추가하세요')}>{t('타이핑')}</button>
+              <button className="mode-stub" disabled title={t('카드를 먼저 추가하세요')}>{ICON.keyboard} {t('타이핑')}</button>
             )}
             {cardsLoaded && cards.length >= 1 ? (
-              <Link to={`/listening/${id}`} className="mode-btn">{t('듣기')}</Link>
+              <Link to={`/listening/${id}`} className="mode-btn">{ICON.headphones} {t('듣기')}</Link>
             ) : (
-              <button className="mode-stub" disabled title={t('카드를 먼저 추가하세요')}>{t('듣기')}</button>
+              <button className="mode-stub" disabled title={t('카드를 먼저 추가하세요')}>{ICON.headphones} {t('듣기')}</button>
             )}
             {cardsLoaded && cards.length >= 1 ? (
               <button type="button" className="mode-btn" onClick={() => setSheetOpen(true)} title={t('종이(Word) 또는 온라인으로 푸는 쓰기 시험')}>
-                {t('시험지')}
+                {ICON.sheet} {t('시험지')}
               </button>
             ) : (
-              <button className="mode-stub" disabled title={t('카드를 먼저 추가하세요')}>{t('시험지')}</button>
+              <button className="mode-stub" disabled title={t('카드를 먼저 추가하세요')}>{ICON.sheet} {t('시험지')}</button>
             )}
           </div>
         </div>

@@ -14,7 +14,9 @@ interface MyDeck {
 
 // 위쪽 바 검색의 결과 화면 (11/14 사용자 요청 — Quizlet처럼 덱을 바로 찾기).
 // · 내 덱: 이름·설명에 검색어가 든 것 (내 덱 목록은 이미 한 번에 다 오니 화면에서 거른다)
-// · 공개 덱: 탐색 화면과 같은 검색 API — 내 덱은 위에 이미 나오니 뺀다
+// · 공개 덱: 탐색 화면과 같은 검색 API, 첫 12개 — 내 덱도 '내 덱' 표시로 같이 보인다(탐색 화면과 같게).
+//   받은 뒤 내 덱을 빼면, 첫 12개가 다 내 덱일 때 뒤에 남의 덱이 있어도 '일치하는 덱이 없어요'가 됐다 (Codex 검산 11/14).
+//   더 있으면 '탐색에서 더 보기'로 이어서 본다
 // 폰에선 위쪽 바에 검색창 대신 돋보기만 있어서, 이 화면 맨 위 검색창으로 찾는다.
 export default function Search() {
   const [params] = useSearchParams()
@@ -23,6 +25,7 @@ export default function Search() {
   const [input, setInput] = useState(q)
   const [mine, setMine] = useState<MyDeck[] | null>(null)
   const [publicDecks, setPublicDecks] = useState<PublicDeck[] | null>(null)
+  const [morePublic, setMorePublic] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => setInput(q), [q])
@@ -39,8 +42,13 @@ export default function Search() {
     if (!q) return
     let alive = true   // 빠르게 다시 검색하면 늦게 도착한 옛 결과가 새 결과를 덮지 않게
     setPublicDecks(null)
+    setError('')   // 새 검색 — 지난 검색의 오류 문구는 지운다 (Codex 검산 11/14: 실패 뒤 성공해도 오류가 남았다)
     api<PageResp<PublicDeck>>(`/public/decks?${new URLSearchParams({ keyword: q, size: '12', sort: 'popular' })}`)
-      .then((p) => { if (alive) setPublicDecks(p.content.filter((d) => !d.mine)) })
+      .then((p) => {
+        if (!alive) return
+        setPublicDecks(p.content)
+        setMorePublic(p.totalPages > 1)
+      })
       .catch((e) => { if (alive) setError((e as Error).message) })
     return () => { alive = false }
   }, [q])
@@ -121,7 +129,7 @@ export default function Search() {
                 <div className="deck-grid">
                   {publicDecks.map((d) => (
                     <div key={d.id} className="deck-card">
-                      <span className="tag">{d.authorNickname}</span>
+                      <span className="tag">{d.mine ? t('내 덱') : d.authorNickname}</span>
                       <Link to={`/explore/${d.id}`} className="title-link">
                         <p className="title">{d.title}</p>
                       </Link>
@@ -131,6 +139,11 @@ export default function Search() {
                     </div>
                   ))}
                 </div>
+              )}
+              {morePublic && (
+                <p style={{ marginTop: 14 }}>
+                  <Link to={`/explore?q=${encodeURIComponent(q)}`} className="search-more">{t('탐색에서 더 보기 →')}</Link>
+                </p>
               )}
             </section>
           </>

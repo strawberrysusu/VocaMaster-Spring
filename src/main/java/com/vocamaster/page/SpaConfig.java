@@ -7,6 +7,7 @@ import org.springframework.http.CacheControl;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
@@ -32,6 +33,17 @@ import java.time.Duration;
  */
 @Configuration
 public class SpaConfig implements WebMvcConfigurer {
+
+    /**
+     * 루트의 사이트 아이콘 — 앱 화면은 /app/favicon.svg를 쓰지만, 브라우저·검사 도구가 루트(/favicon.svg·/favicon.ico)를
+     * 직접 부르면 인증 필터에 걸려 401 JSON이 나가고 콘솔 오류가 남았다 (Codex 검산 11/14, Edge 검사).
+     * 같은 파일로 돌려보낸다 — 두 경로는 보안 설정(SecurityConfig)에서 열어 둔다
+     */
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addRedirectViewController("/favicon.svg", "/app/favicon.svg");
+        registry.addRedirectViewController("/favicon.ico", "/app/favicon.svg");
+    }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
