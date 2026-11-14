@@ -69,3 +69,15 @@ export function translateServerMessage(message: string, dict: Dict): string {
     })
     .join(', ')
 }
+
+/** 가져오기 실패 줄 끝에 서버가 붙이는 사유 (ImportService — MAX_TEXT 255·MAX_READING 200. test-i18n이 서버 코드와 같은지 본다) */
+export const TOO_LONG_SUFFIX = '  (너무 김: 단어·뜻 255자, 읽기 200자 이내)'
+
+/**
+ * 가져오기 실패 줄 — 줄 내용은 사용자가 쓴 글이라 그대로 두고, 서버가 끝에 붙인 '너무 김' 사유만 번역한다.
+ * 사유가 없거나 사전에 없으면 그대로
+ */
+export function translateImportLine(content: string, dict: Dict): string {
+  if (!content.endsWith(TOO_LONG_SUFFIX) || !Object.prototype.hasOwnProperty.call(dict, TOO_LONG_SUFFIX)) return content
+  return content.slice(0, content.length - TOO_LONG_SUFFIX.length) + dict[TOO_LONG_SUFFIX]
+}

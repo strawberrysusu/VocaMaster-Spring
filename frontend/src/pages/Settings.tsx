@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { api, clearToken, getToken, logout as clientLogout } from '../api/client'
 import LangSwitch from '../components/LangSwitch'
 import TopNav from '../components/TopNav'
-import { t } from '../i18n'
+import { gap, t } from '../i18n'
 import { ACCENTS, loadSettings, saveSettings, type AccentKey, type Settings as SettingsT } from '../lib/settings'
 import { isTtsSupported, speak, voicesFor } from '../lib/tts'
 
@@ -281,7 +281,7 @@ export default function Settings() {
               "모든 데이터가 삭제됩니다"라고 쓰면 코드가 하지 않는 약속이 된다.
             */}
             <p className="muted">
-              {t('탈퇴하면 계정이 즉시 비활성화되어 로그인할 수 없고, 공개한 단어장도 탐색에 노출되지 않아요. 남은 데이터의 완전 삭제를 원하시면')}{' '}
+              {t('탈퇴하면 계정이 즉시 비활성화되어 로그인할 수 없고, 공개한 단어장도 탐색에 노출되지 않아요. 남은 데이터의 완전 삭제를 원하시면')}{gap()}
               <a className="doc-link" href="/privacy.html" target="_blank" rel="noreferrer">{t('개인정보처리방침')}</a>{t('의 메일로 요청해 주세요.')}
             </p>
             {withdrawError && <p className="error" role="alert">{withdrawError}</p>}

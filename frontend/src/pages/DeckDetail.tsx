@@ -222,7 +222,7 @@ export default function DeckDetail() {
                 />
                 <input
                   aria-label={t('덱 설명')}
-                  placeholder={t('설명 (선택)')}
+                  placeholder={t('덱 설명 (선택)')}
                   value={dDesc}
                   onChange={(e) => setDDesc(e.target.value)}
                   onKeyDown={(e) => isPlainEnter(e) && saveDeck()}

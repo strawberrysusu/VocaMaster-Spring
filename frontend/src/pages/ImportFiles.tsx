@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
-import { t } from '../i18n'
+import { gap, t, tImportLine } from '../i18n'
 
 interface FailedLine {
   line: number
@@ -108,7 +108,7 @@ export default function ImportFiles() {
           <div>
             <h1>{t('파일로 덱 만들기')}</h1>
             <p className="sub">
-              {t('txt 파일 여러 개를 고르면')} <b>{t('파일명이 곧 덱 이름')}</b>
+              {t('txt 파일 여러 개를 고르면')}{gap()}<b>{t('파일명이 곧 덱 이름')}</b>
               {t('이 됩니다 · 한 줄에 카드 하나 (단어|뜻 또는 단어|읽기|뜻, 탭·쉼표 자동 감지) · 읽기의 전각 괄호（）는 자동으로 벗겨요')}
             </p>
           </div>
@@ -198,7 +198,7 @@ export default function ImportFiles() {
                     <div style={{ margin: '2px 0 8px 30px' }}>
                       {r.failed!.map((f) => (
                         <p key={f.line} className="muted" style={{ margin: '2px 0', fontSize: 12.5, color: '#b0485c' }}>
-                          {t('{n}행: {content}', { n: f.line, content: f.content })}
+                          {t('{n}행: {content}', { n: f.line, content: tImportLine(f.content) })}
                         </p>
                       ))}
                       <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>

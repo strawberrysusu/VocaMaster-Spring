@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { setToken } from '../api/client'
 import LangSwitch from '../components/LangSwitch'
-import { t, tServer } from '../i18n'
+import { langTag, t, tServer } from '../i18n'
 import { isPlainEnter } from '../lib/keys'
 
 export default function Login() {
@@ -52,7 +52,8 @@ export default function Login() {
       const body = mode === 'login' ? { email, password } : { email, password, nickname }
       const res = await fetch(path, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Accept-Language — 서버 기본 입력 검사 문구(@Email 등)도 고른 언어로 (api()와 같은 이유)
+        headers: { 'Content-Type': 'application/json', 'Accept-Language': langTag() },
         body: JSON.stringify(body),
       })
       const data = await res.json().catch(() => null)

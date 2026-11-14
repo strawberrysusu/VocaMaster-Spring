@@ -137,6 +137,19 @@ check('문제지에는 설명 줄 없음', xml.split('<w:br w:type="page"/>')[0]
 check('XML 제어 문자 없음', !/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(xml))
 
 const noKey = dec.decode(readZip(docx.buildTestSheetDocx(all, { ...info, answerKey: false }))['word/document.xml'].data)
+// 화면 언어가 중국어면 제목·머리줄·뜻의 글꼴과 문서 동아시아 언어도 그 언어로 (11/14). 한국어는 맑은 고딕·ko-KR 그대로
+const zhLabels = { ...docx.SHEET_DOC_LABELS_KO, font: 'Microsoft YaHei', eastAsiaLang: 'zh-CN' }
+const zhFiles = readZip(docx.buildTestSheetDocx(all, { ...info, labels: zhLabels }))
+const zhStyles = dec.decode(zhFiles['word/styles.xml'].data)
+const zhDoc = dec.decode(zhFiles['word/document.xml'].data)
+check('중국어 화면: 문서 기본 글꼴·언어', zhStyles.includes('w:eastAsia="Microsoft YaHei"') && zhStyles.includes('w:eastAsia="zh-CN"'))
+check('중국어 화면: 뜻·머리줄 글꼴', zhDoc.includes('w:ascii="Microsoft YaHei"') && !zhDoc.includes('Malgun Gothic'))
+check('중국어 화면: 일본어 단어는 그대로 Yu Gothic', zhDoc.includes('w:eastAsia="Yu Gothic"'))
+// 제목 두 개(시험지·정답지)가 든 글자 조각 — 중국어 글꼴이고 일본어 표시(ja-JP)가 없어야 한다 (Codex 11/14 검산)
+const titleRuns = zhDoc.split('<w:r>').filter((r) => r.includes('N1 &lt;테스트&gt; &amp; Day'))
+check('중국어 화면: 시험지·정답지 제목도 중국어 글꼴', titleRuns.length === 2 && titleRuns.every((r) => r.includes('Microsoft YaHei') && !r.includes('ja-JP')), String(titleRuns.length))
+const koStyles = dec.decode(files['word/styles.xml'].data)
+check('한국어: 맑은 고딕·ko-KR', koStyles.includes('w:eastAsia="Malgun Gothic"') && koStyles.includes('w:eastAsia="ko-KR"'))
 check('정답지 끄면 표 하나', noKey.split('<w:tbl>').length - 1 === 1 && !noKey.includes('w:type="page"'))
 
 const enXml = dec.decode(readZip(docx.buildTestSheetDocx(en, { ...info, answerKey: false }))['word/document.xml'].data)

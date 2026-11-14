@@ -3,13 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import type { CardDto } from '../api/cards'
 import { buildSheet, estimatePages, poolSize, sheetFileName, type SheetFileLabels, type SheetScope } from '../lib/testSheet'
 import { buildTestSheetDocx, DOCX_MIME, type SheetDocLabels } from '../lib/docx'
-import { t } from '../i18n'
+import { getLang, t, type Lang } from '../i18n'
 
 // 덱 화면 "시험지" — 같은 문항을 종이(Word 내려받기, 2단계) 또는 온라인(3단계)으로 푼다 (11/14).
 // Word는 서버를 거치지 않는다: 덱 화면이 이미 불러온 카드로 브라우저에서 .docx를 만든다. 종이는 채점·별표를 직접.
 // 온라인은 /test/:deckId — 채점하면 틀린 단어가 자동 ⭐.
 
 const COUNT_CHOICES = [10, 20, 30, 50, 100]
+
+const DOC_FONT: Partial<Record<Lang, Pick<SheetDocLabels, 'font' | 'eastAsiaLang'>>> = {
+  ja: { font: 'Yu Gothic', eastAsiaLang: 'ja-JP' },
+  zh: { font: 'Microsoft YaHei', eastAsiaLang: 'zh-CN' },
+}
 
 // Word 파일 안 글자·파일 이름 — lib/docx.ts·testSheet.ts는 Node 테스트가 불러서 i18n을 import 못 한다. 여기서 고른 언어로 넘긴다
 const DOC_LABELS: SheetDocLabels = {
@@ -21,6 +26,8 @@ const DOC_LABELS: SheetDocLabels = {
   answerTitle: (title) => t('{title} 정답', { title }),
   date: t('날짜'),
   score: t('점수'),
+  // 문서 글꼴도 화면 언어를 따른다 (Windows 기본 글꼴). 한국어·영어는 없음 = 맑은 고딕 그대로
+  ...DOC_FONT[getLang()],
 }
 const FILE_LABELS: SheetFileLabels = {
   fallback: t('단어장'),
