@@ -68,3 +68,19 @@ test('연관 검색 — 치는 동안 맞는 내 덱이 뜨고, ↓·Enter로 �
   await box.press('Enter')
   await expect(page).toHaveURL(new RegExp(`/app/decks/${deckId}$`))
 })
+
+test('연관 검색 — 줄을 고른 뒤 Esc로 닫고 Enter면 고른 덱이 아니라 검색 화면', async ({ page, request }) => {
+  const label = `닫기${Date.now()}`
+  await makeEmptyDeck(request, label)
+
+  await page.goto('/app/')
+  const box = page.getByRole('combobox', { name: '덱 검색' })
+  await box.click()
+  await box.fill(label)
+  await expect(page.getByRole('option').first()).toContainText(label)
+  await box.press('ArrowDown') // 덱 줄을 고른 채로
+  await box.press('Escape') // 목록을 닫으면 고른 줄도 풀린다
+  await expect(page.getByRole('listbox')).toHaveCount(0)
+  await box.press('Enter')
+  await expect(page).toHaveURL(/\/app\/search\?q=/)
+})

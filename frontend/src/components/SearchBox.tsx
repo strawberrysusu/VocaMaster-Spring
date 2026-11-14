@@ -111,8 +111,8 @@ export default function SearchBox() {
     return [...myHits, ...pubHits, all]
   }, [myDecks, publicHits, q])
 
-  // 목록이 바뀌면 고른 줄을 처음으로
-  useEffect(() => setActive(-1), [q, items.length])
+  // 목록이 바뀌거나 닫히면 고른 줄을 푼다 — 안 풀면 Esc로 닫은 뒤의 Enter가 안 보이는 줄을 연다
+  useEffect(() => setActive(-1), [q, items.length, box.open])
 
   function go(to: string) {
     box.setOpen(false)
@@ -122,7 +122,7 @@ export default function SearchBox() {
 
   function submit(e: FormEvent) {
     e.preventDefault()
-    if (active >= 0 && items[active]) return go(items[active].to)
+    if (showList && active >= 0 && items[active]) return go(items[active].to)   // 목록이 열려 있고 고른 줄이 있을 때만
     go(q ? `/search?q=${encodeURIComponent(q)}` : '/search')
   }
 
