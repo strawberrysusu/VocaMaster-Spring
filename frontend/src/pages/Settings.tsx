@@ -22,6 +22,9 @@ export default function Settings() {
   const [s, setS] = useState<SettingsT>(loadSettings)
   const [voiceTick, setVoiceTick] = useState(0)   // 음성 목록은 비동기로 채워져서 한 번 더 그린다
   const [provider, setProvider] = useState<string | null>(null)   // null = 조회 전
+  const [rankingMasked, setRankingMasked] = useState<boolean | null>(null)   // 학습 랭킹 닉네임 가리기 (null = 조회 전)
+  const [rankSaving, setRankSaving] = useState(false)
+  const [rankError, setRankError] = useState('')
   const [pwCur, setPwCur] = useState('')
   const [pwNew, setPwNew] = useState('')
   const [pwNew2, setPwNew2] = useState('')
@@ -44,10 +47,31 @@ export default function Settings() {
   // 구글 가입자는 password가 null이라(AuthService) 비밀번호 변경 폼 자체가 의미 없다.
   // TopNav 프로필 팝오버가 쓰는 것과 같은 /users/me의 provider로 가른다
   useEffect(() => {
-    api<{ provider: string }>('/users/me')
-      .then((me) => setProvider(me.provider))
+    api<{ provider: string; rankingMasked: boolean }>('/users/me')
+      .then((me) => {
+        setProvider(me.provider)
+        setRankingMasked(me.rankingMasked)
+      })
       .catch(() => setProvider('local'))   // 조회 실패로 폼을 감추면 바꿀 길이 없어진다 — 보이는 쪽으로 실패
   }, [])
+
+  // 학습 랭킹에서 닉네임 가리기 (ADR-059) — 서버에 저장한다. 랭킹 응답을 서버가 가려서 보내니 이 브라우저 설정이 아니다
+  // 누르면 바로 바꿔 보이고(서버 응답을 기다리면 그동안 '안 눌린 것'처럼 보인다), 실패하면 되돌린다
+  async function toggleRankingMask(masked: boolean) {
+    const before = rankingMasked
+    setRankingMasked(masked)
+    setRankSaving(true)
+    setRankError('')
+    try {
+      const me = await api<{ rankingMasked: boolean }>('/users/me/ranking', { method: 'PATCH', body: JSON.stringify({ masked }) })
+      setRankingMasked(me.rankingMasked)
+    } catch (e) {
+      setRankingMasked(before)
+      setRankError((e as Error).message)
+    } finally {
+      setRankSaving(false)
+    }
+  }
 
   function update(patch: Partial<SettingsT>) {
     const next = { ...s, ...patch }
@@ -232,6 +256,21 @@ export default function Settings() {
               ))}
             </div>
           </div>
+        </section>
+
+        <section className="stat-card settings-section">
+          <h2>{t('랭킹')}</h2>
+          <label className="toggle-row">
+            <input
+              type="checkbox"
+              checked={rankingMasked === true}
+              disabled={rankingMasked === null || rankSaving}
+              onChange={(e) => void toggleRankingMask(e.target.checked)}
+            />
+            {t('랭킹에서 닉네임 가리기')}
+          </label>
+          <p className="muted" style={{ fontSize: 12.5, margin: '6px 0 0' }}>{t('켜면 랭킹에 qjw***처럼 앞 몇 글자만 보여요')}</p>
+          {rankError && <p className="error" role="alert">{rankError}</p>}
         </section>
 
         <section className="stat-card settings-section">

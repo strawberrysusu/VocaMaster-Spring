@@ -47,6 +47,11 @@ public class User {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    // 학습 랭킹에서 닉네임 가리기 (V22, ADR-059) — 켜면 'qjw***'처럼 앞 몇 글자만
+    @Builder.Default
+    @Column(name = "ranking_masked", nullable = false)
+    private boolean rankingMasked = false;
+
     public boolean isDeleted() {
         return deletedAt != null;
     }

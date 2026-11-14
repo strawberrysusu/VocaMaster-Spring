@@ -13,6 +13,7 @@ export const ICON = {
   home: svg(18, <><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V21h13V9.5" /></>),
   decks: svg(18, <><rect x="4" y="7" width="14" height="13" rx="2.5" /><path d="M8 4h11a2 2 0 0 1 2 2v11" /></>),
   explore: svg(18, <><circle cx="12" cy="12" r="8.5" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></>),
+  trophy: svg(18, <><path d="M8 4h8v5a4 4 0 0 1-8 0z" /><path d="M8 6H5.5a2 2 0 0 0 2 4H8" /><path d="M16 6h2.5a2 2 0 0 1-2 4H16" /><path d="M12 13v4" /><path d="M8.5 20h7" /></>),
   stats: svg(18, <><path d="M5 20V13" /><path d="M12 20V5" /><path d="M19 20v-9" /></>),
   settings: svg(18, <><path d="M4 8h10" /><circle cx="17" cy="8" r="2.5" /><path d="M20 16H10" /><circle cx="7" cy="16" r="2.5" /></>),
   folder: svg(16, <path d="M3.5 6.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />),

@@ -10,10 +10,11 @@ const SINGULAR: Record<string, string> = {
   choices: 'choice',
   columns: 'column',
   days: 'day',
+  pts: 'pt',   // 학습 랭킹 점수 (11/14)
 }
 
 // '{이름} 복수형' — 목록은 위 SINGULAR의 열쇠와 같다
-const COUNTED = /\{(\w+)\} (cards|decks|questions|lines|answers|choices|columns|days)\b/g
+const COUNTED = /\{(\w+)\} (cards|decks|questions|lines|answers|choices|columns|days|pts)\b/g
 
 /** '{n} cards' 꼴에서 n이 1이면 '{n} card'로 — t()가 값을 채우기 전에 부른다 */
 export function englishOne(template: string, vars: Record<string, string | number>): string {

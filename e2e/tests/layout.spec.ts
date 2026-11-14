@@ -27,6 +27,7 @@ for (const width of WIDTHS) {
       '/app/import-files',
       '/app/explore',
       '/app/stats',
+      '/app/ranking',
       '/app/settings',
     ]
     const bad: string[] = []

@@ -1,5 +1,6 @@
 package com.vocamaster.stats;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,31 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DailyUserStatRepository extends JpaRepository<DailyUserStat, Long> {
+
+    // ── 학습 랭킹 (ADR-059) — 점수 = study_count(답한 카드 수). 탈퇴한 계정은 빠진다. 같은 점수면 먼저 가입한 사람이 위(정렬만, 순위는 같음)
+    // 행 모양: [userId, nickname, rankingMasked, points]
+
+    /** 그날의 랭킹 — 그날 줄만 점수 순 */
+    @Query("select u.id, u.nickname, u.rankingMasked, s.studyCount from DailyUserStat s join s.user u " +
+           "where s.statDate = :day and u.deletedAt is null and s.studyCount > 0 " +
+           "order by s.studyCount desc, u.id asc")
+    List<Object[]> rankDay(@Param("day") LocalDate day, Pageable page);
+
+    /** 전체 랭킹 — 지금까지의 합계 순 */
+    @Query("select u.id, u.nickname, u.rankingMasked, sum(s.studyCount) from DailyUserStat s join s.user u " +
+           "where u.deletedAt is null group by u.id, u.nickname, u.rankingMasked having sum(s.studyCount) > 0 " +
+           "order by sum(s.studyCount) desc, u.id asc")
+    List<Object[]> rankTotal(Pageable page);
+
+    /** 내 순위 = 나보다 점수가 높은 사람 수 + 1 (그날) */
+    @Query("select count(s) from DailyUserStat s join s.user u " +
+           "where s.statDate = :day and u.deletedAt is null and s.studyCount > :points")
+    long countDayAbove(@Param("day") LocalDate day, @Param("points") long points);
+
+    /** 내 순위 = 나보다 합계가 높은 사람 수 + 1 (전체) — 그룹 수를 세는 JPQL이 없어 합계 목록의 길이로 센다 */
+    @Query("select sum(s.studyCount) from DailyUserStat s join s.user u " +
+           "where u.deletedAt is null group by u.id having sum(s.studyCount) > :points")
+    List<Long> totalsAbove(@Param("points") long points);
 
     Optional<DailyUserStat> findByUserIdAndStatDate(Long userId, LocalDate statDate);
 

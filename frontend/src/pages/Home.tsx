@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import { getLang, t, type Lang } from '../i18n'
 import { getRecentStudy, agoLabel, resumePath } from '../lib/recent'
 import TopNav from '../components/TopNav'
+import { fetchStudyRanking, rankBadge, type StudyRanking } from '../api/ranking'
 
 interface TodaySummary {
   dueCount: number
@@ -35,6 +36,11 @@ const DATE_LOCALE: Record<Lang, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US
 
 export default function Home() {
   const [summary, setSummary] = useState<TodaySummary | null>(null)
+  // 오늘의 랭킹 카드 (ADR-059) — 상위 3명 + 내 순위. 못 불러와도 홈은 그대로
+  const [ranking, setRanking] = useState<StudyRanking | null>(null)
+  useEffect(() => {
+    fetchStudyRanking('today', 3).then(setRanking).catch(() => {})
+  }, [])
   const [boxes, setBoxes] = useState<BoxCount[] | null>(null)
   // null=로딩 중, []=정말 덱 없음 — 초기값 []로 두면 로딩 순간 기존 유저에게 온보딩이 번쩍임 (Codex 검산)
   const [decks, setDecks] = useState<Deck[] | null>(null)
@@ -236,7 +242,7 @@ export default function Home() {
         </div>
 
         {summary && (
-          <div className="stats-2col">
+          <div className="stats-2col stats-3col">
             <div className="stat-card">
               {/* studyCount = 모든 학습 '답변 횟수' (고유 카드 수 아님) — 데이터 정의에 맞는 문구 (Codex 검산) */}
               <p className="label">{t('오늘 학습 활동')}</p>
@@ -257,6 +263,29 @@ export default function Home() {
                   <div key={i} style={{ background: i < Math.min(summary.streak, 14) ? 'var(--a)' : '#EFEFF3' }} />
                 ))}
               </div>
+            </div>
+            {/* 오늘의 랭킹 (11/14 사용자 요청, ADR-059) — 오늘 학습 활동 옆에 내 순위. 전체 목록은 왼쪽 메뉴 '랭킹' */}
+            <div className="stat-card rank-card">
+              <div className="rank-card-head">
+                <p className="label">{t('오늘의 랭킹')}</p>
+                <Link to="/ranking" className="link">{t('랭킹 보기 →')}</Link>
+              </div>
+              {ranking?.me ? (
+                <div className="value">
+                  <span className="num big">{t('{n}위', { n: ranking.me.rank })}</span>
+                </div>
+              ) : (
+                <p className="rank-none">{t('오늘 답하면 순위에 올라요')}</p>
+              )}
+              <ol className="rank-mini">
+                {(ranking?.entries ?? []).map((e, i) => (
+                  <li key={`${e.rank}-${i}`} className={e.me ? 'me' : ''}>
+                    <span>{rankBadge(e.rank)}</span>
+                    <span className="rank-mini-name">{e.name}</span>
+                    <span>{t('{n}점', { n: e.points.toLocaleString() })}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
           </div>
         )}
