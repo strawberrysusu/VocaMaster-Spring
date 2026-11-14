@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
+import { isPlainEnter } from '../lib/keys'
 
 interface Deck {
   id: number
@@ -280,7 +281,7 @@ export default function Decks() {
             placeholder="새 덱 이름을 입력하세요"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && create()}
+            onKeyDown={(e) => isPlainEnter(e) && create()}
           />
           <button className="btn-primary" disabled={creating || !title.trim()} onClick={create}>
             {creating ? '만드는 중...' : '덱 만들기'}
@@ -404,7 +405,7 @@ export default function Decks() {
         )}
 
         {pickerOpen && typeof activeFolder === 'number' && (
-          <div className="modal-overlay" onClick={() => !busy && setPickerOpen(false)}>
+          <div className="modal-overlay" onClick={(e) => e.detail < 2 && !busy && setPickerOpen(false)}>
             <div className="modal-panel" role="dialog" aria-modal="true" aria-label="폴더에 덱 담기" onClick={(e) => e.stopPropagation()}>
               <div className="modal-head">
                 <h2>📁 {activeFolderObj?.name ?? '폴더'}에 덱 담기</h2>

@@ -6,6 +6,7 @@ import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
 import Ruby from '../components/Ruby'
 import TestSheetDialog from '../components/TestSheetDialog'
+import { isPlainEnter } from '../lib/keys'
 
 interface Deck {
   id: number
@@ -214,7 +215,7 @@ export default function DeckDetail() {
                   aria-label="덱 이름"
                   value={dTitle}
                   onChange={(e) => setDTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && saveDeck()}
+                  onKeyDown={(e) => isPlainEnter(e) && saveDeck()}
                   maxLength={100}
                   autoFocus
                 />
@@ -223,7 +224,7 @@ export default function DeckDetail() {
                   placeholder="설명 (선택)"
                   value={dDesc}
                   onChange={(e) => setDDesc(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && saveDeck()}
+                  onKeyDown={(e) => isPlainEnter(e) && saveDeck()}
                   maxLength={255}
                 />
                 <div className="edit-actions">
@@ -318,7 +319,7 @@ export default function DeckDetail() {
             placeholder="뜻 (예: 회의)"
             value={back}
             onChange={(e) => setBack(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addCard()}
+            onKeyDown={(e) => isPlainEnter(e) && addCard()}
           />
           <input
             aria-label="설명"
@@ -326,7 +327,7 @@ export default function DeckDetail() {
             placeholder="설명 (선택)"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addCard()}
+            onKeyDown={(e) => isPlainEnter(e) && addCard()}
             maxLength={500}
           />
           <button className="btn-primary" disabled={adding || !front.trim() || !back.trim()} onClick={addCard}>
@@ -369,8 +370,8 @@ export default function DeckDetail() {
                         <span className="word-idx">{number}</span>
                         <input aria-label="단어" value={eFront} onChange={(e) => setEFront(e.target.value)} maxLength={255} autoFocus />
                         <input aria-label="읽기" className="reading-input" placeholder="읽기 (선택)" value={eReading} onChange={(e) => setEReading(e.target.value)} maxLength={200} />
-                        <input aria-label="뜻" value={eBack} onChange={(e) => setEBack(e.target.value)} maxLength={255} onKeyDown={(e) => e.key === 'Enter' && saveCard()} />
-                        <input aria-label="설명" className="memo-input" placeholder="설명 (선택 — 뜻 아래 작은 글씨)" value={eMemo} onChange={(e) => setEMemo(e.target.value)} maxLength={500} onKeyDown={(e) => e.key === 'Enter' && saveCard()} />
+                        <input aria-label="뜻" value={eBack} onChange={(e) => setEBack(e.target.value)} maxLength={255} onKeyDown={(e) => isPlainEnter(e) && saveCard()} />
+                        <input aria-label="설명" className="memo-input" placeholder="설명 (선택 — 뜻 아래 작은 글씨)" value={eMemo} onChange={(e) => setEMemo(e.target.value)} maxLength={500} onKeyDown={(e) => isPlainEnter(e) && saveCard()} />
                         <div className="row-actions">
                           <button className="btn-primary btn-sm" disabled={saving || !eFront.trim() || !eBack.trim()} onClick={saveCard}>저장</button>
                           <button className="btn-ghost-link" disabled={saving} onClick={() => setEditingCardId(null)}>취소</button>

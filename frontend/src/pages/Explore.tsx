@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import { afterCopy, copyDeckApi, toggleLikeApi, type PageResp, type PublicDeck } from '../api/publicDecks'
 import TopNav from '../components/TopNav'
+import { isPlainEnter } from '../lib/keys'
 
 // 탐색 — Phase 4에서 만든 공개 API 3종(검색·복사·좋아요)의 새 화면.
 // 좋아요 초기 상태·내 덱 여부는 서버 필드(likedByMe/mine) 사용 — 세션 내 추적 제거 (백로그 ①③).
@@ -80,7 +81,7 @@ export default function Explore() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (isPlainEnter(e)) {
                 setQuery(keyword)
                 setPage(0)
               }

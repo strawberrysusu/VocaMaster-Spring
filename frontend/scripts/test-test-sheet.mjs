@@ -47,6 +47,18 @@ check('카드 id 유지', all.rows.map((r) => r.cardId).join(',') === '1,2,3,4,5
 check('설명 줄 전달', all.rows[5].memo === '여럿이 모여 의논함' && all.rows[0].memo === '')
 check('읽기 없는 카드는 빈 문자열', all.rows[1].reading === '')
 
+// 괄호 속 문맥의 한자는 읽기 칸을 만들지 않는다 — 시험 보는 낱말(괄호 밖)에 한자가 있을 때만
+const ctx = sheet.buildSheet(
+  [
+    { id: 11, front: '(話が)こじれる', reading: '(はなしが)こじれる', back: '(이야기가) 꼬이다', starred: false },
+    { id: 12, front: 'めきめき(上達する)', reading: 'めきめき(じょうたつする)', back: '부쩍부쩍', starred: false },
+    { id: 13, front: '危ぶまれる(開催が)', reading: 'あやぶまれる', back: '우려되다', starred: false },
+  ],
+  { scope: 'all', count: 'all', shuffle: false },
+)
+check('괄호 속 문맥에만 한자가 있으면 읽기 칸 없음', !ctx.rows[0].needsReading && !ctx.rows[1].needsReading)
+check('괄호 밖 낱말에 한자가 있으면 읽기 칸', ctx.rows[2].needsReading === true)
+
 const starred = sheet.buildSheet(jpCards, { scope: 'starred', count: 'all', shuffle: false })
 check('별표만', starred.rows.map((r) => r.word).join(',') === '感謝,ジャンケン')
 check('poolSize 별표', sheet.poolSize(jpCards, 'starred') === 2 && sheet.poolSize(jpCards, 'all') === 6)

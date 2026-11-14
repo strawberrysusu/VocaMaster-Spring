@@ -56,7 +56,9 @@ export default function TestSheetDialog({ deckId, deckTitle, cards, onClose }: P
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    // 바깥을 누르면 닫기 — 단 더블클릭의 두 번째 클릭(detail 2)은 무시한다: '시험지' 버튼을 두 번 빨리 누르면
+    // 첫 클릭에 열린 창의 바깥 영역이 두 번째 클릭을 받아 바로 닫혔다 (11/14 검토)
+    <div className="modal-overlay" onClick={(e) => e.detail < 2 && onClose()}>
       <div className="modal-panel sheet-panel" role="dialog" aria-modal="true" aria-label="시험지 만들기" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2>📝 시험지 만들기</h2>

@@ -45,6 +45,11 @@ export function hasKanji(s: string): boolean {
   return KANJI.test(s)
 }
 
+/** 괄호 속 문맥을 뺀 말 — '(話が)こじれる'에서 시험 보는 낱말은 こじれる다 (11/14 검토: 문맥의 한자 때문에 가나 낱말에 읽기 칸이 생겼다) */
+function withoutContext(s: string): string {
+  return s.replace(/[(（][^()（）]*[)）]/g, '')
+}
+
 function isJapanese(s: string): boolean {
   return KANJI.test(s) || KANA.test(s)
 }
@@ -77,7 +82,7 @@ export function buildSheet(cards: SheetCard[], opts: SheetOptions, random: () =>
       reading: (c.reading ?? '').trim(),
       meaning: c.back.trim(),
       memo: (c.memo ?? '').trim(),
-      needsReading: japanese && hasKanji(c.front),
+      needsReading: japanese && hasKanji(withoutContext(c.front)),
     })),
   }
 }
