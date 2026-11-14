@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
+import { getLang, t, type Lang } from '../i18n'
 import { getRecentStudy, agoLabel, resumePath } from '../lib/recent'
 import TopNav from '../components/TopNav'
 
@@ -30,6 +31,7 @@ interface Folder {
 }
 
 const SECONDS_PER_CARD = 25 // 예상 시간 어림값 — 카드당 평균 답변 시간
+const DATE_LOCALE: Record<Lang, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' } // 머리의 날짜를 화면 언어로
 
 export default function Home() {
   const [summary, setSummary] = useState<TodaySummary | null>(null)
@@ -49,7 +51,7 @@ export default function Home() {
     api<Folder[]>('/folders').then(setFolders).catch(() => {})   // 폴더 패널만 조용히 숨김
   }, [])
 
-  const today = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
+  const today = new Date().toLocaleDateString(DATE_LOCALE[getLang()], { month: 'long', day: 'numeric', weekday: 'long' })
   const due = summary?.dueCount ?? 0
   const dueMinutes = Math.max(1, Math.round((due * SECONDS_PER_CARD) / 60))
   const maxBox = boxes ? Math.max(1, ...boxes.map((b) => b.count)) : 1
@@ -72,7 +74,7 @@ export default function Home() {
   })
   const unfiled = (decks ?? []).filter((d) => d.folderId === null)
   if (folders.length > 0 && unfiled.length > 0) {
-    folderCards.push({ id: 'none', name: '미분류', deckCount: unfiled.length, cardCount: unfiled.reduce((a, d) => a + d.cardCount, 0) })
+    folderCards.push({ id: 'none', name: t('미분류'), deckCount: unfiled.length, cardCount: unfiled.reduce((a, d) => a + d.cardCount, 0) })
   }
 
   if (isNewUser) {
@@ -81,30 +83,30 @@ export default function Home() {
         <TopNav />
         <div className="shell">
           <div className="section-head">
-            <h1>시작하기</h1>
+            <h1>{t('시작하기')}</h1>
             <span className="date">{today}</span>
           </div>
           <section className="hero onboard">
-            <h2 className="onboard-title">첫 단어장을 만들어볼까요?</h2>
-            <p className="hero-copy">Quizlet 대신, 내 것으로. 3분이면 충분해요.</p>
+            <h2 className="onboard-title">{t('첫 단어장을 만들어볼까요?')}</h2>
+            <p className="hero-copy">{t('Quizlet 대신, 내 것으로. 3분이면 충분해요.')}</p>
             <div className="onboard-steps">
               <div className="onboard-step">
                 <span className="step-num">1</span>
-                <b>덱 만들기</b>
-                <span>주제별 단어장 하나</span>
+                <b>{t('덱 만들기')}</b>
+                <span>{t('주제별 단어장 하나')}</span>
               </div>
               <div className="onboard-step">
                 <span className="step-num">2</span>
-                <b>단어 추가</b>
-                <span>일단 5장이면 충분</span>
+                <b>{t('단어 추가')}</b>
+                <span>{t('일단 5장이면 충분')}</span>
               </div>
               <div className="onboard-step">
                 <span className="step-num">3</span>
-                <b>오늘 복습</b>
-                <span>간격은 라이트너가 알아서</span>
+                <b>{t('오늘 복습')}</b>
+                <span>{t('간격은 라이트너가 알아서')}</span>
               </div>
             </div>
-            <Link to="/decks" className="cta">첫 덱 만들기</Link>
+            <Link to="/decks" className="cta">{t('첫 덱 만들기')}</Link>
           </section>
         </div>
       </>
@@ -116,7 +118,7 @@ export default function Home() {
       <TopNav streak={summary?.streak} />
       <div className="shell">
         <div className="section-head">
-          <h1>오늘의 복습</h1>
+          <h1>{t('오늘의 복습')}</h1>
           <span className="date">{today}</span>
         </div>
 
@@ -127,35 +129,35 @@ export default function Home() {
             <div>
               <div className="hero-count">
                 <span className="num big">{due}</span>
-                <span className="unit">장</span>
+                <span className="unit">{t('장')}</span>
               </div>
               {due > 0 ? (
                 <>
-                  <p className="hero-copy">복습 시간이 된 카드가 기다리고 있어요.</p>
-                  <p className="hero-sub">약 {dueMinutes}분 예상</p>
+                  <p className="hero-copy">{t('복습 시간이 된 카드가 기다리고 있어요.')}</p>
+                  <p className="hero-sub">{t('약 {n}분 예상', { n: dueMinutes })}</p>
                 </>
               ) : (
                 <>
-                  <p className="hero-copy">지금은 복습할 카드가 없어요.</p>
-                  <p className="hero-sub">새 단어를 추가하거나, 잠시 쉬어가요 ☕</p>
+                  <p className="hero-copy">{t('지금은 복습할 카드가 없어요.')}</p>
+                  <p className="hero-sub">{t('새 단어를 추가하거나, 잠시 쉬어가요 ☕')}</p>
                 </>
               )}
             </div>
             <div className="hero-actions">
               {due > 0 ? (
-                <Link to="/study" className="cta">오늘 복습 시작</Link>
+                <Link to="/study" className="cta">{t('오늘 복습 시작')}</Link>
               ) : (
-                <span className="cta disabled">오늘 복습 시작</span>
+                <span className="cta disabled">{t('오늘 복습 시작')}</span>
               )}
-              <Link to="/decks" className="hero-secondary">내 덱 보기</Link>
+              <Link to="/decks" className="hero-secondary">{t('내 덱 보기')}</Link>
             </div>
           </div>
 
           {boxes && (
             <div className="ladder">
               <div className="ladder-head">
-                <span className="title">라이트너 박스 분포</span>
-                <span className="hint">오른쪽으로 갈수록 복습 간격이 길어져요</span>
+                <span className="title">{t('라이트너 박스 분포')}</span>
+                <span className="hint">{t('오른쪽으로 갈수록 복습 간격이 길어져요')}</span>
               </div>
               <div className="ladder-bars">
                 {boxes.map((b) => (
@@ -179,50 +181,56 @@ export default function Home() {
         <div className="home-2col">
           <section className="home-panel">
             <div className="panel-head">
-              <h2>최근 학습 덱</h2>
-              <Link to="/decks" className="link">전체 보기</Link>
+              <h2>{t('최근 학습 덱')}</h2>
+              <Link to="/decks" className="link">{t('전체 보기')}</Link>
             </div>
             {recentDecks.map(({ deck, at, mode }) => (
               <div className="recent-row" key={deck.id}>
                 <div className="recent-info">
                   <Link to={`/decks/${deck.id}`} className="recent-title">{deck.title}</Link>
-                  <p className="recent-meta">카드 {deck.cardCount}장{at ? ` · 마지막 학습 ${agoLabel(at)}` : ''}</p>
+                  <p className="recent-meta">
+                    {at
+                      ? t('카드 {n}장 · 마지막 학습 {ago}', { n: deck.cardCount, ago: agoLabel(at) })
+                      : t('카드 {n}장', { n: deck.cardCount })}
+                  </p>
                 </div>
-                <Link to={resumePath(deck.id, mode)} className="resume-btn">이어하기</Link>
+                <Link to={resumePath(deck.id, mode)} className="resume-btn">{t('이어하기')}</Link>
               </div>
             ))}
             {fallbackDecks.map((d) => (
               <div className="recent-row" key={d.id}>
                 <div className="recent-info">
                   <Link to={`/decks/${d.id}`} className="recent-title">{d.title}</Link>
-                  <p className="recent-meta">카드 {d.cardCount}장</p>
+                  <p className="recent-meta">{t('카드 {n}장', { n: d.cardCount })}</p>
                 </div>
-                <Link to={`/study?deckId=${d.id}`} className="resume-btn">학습하기</Link>
+                <Link to={`/study?deckId=${d.id}`} className="resume-btn">{t('학습하기')}</Link>
               </div>
             ))}
             {recentDecks.length === 0 && fallbackDecks.length === 0 && decks !== null && (
-              <p className="muted">카드가 있는 덱이 아직 없어요 — 내 덱에서 시작해보세요.</p>
+              <p className="muted">{t('카드가 있는 덱이 아직 없어요 — 내 덱에서 시작해보세요.')}</p>
             )}
-            {decks === null && <p className="muted">불러오는 중...</p>}
+            {decks === null && <p className="muted">{t('불러오는 중...')}</p>}
           </section>
 
           <section className="home-panel">
             <div className="panel-head">
-              <h2>내 폴더</h2>
-              <span className="panel-sub">덱 {decks?.length ?? 0}개</span>
+              <h2>{t('내 폴더')}</h2>
+              <span className="panel-sub">{t('덱 {n}개', { n: decks?.length ?? 0 })}</span>
             </div>
             {folderCards.map((f) => (
               <Link key={f.id} to={`/decks?folder=${f.id}`} className="folder-row">
                 <span className="folder-row-icon">{f.id === 'none' ? '📂' : '📁'}</span>
                 <span className="folder-row-info">
                   <span className="folder-row-name">{f.name}</span>
-                  <span className="folder-row-meta">{f.deckCount}개 덱 · {f.cardCount.toLocaleString()}장</span>
+                  <span className="folder-row-meta">
+                    {t('{decks}개 덱 · {cards}장', { decks: f.deckCount, cards: f.cardCount.toLocaleString() })}
+                  </span>
                 </span>
                 <span className="folder-row-arrow">›</span>
               </Link>
             ))}
             {folderCards.length === 0 && (
-              <p className="muted">내 덱의 "＋ 새 폴더"로 덱을 정리할 수 있어요.</p>
+              <p className="muted">{t('내 덱의 "＋ 새 폴더"로 덱을 정리할 수 있어요.')}</p>
             )}
           </section>
         </div>
@@ -231,18 +239,18 @@ export default function Home() {
           <div className="stats-2col">
             <div className="stat-card">
               {/* studyCount = 모든 학습 '답변 횟수' (고유 카드 수 아님) — 데이터 정의에 맞는 문구 (Codex 검산) */}
-              <p className="label">오늘 학습 활동</p>
+              <p className="label">{t('오늘 학습 활동')}</p>
               <div className="value">
                 <span className="num big">{summary.studyCount}</span>
-                <span className="unit">회</span>
+                <span className="unit">{t('회')}</span>
               </div>
-              <p className="foot">오늘 복습한 카드 {summary.reviewedTodayCount}장</p>
+              <p className="foot">{t('오늘 복습한 카드 {n}장', { n: summary.reviewedTodayCount })}</p>
             </div>
             <div className="stat-card">
-              <p className="label">연속 학습</p>
+              <p className="label">{t('연속 학습')}</p>
               <div className="value">
                 <span className="num big">{summary.streak}</span>
-                <span className="unit">일</span>
+                <span className="unit">{t('일')}</span>
               </div>
               <div className="streak-dots">
                 {Array.from({ length: 14 }, (_, i) => (

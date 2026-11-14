@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import { afterCopy, copyDeckApi, toggleLikeApi, type PageResp, type PublicDeck } from '../api/publicDecks'
 import TopNav from '../components/TopNav'
 import { isPlainEnter } from '../lib/keys'
+import { t } from '../i18n'
 
 // 탐색 — Phase 4에서 만든 공개 API 3종(검색·복사·좋아요)의 새 화면.
 // 좋아요 초기 상태·내 덱 여부는 서버 필드(likedByMe/mine) 사용 — 세션 내 추적 제거 (백로그 ①③).
@@ -69,15 +70,15 @@ export default function Explore() {
       <div className="shell">
         <div className="page-head">
           <div>
-            <h1>탐색</h1>
-            <p className="sub">다른 사람들의 공개 단어장을 검색하고, 내 덱으로 복사하세요</p>
+            <h1>{t('탐색')}</h1>
+            <p className="sub">{t('다른 사람들의 공개 단어장을 검색하고, 내 덱으로 복사하세요')}</p>
           </div>
         </div>
 
         <div className="create-row">
           <input
-            aria-label="공개 덱 검색"
-            placeholder="제목이나 설명으로 검색"
+            aria-label={t('공개 덱 검색')}
+            placeholder={t('제목이나 설명으로 검색')}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => {
@@ -88,69 +89,69 @@ export default function Explore() {
             }}
           />
           <button className="btn-primary" onClick={() => { setQuery(keyword); setPage(0) }}>
-            검색
+            {t('검색')}
           </button>
         </div>
 
         <div className="sort-tabs">
           <button className={sort === 'popular' ? 'active' : ''} onClick={() => { setSort('popular'); setPage(0) }}>
-            인기순
+            {t('인기순')}
           </button>
           <button className={sort === 'recent' ? 'active' : ''} onClick={() => { setSort('recent'); setPage(0) }}>
-            최신순
+            {t('최신순')}
           </button>
         </div>
 
         {error && <p className="error" role="alert">{error}</p>}
-        {decks === null && !error && <p className="muted">불러오는 중...</p>}
+        {decks === null && !error && <p className="muted">{t('불러오는 중...')}</p>}
 
         <div className="deck-grid">
           {(decks ?? []).map((d) => (
             <div key={d.id} className="deck-card explore-card">
-              <span className="tag">{d.mine ? '내 덱' : d.authorNickname}</span>
+              <span className="tag">{d.mine ? t('내 덱') : d.authorNickname}</span>
               <Link to={`/explore/${d.id}`} className="title-link">
                 <p className="title">{d.title}</p>
               </Link>
               <p className="meta">
-                카드 {d.cardCount}장{d.description ? ` · ${d.description}` : ''}
+                {t('카드 {n}장', { n: d.cardCount })}{d.description ? ` · ${d.description}` : ''}
               </p>
               <div className="explore-actions">
                 <button
                   className={`like-btn ${d.likedByMe ? 'on' : ''}`}
                   disabled={busyId === d.id}
                   onClick={() => toggleLike(d)}
-                  aria-label={d.likedByMe ? '좋아요 취소' : '좋아요'}
+                  aria-label={d.likedByMe ? t('좋아요 취소') : t('좋아요')}
                   aria-pressed={d.likedByMe}
                 >
                   ♥ {d.likeCount}
                 </button>
-                <span className="muted" style={{ fontSize: 12.5 }}>복사 {d.copyCount}</span>
+                <span className="muted" style={{ fontSize: 12.5 }}>{t('복사 {n}', { n: d.copyCount })}</span>
                 <button
                   className="btn-primary copy-btn"
                   disabled={busyId === d.id || copiedIds[d.id]}
                   onClick={() => copy(d)}
                 >
-                  {copiedIds[d.id] ? '복사됨 ✓' : '내 덱으로 복사'}
+                  {copiedIds[d.id] ? t('복사됨 ✓') : t('내 덱으로 복사')}
                 </button>
               </div>
             </div>
           ))}
           {decks !== null && decks.length === 0 && !error && (
             <p className="muted">
-              {query ? '검색 결과가 없어요.' : '아직 공개 덱이 없어요 — 내 덱을 공개해서 첫 주자가 되어보세요.'}
+              {query ? t('검색 결과가 없어요.') : t('아직 공개 덱이 없어요 — 내 덱을 공개해서 첫 주자가 되어보세요.')}
             </p>
           )}
         </div>
 
         {totalPages > 1 && (
           <div className="pager">
-            <button disabled={page === 0} onClick={() => goPage(page - 1)}>◀ 이전</button>
+            <button disabled={page === 0} onClick={() => goPage(page - 1)}>{t('◀ 이전')}</button>
             {Array.from({ length: totalPages }, (_, i) => (
               <button key={i} className={i === page ? 'active' : ''} onClick={() => goPage(i)}>
                 {i + 1}
               </button>
             ))}
-            <button disabled={page === totalPages - 1} onClick={() => goPage(page + 1)}>다음 ▶</button>
+            <button disabled={page === totalPages - 1} onClick={() => goPage(page + 1)}>{t('다음 ▶')}</button>
           </div>
         )}
       </div>

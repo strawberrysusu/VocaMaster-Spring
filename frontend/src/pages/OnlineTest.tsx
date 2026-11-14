@@ -6,6 +6,7 @@ import TopNav from '../components/TopNav'
 import { buildSheet, type SheetRow, type SheetScope } from '../lib/testSheet'
 import { matchesAnswer, matchesReading } from '../lib/answerMatch'
 import { isPlainEnter } from '../lib/keys'
+import { t } from '../i18n'
 
 // 온라인 시험지 (3단계, 11/14) — 종이 시험지와 같은 문항을 화면에서 풀고 한 번에 채점.
 //  · 읽기(한자가 있는 단어만): 자동 채점, 가타카나로 써도 정답, 읽기가 두 가지면 하나만
@@ -185,7 +186,7 @@ export default function OnlineTest() {
     } catch (e) {
       if (attemptRef.current !== attempt) return
       setStarState('error')
-      setError(`틀린 단어 별표를 못 했어요 — ${(e as Error).message}`)
+      setError(t('틀린 단어 별표를 못 했어요 — {msg}', { msg: (e as Error).message }))
     }
   }
 
@@ -229,7 +230,7 @@ export default function OnlineTest() {
       if (attemptRef.current !== attempt) return
       setResults((prev) => prev && prev.map((r, j) => (j === i ? { ...r, override: turningOn } : r)))
     } catch (e) {
-      if (attemptRef.current === attempt) setError(`별표를 바꾸지 못했어요 — ${(e as Error).message}`)
+      if (attemptRef.current === attempt) setError(t('별표를 바꾸지 못했어요 — {msg}', { msg: (e as Error).message }))
     } finally {
       setBusyCards((prev) => withoutId(prev, cardId))
     }
@@ -250,42 +251,45 @@ export default function OnlineTest() {
     window.scrollTo({ top: 0 })
   }
 
-  const scopeLabel = scope === 'starred' ? '⭐ 별표만' : '전체'
+  const scopeLabel = scope === 'starred' ? t('⭐ 별표만') : t('전체')
+  const starDoneVars = { wrong: wrongCount, added: addedStars.size, skipped: skippedCount }
 
   return (
     <>
       <TopNav />
       <div className="shell">
         <p style={{ margin: '0 0 14px' }}>
-          <Link to={`/decks/${deckId}`} className="hero-secondary">← 덱으로</Link>
+          <Link to={`/decks/${deckId}`} className="hero-secondary">{t('← 덱으로')}</Link>
         </p>
         <div className="page-head">
           <div>
-            <h1>📝 온라인 시험{title ? ` — ${title}` : ''}</h1>
+            <h1>{t('📝 온라인 시험')}{title ? ` — ${title}` : ''}</h1>
             <p className="sub">
-              {scopeLabel} · {rows.length}문항 · 틀리거나 비워 둔 단어는 채점하면 자동으로 ⭐ 돼요 (복습 일정은 그대로)
+              {scopeLabel} · {t('{n}문항', { n: rows.length })} · {t('틀리거나 비워 둔 단어는 채점하면 자동으로 ⭐ 돼요 (복습 일정은 그대로)')}
             </p>
           </div>
         </div>
 
         {error && <p className="error" role="alert">{error}</p>}
-        {loading && <p className="muted">문제 만드는 중...</p>}
-        {!loading && rows.length === 0 && !error && <p className="muted">문항이 없어요 — 덱으로 돌아가 범위를 바꿔 보세요.</p>}
+        {loading && <p className="muted">{t('문제 만드는 중...')}</p>}
+        {!loading && rows.length === 0 && !error && <p className="muted">{t('문항이 없어요 — 덱으로 돌아가 범위를 바꿔 보세요.')}</p>}
 
         {results && (
           <div className="otest-summary" role="status">
             <p className="result-line" style={{ margin: 0 }}>
-              점수 <b>{score}/{rows.length}</b>
+              {t('점수')} <b>{score}/{rows.length}</b>
               {wrongCount > 0 && (
                 <span className="otest-star-note">
-                  {starState === 'saving' && ' · 틀린 단어 ⭐ 하는 중...'}
+                  {starState === 'saving' && ' · ' + t('틀린 단어 ⭐ 하는 중...')}
                   {starState === 'done' &&
-                    ` · 틀린 ${wrongCount}개 ⭐ 완료 (새로 켠 별표 ${addedStars.size}개` +
-                      (skippedCount > 0 ? `, 지워진 카드 ${skippedCount}개는 건너뜀)` : ')')}
+                    ' · ' +
+                      (skippedCount > 0
+                        ? t('틀린 {wrong}개 ⭐ 완료 (새로 켠 별표 {added}개, 지워진 카드 {skipped}개는 건너뜀)', starDoneVars)
+                        : t('틀린 {wrong}개 ⭐ 완료 (새로 켠 별표 {added}개)', starDoneVars))}
                   {starState === 'error' && (
                     <>
                       {' · '}
-                      <button className="btn-ghost-link" onClick={() => void starWrong(results)}>별표 다시 시도</button>
+                      <button className="btn-ghost-link" onClick={() => void starWrong(results)}>{t('별표 다시 시도')}</button>
                     </>
                   )}
                 </span>
@@ -297,10 +301,10 @@ export default function OnlineTest() {
         {rows.length > 0 && (
           <div className={`otest-sheet${japanese ? ' jp' : ''}`} ref={sheetRef}>
             <div className="otest-head" aria-hidden="true">
-              <span>번호</span>
-              <span>단어</span>
-              {japanese && <span>읽기</span>}
-              <span>뜻</span>
+              <span>{t('번호')}</span>
+              <span>{t('단어')}</span>
+              {japanese && <span>{t('읽기')}</span>}
+              <span>{t('뜻')}</span>
             </div>
             {rows.map((r, i) => {
               const res = results?.[i]
@@ -313,8 +317,8 @@ export default function OnlineTest() {
                     (askReading(r) ? (
                       <input
                         className={`otest-input${res && res.readingOk === false && !res.override ? ' bad' : ''}`}
-                        aria-label={`${r.no}번 읽기`}
-                        placeholder="읽기"
+                        aria-label={t('{n}번 읽기', { n: r.no })}
+                        placeholder={t('읽기')}
                         lang="ja"
                         value={answers[i]?.reading ?? ''}
                         disabled={!!results}
@@ -322,12 +326,12 @@ export default function OnlineTest() {
                         onKeyDown={onEnter}
                       />
                     ) : (
-                      <span className="otest-noread" title="한자가 없는 단어는 읽기를 쓰지 않아요">—</span>
+                      <span className="otest-noread" title={t('한자가 없는 단어는 읽기를 쓰지 않아요')}>—</span>
                     ))}
                   <input
                     className={`otest-input${res && !res.meaningOk && !res.override ? ' bad' : ''}`}
-                    aria-label={`${r.no}번 뜻`}
-                    placeholder="뜻"
+                    aria-label={t('{n}번 뜻', { n: r.no })}
+                    placeholder={t('뜻')}
                     value={answers[i]?.meaning ?? ''}
                     disabled={!!results}
                     onChange={(e) => update(i, 'meaning', e.target.value)}
@@ -343,7 +347,7 @@ export default function OnlineTest() {
                       </span>
                       {(!((res.readingOk ?? true) && res.meaningOk) || res.override) && (
                         <button className="btn-ghost-link otest-override" disabled={busyCards.has(r.cardId) || starState === 'saving'} onClick={() => void toggleOverride(i)}>
-                          {res.override ? '다시 오답으로' : '맞음으로'}
+                          {res.override ? t('다시 오답으로') : t('맞음으로')}
                         </button>
                       )}
                     </div>
@@ -362,19 +366,19 @@ export default function OnlineTest() {
                   <button
                     className="answer-no"
                     disabled={starBusy}
-                    title={starBusy ? '별표 저장이 끝나면 누를 수 있어요' : undefined}
+                    title={starBusy ? t('별표 저장이 끝나면 누를 수 있어요') : undefined}
                     onClick={retryWrong}
                   >
-                    틀린 {wrongCount}개만 다시 풀기
+                    {t('틀린 {n}개만 다시 풀기', { n: wrongCount })}
                   </button>
                 )}
                 <Link to={`/study?deckId=${deckId}&starredOnly=1`} className="answer-yes" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                  ⭐ 별표 복습 하러 가기
+                  {t('⭐ 별표 복습 하러 가기')}
                 </Link>
               </>
             ) : (
               <button className="answer-yes" onClick={grade}>
-                채점하기{blanks > 0 ? ` (빈칸 ${blanks}문항은 모름으로)` : ''}
+                {blanks > 0 ? t('채점하기 (빈칸 {n}문항은 모름으로)', { n: blanks }) : t('채점하기')}
               </button>
             )}
           </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api, getToken, logout as clientLogout } from '../api/client'
+import { t } from '../i18n'
 
 type Me = { id: number; email: string; nickname: string; provider: string; createdAt?: string }
 
@@ -61,11 +62,11 @@ const ICON = {
 }
 
 const MENU = [
-  { to: '/', label: '홈', icon: ICON.home, isActive: (p: string) => p === '/' },
-  { to: '/decks', label: '내 덱', icon: ICON.decks, isActive: (p: string) => p.startsWith('/decks') || p.startsWith('/import') },
-  { to: '/explore', label: '탐색', icon: ICON.explore, isActive: (p: string) => p.startsWith('/explore') || p.startsWith('/public') },
-  { to: '/stats', label: '통계', icon: ICON.stats, isActive: (p: string) => p.startsWith('/stats') },
-  { to: '/settings', label: '설정', icon: ICON.settings, isActive: (p: string) => p.startsWith('/settings') },
+  { to: '/', label: t('홈'), icon: ICON.home, isActive: (p: string) => p === '/' },
+  { to: '/decks', label: t('내 덱'), icon: ICON.decks, isActive: (p: string) => p.startsWith('/decks') || p.startsWith('/import') },
+  { to: '/explore', label: t('탐색'), icon: ICON.explore, isActive: (p: string) => p.startsWith('/explore') || p.startsWith('/public') },
+  { to: '/stats', label: t('통계'), icon: ICON.stats, isActive: (p: string) => p.startsWith('/stats') },
+  { to: '/settings', label: t('설정'), icon: ICON.settings, isActive: (p: string) => p.startsWith('/settings') },
 ]
 
 // 리디자인(8/30): 상단 가로 탭 → Quizlet식 좌측 사이드바. 컴포넌트 이름은 유지해서
@@ -150,14 +151,14 @@ export default function TopNav({ streak }: { streak?: number }) {
         {/* 모바일 상단 헤더 오른쪽 — 데스크톱에선 숨김 */}
         <div className="side-account-mobile">
           {loggedIn ? (
-            <button className="nav-logout" onClick={logout}>로그아웃</button>
+            <button className="nav-logout" onClick={logout}>{t('로그아웃')}</button>
           ) : (
-            <Link to="/login" className="btn-primary side-login-btn">로그인</Link>
+            <Link to="/login" className="btn-primary side-login-btn">{t('로그인')}</Link>
           )}
         </div>
       </div>
 
-      <nav className="side-menu" aria-label="주 메뉴">
+      <nav className="side-menu" aria-label={t('주 메뉴')}>
         {MENU.map((m) => (
           <Link key={m.to} to={m.to} className={m.isActive(pathname) ? 'active' : ''}>
             {m.icon}
@@ -168,7 +169,7 @@ export default function TopNav({ streak }: { streak?: number }) {
 
       {loggedIn && folders.length > 0 && (
         <div className="side-folders">
-          <p className="side-folders-head">내 폴더</p>
+          <p className="side-folders-head">{t('내 폴더')}</p>
           {folders.map((f) => (
             <Link
               key={f.id}
@@ -186,13 +187,13 @@ export default function TopNav({ streak }: { streak?: number }) {
       <div className="side-foot">
         {streak !== undefined && streak > 0 && (
           <div className="streak-pill">
-            <span className="dot" /> {streak}일 연속
+            <span className="dot" /> {t('{n}일 연속', { n: streak })}
           </div>
         )}
         {loggedIn ? (
           <div className="side-account">
             <div className="avatar-wrap" ref={popRef}>
-              <button className="avatar avatar-btn" onClick={toggleProfile} aria-label="내 프로필">
+              <button className="avatar avatar-btn" onClick={toggleProfile} aria-label={t('내 프로필')}>
                 {emailInitial()}
               </button>
               {open && (
@@ -202,24 +203,24 @@ export default function TopNav({ streak }: { streak?: number }) {
                       <p className="pp-nick">{me.nickname}</p>
                       <p className="pp-email">{me.email}</p>
                       <p className="pp-meta">
-                        <span className="pp-badge">{me.provider === 'google' ? '구글 연결됨' : '이메일 가입'}</span>
-                        {me.createdAt && <span>{me.createdAt.slice(0, 10)} 가입</span>}
+                        <span className="pp-badge">{me.provider === 'google' ? t('구글 연결됨') : t('이메일 가입')}</span>
+                        {me.createdAt && <span>{t('{date} 가입', { date: me.createdAt.slice(0, 10) })}</span>}
                       </p>
                     </>
                   ) : (
-                    <p className="pp-email">불러오는 중…</p>
+                    <p className="pp-email">{t('불러오는 중…')}</p>
                   )}
                 </div>
               )}
             </div>
             <button className="nav-logout" onClick={logout}>
-              로그아웃
+              {t('로그아웃')}
             </button>
           </div>
         ) : (
           // 비로그인 열람(UNLISTED 링크 진입 등) — 로그인으로 유도
           <Link to="/login" className="btn-primary side-login-btn">
-            로그인
+            {t('로그인')}
           </Link>
         )}
       </div>

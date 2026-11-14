@@ -5,6 +5,7 @@ import { afterCopy, copyDeckApi, toggleLikeApi, type PageResp, type PublicCard, 
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
 import Ruby from '../components/Ruby'
+import { t } from '../i18n'
 
 // 공개 덱 상세 — 복사 전에 내용을 볼 수 있게 (백로그 ②). UNLISTED 링크 진입점이기도 함.
 export default function PublicDeckDetail() {
@@ -66,7 +67,7 @@ export default function PublicDeckDetail() {
       <TopNav />
       <div className="shell">
         <p style={{ margin: '0 0 14px' }}>
-          <Link to="/explore" className="hero-secondary">← 탐색</Link>
+          <Link to="/explore" className="hero-secondary">{t('← 탐색')}</Link>
         </p>
 
         {error && <p className="error" role="alert">{error}</p>}
@@ -74,10 +75,10 @@ export default function PublicDeckDetail() {
         {deck && (
           <div className="page-head">
             <div>
-              <span className="tag">{deck.mine ? '내 덱' : deck.authorNickname}</span>
+              <span className="tag">{deck.mine ? t('내 덱') : deck.authorNickname}</span>
               <h1 style={{ marginTop: 10 }}>{deck.title}</h1>
               <p className="sub">
-                카드 {deck.cardCount}장{deck.description ? ` · ${deck.description}` : ''} · ♥ {deck.likeCount} · 복사 {deck.copyCount}
+                {t('카드 {n}장', { n: deck.cardCount })}{deck.description ? ` · ${deck.description}` : ''} · ♥ {deck.likeCount} · {t('복사 {n}', { n: deck.copyCount })}
               </p>
             </div>
             <div className="mode-buttons">
@@ -87,22 +88,22 @@ export default function PublicDeckDetail() {
                 onClick={toggleLike}
                 aria-pressed={deck.likedByMe}
               >
-                ♥ {deck.likedByMe ? '좋아요 취소' : '좋아요'}
+                ♥ {deck.likedByMe ? t('좋아요 취소') : t('좋아요')}
               </button>
               {copiedId ? (
                 <button className="btn-primary" onClick={() => navigate(`/decks/${copiedId}`)}>
-                  복사됨 ✓ 내 덱 보기
+                  {t('복사됨 ✓ 내 덱 보기')}
                 </button>
               ) : (
                 <button className="btn-primary" disabled={busy} onClick={copy}>
-                  내 덱으로 복사
+                  {t('내 덱으로 복사')}
                 </button>
               )}
             </div>
           </div>
         )}
 
-        {cards === null && !error && <p className="muted">불러오는 중...</p>}
+        {cards === null && !error && <p className="muted">{t('불러오는 중...')}</p>}
 
         {cards && (
           <div className="word-list">
@@ -113,10 +114,10 @@ export default function PublicDeckDetail() {
                 <span className="word-back">{c.back}</span>
               </div>
             ))}
-            {cards.length === 0 && <p className="muted" style={{ padding: '24px 4px' }}>이 덱에는 아직 카드가 없어요.</p>}
+            {cards.length === 0 && <p className="muted" style={{ padding: '24px 4px' }}>{t('이 덱에는 아직 카드가 없어요.')}</p>}
             {total > cards.length && (
               <p className="muted" style={{ padding: '14px 4px', fontSize: 13 }}>
-                미리보기 {cards.length}장 / 전체 {total}장 — 복사하면 전부 가져옵니다
+                {t('미리보기 {n}장 / 전체 {total}장 — 복사하면 전부 가져옵니다', { n: cards.length, total })}
               </p>
             )}
           </div>

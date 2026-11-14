@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
 import { isPlainEnter } from '../lib/keys'
+import { t } from '../i18n'
 
 interface Deck {
   id: number
@@ -19,9 +20,9 @@ interface Folder {
 }
 
 const VISIBILITY_LABEL: Record<Deck['visibility'], string> = {
-  PRIVATE: '비공개',
-  PUBLIC: '공개',
-  UNLISTED: '링크 공유',
+  PRIVATE: t('비공개'),
+  PUBLIC: t('공개'),
+  UNLISTED: t('링크 공유'),
 }
 
 export default function Decks() {
@@ -83,7 +84,7 @@ export default function Decks() {
   }, [rawFolder])
 
   async function createFolder() {
-    const name = window.prompt('새 폴더 이름 (예: JLPT N1)')
+    const name = window.prompt(t('새 폴더 이름 (예: JLPT N1)'))
     if (!name?.trim()) return
     try {
       await api('/folders', { method: 'POST', body: JSON.stringify({ name: name.trim() }) })
@@ -94,7 +95,7 @@ export default function Decks() {
   }
 
   async function renameFolder(f: Folder) {
-    const name = window.prompt('폴더 이름 변경', f.name)
+    const name = window.prompt(t('폴더 이름 변경'), f.name)
     if (!name?.trim() || name.trim() === f.name) return
     try {
       await api(`/folders/${f.id}`, { method: 'PATCH', body: JSON.stringify({ name: name.trim() }) })
@@ -105,7 +106,7 @@ export default function Decks() {
   }
 
   async function removeFolder(f: Folder) {
-    if (!window.confirm(`"${f.name}" 폴더를 삭제할까요?\n안의 덱들은 삭제되지 않고 미분류로 이동해요.`)) return
+    if (!window.confirm(t('"{name}" 폴더를 삭제할까요?\n안의 덱들은 삭제되지 않고 미분류로 이동해요.', { name: f.name }))) return
     try {
       await api(`/folders/${f.id}`, { method: 'DELETE' })
       if (activeFolder === f.id) goFolder('all')
@@ -173,7 +174,7 @@ export default function Decks() {
       setPickerOpen(false)
       loadAndNotify()
     } catch (e) {
-      setError(`${done}개 담은 후 중단: ${(e as Error).message} — 목록을 새로고침했어요`)
+      setError(t('{n}개 담은 후 중단: {message} — 목록을 새로고침했어요', { n: done, message: (e as Error).message }))
       loadAndNotify()
     } finally {
       setBusy(false)
@@ -185,8 +186,8 @@ export default function Decks() {
   async function deleteSelected() {
     if (busy || selected.size === 0) return
     const names = decks.filter((d) => selected.has(d.id)).map((d) => d.title)
-    const preview = names.slice(0, 5).map((n) => `· ${n}`).join('\n') + (names.length > 5 ? `\n… 외 ${names.length - 5}개` : '')
-    if (!window.confirm(`선택한 ${selected.size}개 덱을 삭제할까요?\n\n${preview}\n\n각 덱의 카드와 학습·퀴즈·타이핑 기록이 전부 사라지고 되돌릴 수 없어요.`)) return
+    const preview = names.slice(0, 5).map((n) => `· ${n}`).join('\n') + (names.length > 5 ? `\n${t('… 외 {n}개', { n: names.length - 5 })}` : '')
+    if (!window.confirm(t('선택한 {n}개 덱을 삭제할까요?\n\n{preview}\n\n각 덱의 카드와 학습·퀴즈·타이핑 기록이 전부 사라지고 되돌릴 수 없어요.', { n: selected.size, preview }))) return
     setBusy(true)
     setError('')
     let done = 0
@@ -200,7 +201,7 @@ export default function Decks() {
       loadAndNotify()
     } catch (e) {
       // 순차 처리라 중간 실패 시 앞부분만 지워짐 — 어디까지 됐는지 명시하고 실상태 재조회
-      setError(`${done}개 삭제 후 중단: ${(e as Error).message} — 목록을 새로고침했어요`)
+      setError(t('{n}개 삭제 후 중단: {message} — 목록을 새로고침했어요', { n: done, message: (e as Error).message }))
       loadAndNotify()
     } finally {
       setBusy(false)
@@ -233,7 +234,7 @@ export default function Decks() {
   // 랭킹 훅(공개 전환 시 ZSET 등록) 때문에 DB 한 방이 아니라 기존 API를 덱마다 호출한다
   async function applyVisibility(v: Deck['visibility']) {
     if (busy || selected.size === 0) return
-    if (v === 'PUBLIC' && !window.confirm(`선택한 ${selected.size}개 덱을 전체 공개할까요?\n탐색에 노출되고 누구나 검색·복사할 수 있어요.`)) return
+    if (v === 'PUBLIC' && !window.confirm(t('선택한 {n}개 덱을 전체 공개할까요?\n탐색에 노출되고 누구나 검색·복사할 수 있어요.', { n: selected.size }))) return
     setBusy(true)
     setError('')
     try {
@@ -270,23 +271,23 @@ export default function Decks() {
       <div className="shell">
         <div className="page-head">
           <div>
-            <h1>내 덱</h1>
-            <p className="sub">{decks.length}개의 덱 · 전체 {totalCards}장</p>
+            <h1>{t('내 덱')}</h1>
+            <p className="sub">{t('{n}개의 덱 · 전체 {cards}장', { n: decks.length, cards: totalCards })}</p>
           </div>
         </div>
 
         <div className="create-row">
           <input
-            aria-label="새 덱 이름"
-            placeholder="새 덱 이름을 입력하세요"
+            aria-label={t('새 덱 이름')}
+            placeholder={t('새 덱 이름을 입력하세요')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => isPlainEnter(e) && create()}
           />
           <button className="btn-primary" disabled={creating || !title.trim()} onClick={create}>
-            {creating ? '만드는 중...' : '덱 만들기'}
+            {creating ? t('만드는 중...') : t('덱 만들기')}
           </button>
-          <Link to="/import-files" className="btn-ghost-link">📁 파일로 만들기</Link>
+          <Link to="/import-files" className="btn-ghost-link">{t('📁 파일로 만들기')}</Link>
           <button
             className={`btn-ghost-link select-toggle ${selectMode ? 'on' : ''}`}
             onClick={() => {
@@ -294,16 +295,16 @@ export default function Decks() {
               setSelected(new Set())
             }}
           >
-            {selectMode ? '✕ 선택 취소' : '☑ 선택'}
+            {selectMode ? t('✕ 선택 취소') : t('☑ 선택')}
           </button>
         </div>
 
         <div className="folder-bar">
           <button className={`folder-chip ${activeFolder === 'all' ? 'active' : ''}`} onClick={() => goFolder('all')}>
-            전체 {decks.length}
+            {t('전체 {n}', { n: decks.length })}
           </button>
           <button className={`folder-chip ${activeFolder === 'none' ? 'active' : ''}`} onClick={() => goFolder('none')}>
-            📂 미분류 {unfiledCount}
+            {t('📂 미분류 {n}', { n: unfiledCount })}
           </button>
           {folders.map((f) => (
             <span key={f.id} className={`folder-chip ${activeFolder === f.id ? 'active' : ''}`}>
@@ -312,44 +313,46 @@ export default function Decks() {
               </button>
               {activeFolder === f.id && (
                 <>
-                  <button className="folder-chip-op" title="이름 변경" aria-label={`${f.name} 이름 변경`} onClick={() => renameFolder(f)}>✎</button>
-                  <button className="folder-chip-op" title="폴더 삭제 (덱은 미분류로)" aria-label={`${f.name} 삭제`} onClick={() => removeFolder(f)}>🗑</button>
+                  <button className="folder-chip-op" title={t('이름 변경')} aria-label={t('{name} 이름 변경', { name: f.name })} onClick={() => renameFolder(f)}>✎</button>
+                  <button className="folder-chip-op" title={t('폴더 삭제 (덱은 미분류로)')} aria-label={t('{name} 삭제', { name: f.name })} onClick={() => removeFolder(f)}>🗑</button>
                 </>
               )}
             </span>
           ))}
-          <button className="folder-chip folder-add" onClick={createFolder}>+ 새 폴더</button>
+          <button className="folder-chip folder-add" onClick={createFolder}>{t('+ 새 폴더')}</button>
         </div>
 
         {selectMode && (
           <div className="bulk-bar">
-            <span>{selected.size}개 선택</span>
+            <span>{t('{n}개 선택', { n: selected.size })}</span>
             <button className="btn-ghost-link" disabled={busy} onClick={() => setSelected(new Set(filtered.map((d) => d.id)))}>
-              전체 선택 ({filtered.length}개{activeFolder === 'all' ? ', 모든 페이지' : ' — 현재 폴더'})
+              {activeFolder === 'all'
+                ? t('전체 선택 ({n}개, 모든 페이지)', { n: filtered.length })
+                : t('전체 선택 ({n}개 — 현재 폴더)', { n: filtered.length })}
             </button>
             <span className="bulk-sep">→</span>
-            <button className="btn-ghost-link" disabled={busy || selected.size === 0} onClick={() => applyVisibility('PUBLIC')}>🌐 전체 공개</button>
-            <button className="btn-ghost-link" disabled={busy || selected.size === 0} onClick={() => applyVisibility('UNLISTED')}>🔗 링크 공개</button>
-            <button className="btn-ghost-link" disabled={busy || selected.size === 0} onClick={() => applyVisibility('PRIVATE')}>🔒 비공개</button>
+            <button className="btn-ghost-link" disabled={busy || selected.size === 0} onClick={() => applyVisibility('PUBLIC')}>{t('🌐 전체 공개')}</button>
+            <button className="btn-ghost-link" disabled={busy || selected.size === 0} onClick={() => applyVisibility('UNLISTED')}>{t('🔗 링크 공개')}</button>
+            <button className="btn-ghost-link" disabled={busy || selected.size === 0} onClick={() => applyVisibility('PRIVATE')}>{t('🔒 비공개')}</button>
             <span className="bulk-sep">·</span>
             <select
               className="bulk-move"
               disabled={busy || selected.size === 0}
               value=""
-              aria-label="선택한 덱을 폴더로 이동"
+              aria-label={t('선택한 덱을 폴더로 이동')}
               onChange={(e) => {
                 if (e.target.value === '') return
                 moveSelected(e.target.value === 'none' ? null : Number(e.target.value))
               }}
             >
-              <option value="">📁 폴더로 이동…</option>
-              <option value="none">📂 미분류로</option>
+              <option value="">{t('📁 폴더로 이동…')}</option>
+              <option value="none">{t('📂 미분류로')}</option>
               {folders.map((f) => (
                 <option key={f.id} value={f.id}>📁 {f.name}</option>
               ))}
             </select>
-            <button className="btn-ghost-link bulk-danger" disabled={busy || selected.size === 0} onClick={deleteSelected}>🗑 삭제</button>
-            {busy && <span className="muted">적용 중…</span>}
+            <button className="btn-ghost-link bulk-danger" disabled={busy || selected.size === 0} onClick={deleteSelected}>{t('🗑 삭제')}</button>
+            {busy && <span className="muted">{t('적용 중…')}</span>}
           </div>
         )}
 
@@ -359,8 +362,8 @@ export default function Decks() {
           {typeof activeFolder === 'number' && !selectMode && (
             <button className="deck-card deck-add-card" onClick={openPicker}>
               <span className="add-plus">＋</span>
-              <p className="title">이 폴더에 덱 담기</p>
-              <p className="meta">이미 만든 덱을 골라서 가져와요</p>
+              <p className="title">{t('이 폴더에 덱 담기')}</p>
+              <p className="meta">{t('이미 만든 덱을 골라서 가져와요')}</p>
             </button>
           )}
           {visible.map((d) => (
@@ -378,56 +381,56 @@ export default function Decks() {
               {selectMode && <span className="pick-mark">{selected.has(d.id) ? '☑' : '☐'}</span>}
               <span className="tag">{VISIBILITY_LABEL[d.visibility]}</span>
               <p className="title">{d.title}</p>
-              <p className="meta">카드 {d.cardCount}장{d.description ? ` · ${d.description}` : ''}</p>
+              <p className="meta">{t('카드 {n}장', { n: d.cardCount })}{d.description ? ` · ${d.description}` : ''}</p>
             </Link>
           ))}
           {filtered.length === 0 && (
             <p className="muted">
               {decks.length === 0
-                ? '덱이 없어요. 위에서 첫 덱을 만들어보세요.'
+                ? t('덱이 없어요. 위에서 첫 덱을 만들어보세요.')
                 : typeof activeFolder === 'number'
-                  ? '이 폴더엔 아직 덱이 없어요 — "＋ 덱 담기" 카드로 채워보세요.'
-                  : '미분류 덱이 없어요 — 전부 폴더에 정리되어 있어요.'}
+                  ? t('이 폴더엔 아직 덱이 없어요 — "＋ 덱 담기" 카드로 채워보세요.')
+                  : t('미분류 덱이 없어요 — 전부 폴더에 정리되어 있어요.')}
             </p>
           )}
         </div>
 
         {totalPages > 1 && (
           <div className="pager">
-            <button disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>◀ 이전</button>
+            <button disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>{t('◀ 이전')}</button>
             {Array.from({ length: totalPages }, (_, i) => (
               <button key={i} className={i === safePage ? 'active' : ''} onClick={() => setPage(i)}>
                 {i + 1}
               </button>
             ))}
-            <button disabled={safePage === totalPages - 1} onClick={() => setPage(safePage + 1)}>다음 ▶</button>
+            <button disabled={safePage === totalPages - 1} onClick={() => setPage(safePage + 1)}>{t('다음 ▶')}</button>
           </div>
         )}
 
         {pickerOpen && typeof activeFolder === 'number' && (
           <div className="modal-overlay" onClick={(e) => e.detail < 2 && !busy && setPickerOpen(false)}>
-            <div className="modal-panel" role="dialog" aria-modal="true" aria-label="폴더에 덱 담기" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-panel" role="dialog" aria-modal="true" aria-label={t('폴더에 덱 담기')} onClick={(e) => e.stopPropagation()}>
               <div className="modal-head">
-                <h2>📁 {activeFolderObj?.name ?? '폴더'}에 덱 담기</h2>
-                <button className="modal-close" aria-label="닫기" disabled={busy} onClick={() => setPickerOpen(false)}>✕</button>
+                <h2>{t('📁 {name}에 덱 담기', { name: activeFolderObj?.name ?? t('폴더') })}</h2>
+                <button className="modal-close" aria-label={t('닫기')} disabled={busy} onClick={() => setPickerOpen(false)}>✕</button>
               </div>
               {candidates.length === 0 ? (
-                <p className="muted">담을 수 있는 덱이 없어요 — 모든 덱이 이미 이 폴더에 있어요.</p>
+                <p className="muted">{t('담을 수 있는 덱이 없어요 — 모든 덱이 이미 이 폴더에 있어요.')}</p>
               ) : (
                 <>
                   <div className="picker-tools">
                     <input
-                      aria-label="담을 덱 검색"
-                      placeholder="덱 이름 검색"
+                      aria-label={t('담을 덱 검색')}
+                      placeholder={t('덱 이름 검색')}
                       autoFocus
                       value={pickerQuery}
                       onChange={(e) => setPickerQuery(e.target.value)}
                     />
                     <button className="btn-ghost-link" disabled={busy || shownCandidates.length === 0} onClick={() => setPicked(new Set(shownCandidates.map((d) => d.id)))}>
-                      보이는 것 전체 선택
+                      {t('보이는 것 전체 선택')}
                     </button>
                     <button className="btn-ghost-link" disabled={busy || picked.size === 0} onClick={() => setPicked(new Set())}>
-                      해제
+                      {t('해제')}
                     </button>
                   </div>
                   <div className="pick-list">
@@ -436,16 +439,16 @@ export default function Decks() {
                         <input type="checkbox" checked={picked.has(d.id)} disabled={busy} onChange={() => togglePick(d.id)} />
                         <span className="pick-title">{d.title}</span>
                         <span className="pick-where">
-                          {d.folderId === null ? '📂 미분류' : `📁 ${folders.find((f) => f.id === d.folderId)?.name ?? '다른 폴더'}`} · {d.cardCount}장
+                          {d.folderId === null ? t('📂 미분류') : `📁 ${folders.find((f) => f.id === d.folderId)?.name ?? t('다른 폴더')}`} · {t('{n}장', { n: d.cardCount })}
                         </span>
                       </label>
                     ))}
-                    {shownCandidates.length === 0 && <p className="muted">검색과 일치하는 덱이 없어요.</p>}
+                    {shownCandidates.length === 0 && <p className="muted">{t('검색과 일치하는 덱이 없어요.')}</p>}
                   </div>
                   <div className="modal-foot">
-                    <span className="muted">다른 폴더의 덱을 담으면 그쪽에서는 빠져요 (덱은 한 폴더에만 소속)</span>
+                    <span className="muted">{t('다른 폴더의 덱을 담으면 그쪽에서는 빠져요 (덱은 한 폴더에만 소속)')}</span>
                     <button className="btn-primary" disabled={busy || picked.size === 0} onClick={addPickedToFolder}>
-                      {busy ? '담는 중…' : `${picked.size}개 담기`}
+                      {busy ? t('담는 중…') : t('{n}개 담기', { n: picked.size })}
                     </button>
                   </div>
                 </>

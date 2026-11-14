@@ -185,8 +185,8 @@ function columnWidths(japanese: boolean): number[] {
   return [NO_COL, a, rest - a]
 }
 
-function headerRow(widths: number[], japanese: boolean): string {
-  const labels = japanese ? ['번호', '단어', '읽기', '뜻'] : ['번호', '단어', '뜻']
+function headerRow(widths: number[], japanese: boolean, L: SheetDocLabels): string {
+  const labels = japanese ? [L.no, L.word, L.reading, L.meaning] : [L.no, L.word, L.meaning]
   const st: RunStyle = { sizeHalfPt: 20, bold: true }
   return row(labels.map((l, i) => cell(widths[i], run(l, st), { fill: HEAD_FILL, align: 'center' })).join(''), 420, true)
 }
@@ -216,35 +216,68 @@ function answerRow(r: SheetRow, widths: number[], japanese: boolean): string {
   return row(no + word + reading + meaning(widths[3]), ANSWER_ROW_H)
 }
 
+/**
+ * 문서에 들어가는 글자 — 기본은 한국어. 화면(TestSheetDialog)이 고른 언어의 문구를 넘긴다.
+ * 이 파일은 i18n을 import 하지 않는다: scripts/load-ts.mjs가 상대 경로 import를 못 풀어서 (다국어 11/14)
+ */
+export interface SheetDocLabels {
+  /** 머리줄 칸 이름 */
+  no: string
+  word: string
+  reading: string
+  meaning: string
+  /** 문제지 제목 — 덱 이름을 받아 */
+  sheetTitle: (deckTitle: string) => string
+  /** 정답지 제목 — 덱 이름을 받아 */
+  answerTitle: (deckTitle: string) => string
+  /** 날짜·점수 줄의 낱말 */
+  date: string
+  score: string
+}
+
+export const SHEET_DOC_LABELS_KO: SheetDocLabels = {
+  no: '번호',
+  word: '단어',
+  reading: '읽기',
+  meaning: '뜻',
+  sheetTitle: (deckTitle) => `${deckTitle} 시험지`,
+  answerTitle: (deckTitle) => `${deckTitle} 정답`,
+  date: '날짜',
+  score: '점수',
+}
+
 export interface SheetDocInfo {
   deckTitle: string
   /** 문제지 맨 위 부제 — 예: "⭐ 별표 30문항 · 순서 섞음" */
   subtitle: string
   answerKey: boolean
+  /** 문서 안 글자 — 없으면 한국어 */
+  labels?: SheetDocLabels
 }
 
 export function testSheetDocumentXml(model: SheetModel, info: SheetDocInfo): string {
+  const L = info.labels ?? SHEET_DOC_LABELS_KO
   const widths = columnWidths(model.japanese)
   const n = model.rows.length
-  const title = para(run(`${info.deckTitle} 시험지`, { sizeHalfPt: 30, bold: true, japanese: model.japanese }), 'left', 60, true)
+  const title = para(run(L.sheetTitle(info.deckTitle), { sizeHalfPt: 30, bold: true, japanese: model.japanese }), 'left', 60, true)
   const meta = para(
     run(info.subtitle, { sizeHalfPt: 18, color: '666666' }) +
-      run(`        날짜 ______________     점수 ______ / ${n}`, { sizeHalfPt: 20 }),
+      run(`        ${L.date} ______________     ${L.score} ______ / ${n}`, { sizeHalfPt: 20 }),
     'left',
     160,
     true,
   )
   const qTable = table(
     widths,
-    headerRow(widths, model.japanese) + model.rows.map((r) => questionRow(r, widths, model.japanese)).join(''),
+    headerRow(widths, model.japanese, L) + model.rows.map((r) => questionRow(r, widths, model.japanese)).join(''),
   )
   let body = title + meta + qTable
   if (info.answerKey) {
     const pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'
-    const aTitle = para(run(`${info.deckTitle} 정답`, { sizeHalfPt: 26, bold: true, japanese: model.japanese }), 'left', 120, true)
+    const aTitle = para(run(L.answerTitle(info.deckTitle), { sizeHalfPt: 26, bold: true, japanese: model.japanese }), 'left', 120, true)
     const aTable = table(
       widths,
-      headerRow(widths, model.japanese) + model.rows.map((r) => answerRow(r, widths, model.japanese)).join(''),
+      headerRow(widths, model.japanese, L) + model.rows.map((r) => answerRow(r, widths, model.japanese)).join(''),
     )
     body += pageBreak + aTitle + aTable
   }

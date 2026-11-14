@@ -1,5 +1,6 @@
 // API 클라이언트 — 모든 요청이 이 관문을 지난다.
 // 401(미인증/만료)이면 refresh 쿠키(httpOnly)로 access token을 재발급받아 1회 재시도.
+import { t } from '../i18n'
 
 const TOKEN_KEY = 'vm.accessToken'
 
@@ -91,7 +92,7 @@ export async function api<T>(path: string, options: RequestInit = {}, retried = 
       clearToken()
       window.location.href = '/app/login'
     }
-    throw new Error('로그인이 필요합니다')
+    throw new Error(t('로그인이 필요합니다'))
   }
 
   if (!res.ok) {
@@ -99,7 +100,7 @@ export async function api<T>(path: string, options: RequestInit = {}, retried = 
     // Error를 상속하므로 기존 `(e as Error).message` 호출부는 그대로 동작한다.
     // status/code를 실어 보내는 이유: 같은 409라도 대응이 정반대인 경우가 있어
     // 호출부가 메시지 문자열을 파싱하는 일이 없어야 한다 (2026-09-01)
-    throw new ApiError(body?.message ?? `요청 실패 (HTTP ${res.status})`, res.status, body?.code)
+    throw new ApiError(body?.message ?? t('요청 실패 (HTTP {status})', { status: res.status }), res.status, body?.code)
   }
   // 204 또는 200+빈 본문(삭제 등) — res.json()은 빈 본문에서 터진다
   const text = await res.text()

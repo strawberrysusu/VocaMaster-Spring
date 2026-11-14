@@ -1,13 +1,14 @@
 // 사용자 설정 — 브라우저 저장(localStorage). 서버 저장은 "기기 간 동기화"가 필요해질 때 (백로그).
 // 목업의 스위치(accent·deckColumns·quizAutoAdvance·showReading)를 실물로 만든 것 (2026-08-23).
+import { t } from '../i18n'
 
 export type AccentKey = 'indigo' | 'teal' | 'navy' | 'purple'
 
 export const ACCENTS: Record<AccentKey, { label: string; a: string; soft: string }> = {
-  indigo: { label: '인디고', a: '#3d3e96', soft: '#ececf7' },
-  teal: { label: '틸', a: '#2f8f83', soft: '#e6f3f1' },
-  navy: { label: '네이비', a: '#2b4a8a', soft: '#e8edf6' },
-  purple: { label: '퍼플', a: '#6b46a8', soft: '#efe9f7' },
+  indigo: { label: t('인디고'), a: '#3d3e96', soft: '#ececf7' },
+  teal: { label: t('틸'), a: '#2f8f83', soft: '#e6f3f1' },
+  navy: { label: t('네이비'), a: '#2b4a8a', soft: '#e8edf6' },
+  purple: { label: t('퍼플'), a: '#6b46a8', soft: '#efe9f7' },
 }
 
 export interface Settings {
