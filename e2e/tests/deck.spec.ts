@@ -82,7 +82,7 @@ test('시험지: Word 파일이 단어가 들어간 채로 받아진다', async 
 })
 
 // 학습 버튼 (11/14 사용자 요청) — '복습 학습 (Leitner)'·'⭐ 별표 복습' 두 버튼을 '낱말카드' 하나로: 누르면 범위를 고른다
-test('낱말카드 — 누르면 전체 복습 / 별표만 복습 중에서 고른다', async ({ page, request }) => {
+test('낱말카드 — 누르면 카드 학습 / 전체 복습 / 별표만 복습 중에서 고른다', async ({ page, request }) => {
   const deckId = await makeDeck(request, '낱말카드메뉴', ['感謝|かんしゃ|감사', 'ざら|아주 흔함'])
   const [first] = await listCards(request, deckId)
   await toggleStar(request, first.id)
@@ -90,7 +90,30 @@ test('낱말카드 — 누르면 전체 복습 / 별표만 복습 중에서 고�
   await page.goto(`/app/decks/${deckId}`)
   await page.locator('.mode-buttons').getByRole('button', { name: '낱말카드' }).click()
   const menu = page.getByRole('menu')
+  await expect(menu.getByRole('menuitem', { name: '카드 학습' })).toHaveAttribute('href', `/app/study?deckId=${deckId}&mode=browse`)
   await expect(menu.getByRole('menuitem', { name: '전체 복습' })).toHaveAttribute('href', `/app/study?deckId=${deckId}`)
   await menu.getByRole('menuitem', { name: '별표만 복습 (1장)' }).click()
   await expect(page).toHaveURL(new RegExp(`/app/study\\?deckId=${deckId}&starredOnly=1$`))
+})
+
+test('카드 학습 — 알아요·몰라요 없이 넘겨 보고, 서버에 아무것도 보내지 않는다', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '카드학습', ['感謝|かんしゃ|감사', 'ざら|아주 흔함'])
+  const sent: string[] = []
+  page.on('request', (r) => {
+    if (r.url().includes('/reviews/')) sent.push(r.url())
+  })
+
+  await page.goto(`/app/study?deckId=${deckId}&mode=browse`)
+  await expect(page.getByText('1 / 2 · 카드 학습')).toBeVisible()
+  await expect(page.getByRole('button', { name: '알아요' })).toHaveCount(0)
+  await page.keyboard.press('Space') // 뒤집기 — 카드 순서는 최신순이라 어느 카드든 뒷면(뜻)이 보이면 된다
+  await expect(page.locator('.study-answer')).toBeVisible()
+  await page.keyboard.press('KeyD') // 채점 키는 듣지 않는다 — 넘어가지 않는다
+  await expect(page.getByText('1 / 2 · 카드 학습')).toBeVisible()
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('ArrowRight') // 마지막 카드를 지나면 마칠지 묻는다
+  await expect(page.getByText('2장을 다 봤어요')).toBeVisible()
+  await page.getByRole('button', { name: '학습 완료' }).click()
+  await expect(page.getByRole('heading', { name: '카드 보기 완료' })).toBeVisible()
+  expect(sent, '카드 학습은 복습 기록 API를 부르지 않는다').toEqual([])
 })

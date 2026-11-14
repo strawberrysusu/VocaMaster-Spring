@@ -852,7 +852,11 @@ body:has(.topbar) {
 }
 .mode-buttons svg { flex-shrink: 0; }
 .mode-primary svg:last-child { margin-left: -2px; opacity: 0.85; }   /* ▾ 펼침 표시 */
-.mode-menu-wrap .top-menu { left: 0; right: auto; }   /* 낱말카드 버튼 왼쪽 끝에 맞춰 아래로 */
+.mode-menu-wrap .top-menu { left: 0; right: auto; min-width: 270px; }   /* 낱말카드 버튼 왼쪽 끝에 맞춰 아래로 */
+.top-menu .menu-2line { align-items: flex-start; }   /* 이름 + 한 줄 설명 */
+.top-menu .menu-2line svg { margin-top: 2px; }
+.menu-2line > span { display: flex; flex-direction: column; gap: 2px; font-weight: 600; }
+.menu-2line small { font-size: 12px; font-weight: 400; color: var(--muted); white-space: normal; }
 .top-menu .menu-disabled { display: flex; align-items: center; gap: 10px; padding: 9px 10px; font-size: 14px; color: #b4b5c2; cursor: not-allowed; }
 
 .mode-stub {

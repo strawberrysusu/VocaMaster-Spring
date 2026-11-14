@@ -24,6 +24,7 @@ export const ICON = {
   logout: svg(18, <><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 16l-4-4 4-4" /><path d="M6 12h10" /></>),
   // 덱 화면 학습 버튼 (11/14 사용자 요청 — 글자만으론 구분이 어렵다)
   cards: svg(18, <><rect x="3.5" y="7" width="13" height="13" rx="2.5" /><path d="M7.5 4h10.5a2 2 0 0 1 2 2v10.5" /></>),
+  review: svg(18, <><path d="M20 11.5a8 8 0 1 1-2.4-5.7" /><path d="M20 4v5h-5" /></>),
   star: svg(18, <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z" />),
   quiz: svg(18, <><circle cx="12" cy="12" r="8.5" /><path d="M9.6 9.6a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.4" /><path d="M12 17h.01" /></>),
   keyboard: svg(18, <><rect x="2.5" y="6" width="19" height="12" rx="2" /><path d="M6.5 10h.01M10 10h.01M14 10h.01M17.5 10h.01" /><path d="M7.5 14h9" /></>),

@@ -105,6 +105,9 @@ export default function Study() {
   const [params] = useSearchParams()
   const deckId = params.get('deckId')
   const starredOnly = params.get('starredOnly') === '1'   // /study?deckId=N&starredOnly=1 (덱 상세 '⭐만' 진입)
+  // 카드 학습 (/study?deckId=N&mode=browse, 11/14 사용자 요청) — 채점 없이 뒤집어 보기만.
+  // 알아요·몰라요 버튼·키·스와이프 채점이 없고, 답이 하나도 없으니 서버에 아무것도 보내지 않는다(끝내기 = '카드 보기 완료')
+  const browseOnly = params.get('mode') === 'browse'
 
   const [queue, setQueue] = useState<StudyCard[] | null>(null)
   const [idx, setIdx] = useState(0)
@@ -128,7 +131,7 @@ export default function Study() {
   const [dragging, setDragging] = useState(false)
 
   // 초안 키는 입구별로 분리 — 덱 학습과 전체 복습의 답안이 섞이면 안 된다
-  const draftKey = `vm.study.draft.${deckId ?? 'due'}${starredOnly ? '.starred' : ''}`
+  const draftKey = `vm.study.draft.${deckId ?? 'due'}${starredOnly ? '.starred' : ''}${browseOnly ? '.browse' : ''}`   // 카드 학습은 복습 초안과 섞이지 않게
   const draftLoaded = useRef(false)
   const cardRef = useRef<HTMLButtonElement>(null)
   // 카드 전환 잠금 — 알아요를 빠르게 두 번 누르면 setIdx가 두 번 돌아 카드를 건너뛰고,
@@ -266,7 +269,7 @@ export default function Study() {
     // flying: 카드가 날아가는 0.22초 동안은 채점·이동을 전부 막는다. 안 막으면 버튼이 먼저 카드를 넘기고,
     // 뒤늦게 도착한 스와이프 채점이 '옛 화면 기준'으로 한 번 더 넘겨 인덱스가 범위를 벗어난다(화면이 빔).
     // 몰라요를 눌렀다면 같은 카드에 알아요를 덮어쓰기도 했다 (9/17 Codex 재현, PR #10 회귀)
-    if (!card || advancing.current || attempted || flying.current) return
+    if (!card || advancing.current || attempted || flying.current || browseOnly) return   // 카드 학습은 채점이 없다
     advancing.current = true
     setAnswers((prev) => ({ ...prev, [card.cardId]: correct }))
     goNext()
@@ -426,6 +429,12 @@ export default function Study() {
       setFlyingCls(false)
       setDragX(0)
       if (currentCardId.current !== flownId) return   // 그 사이 카드가 바뀌었다면 늦은 채점은 적용하지 않는다 (이중 안전장치)
+      if (browseOnly) {
+        // 카드 학습: 채점 대신 넘기기 — 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전 (첫 카드면 제자리)
+        if (dir < 0) goNext()
+        else goPrev()
+        return
+      }
       pick(dir > 0)
     }, 220)
   }
@@ -595,7 +604,7 @@ export default function Study() {
             <div className="study-top">
               <Link to={backTo} className="hero-secondary" onClick={confirmQuit}>{t('← 그만하기')}</Link>
               <span className="muted" style={{ fontSize: 13.5 }}>
-                {idx + 1} / {total} · {t('답함 {n}', { n: answeredInQueue })}
+                {idx + 1} / {total} · {browseOnly ? t('카드 학습') : t('답함 {n}', { n: answeredInQueue })}
               </span>
             </div>
             {/* 막대 = 지금 위치(idx+1 / total). 답해서 넘어가든 화살표로 넘어가든 오르고, 이전으로 가면 준다.
@@ -629,8 +638,12 @@ export default function Study() {
               onPointerCancel={(e) => onCardPointerEnd(e, false)}
             >
               {/* 스와이프 중 방향 표시 — 민 거리에 비례해 진해진다 */}
-              <span className="swipe-tag yes" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, dragX) / SWIPE_COMMIT) }}>{t('알아요')}</span>
-              <span className="swipe-tag no" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, -dragX) / SWIPE_COMMIT) }}>{t('몰라요')}</span>
+              {!browseOnly && (
+                <>
+                  <span className="swipe-tag yes" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, dragX) / SWIPE_COMMIT) }}>{t('알아요')}</span>
+                  <span className="swipe-tag no" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, -dragX) / SWIPE_COMMIT) }}>{t('몰라요')}</span>
+                </>
+              )}
               {/* 읽기는 답의 절반(한자→읽기 회상 훈련) — 뜻 확인 후에만 공개. 읽기 없는 카드(영어 등)는 표시 없음 */}
               {revealed && card.reading && <span className="reading">{card.reading}</span>}
               <span className="study-word">{card.front}</span>
@@ -687,6 +700,7 @@ export default function Study() {
               더 붙는다. 복습 덱은 아는 카드가 대부분이라 그 한 탭이 매번 쌓인다.
               자기평가 학습이라 '떠올렸으면 바로 채점'이 자연스럽고, Quizlet도 앞면에서 바로 눌린다.
             */}
+            {!browseOnly && (
             <div className="answer-buttons">
               <button
                 className={`answer-no${picked === false ? ' picked' : ''}`}
@@ -705,26 +719,37 @@ export default function Study() {
                 {t('알아요')}
               </button>
             </div>
+            )}
             {!revealed && (
               <p className="muted study-tip" style={{ textAlign: 'center', fontSize: 13.5, marginTop: 10 }}>
-                {t('떠올렸으면 바로 답해도 되고, 카드를 눌러 뜻을 확인해도 돼요')}
-                <span className="only-touch"> · {t('옆으로 밀어서 답할 수도 있어요')}</span>
+                {browseOnly ? (
+                  t('카드를 눌러 뒤집고, 화살표나 옆으로 밀어 넘겨요')
+                ) : (
+                  <>
+                    {t('떠올렸으면 바로 답해도 되고, 카드를 눌러 뜻을 확인해도 돼요')}
+                    <span className="only-touch"> · {t('옆으로 밀어서 답할 수도 있어요')}</span>
+                  </>
+                )}
               </p>
             )}
 
             <div className="study-nav">
               <button className="nav-btn" onClick={goPrev} disabled={idx === 0 || flyingCls}>{t('← 이전')}</button>
               <span className="muted" style={{ fontSize: 12.5 }}>
-                {picked === undefined ? t('아직 답하지 않음') : picked ? t('이번 답변: 알아요') : t('이번 답변: 몰라요')}
+                {browseOnly ? '' : picked === undefined ? t('아직 답하지 않음') : picked ? t('이번 답변: 알아요') : t('이번 답변: 몰라요')}
               </span>
               <button className="nav-btn" onClick={goNext} disabled={flyingCls}>{t('다음 →')}</button>
             </div>
             {/* 마우스·키보드 환경에서만 보인다 (CSS hover:hover) */}
             <p className="muted kbd-hint" aria-hidden="true">
-              <kbd>Space</kbd> / <kbd>↑</kbd> {t('뒤집기')} · <kbd>A</kbd> {t('몰라요')} · <kbd>D</kbd> {t('알아요')} · <kbd>S</kbd> {t('별표')} · <kbd>←</kbd> <kbd>→</kbd> {t('이동')}
+              <kbd>Space</kbd> / <kbd>↑</kbd> {t('뒤집기')}
+              {!browseOnly && <> · <kbd>A</kbd> {t('몰라요')} · <kbd>D</kbd> {t('알아요')}</>}
+              {' · '}<kbd>S</kbd> {t('별표')} · <kbd>←</kbd> <kbd>→</kbd> {t('이동')}
             </p>
             <p className="muted study-foot">
-              {t('답은 아직 저장되지 않았어요. 되돌아가서 얼마든지 고칠 수 있고, 마지막에 한 번에 제출됩니다.')}
+              {browseOnly
+                ? t('카드 학습은 기록을 남기지 않아요. 복습 일정은 그대로예요.')
+                : t('답은 아직 저장되지 않았어요. 되돌아가서 얼마든지 고칠 수 있고, 마지막에 한 번에 제출됩니다.')}
             </p>
           </>
         )}
@@ -734,11 +759,19 @@ export default function Study() {
           <div className="result-panel">
             <h2>{draftCount === 0 ? t('카드 보기를 마칠까요?') : t('제출할까요?')}</h2>
             <p className="result-line">
-              {t('{n}장 중', { n: total })} <b>{t('{n}장', { n: answeredInQueue })}</b> {t('답함')}
-              {answeredInQueue < total && <> · {t('미응답 {n}장', { n: total - answeredInQueue })}</>}
+              {browseOnly ? (
+                t('{n}장을 다 봤어요', { n: total })
+              ) : (
+                <>
+                  {t('{n}장 중', { n: total })} <b>{t('{n}장', { n: answeredInQueue })}</b> {t('답함')}
+                  {answeredInQueue < total && <> · {t('미응답 {n}장', { n: total - answeredInQueue })}</>}
+                </>
+              )}
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
-              {draftCount === 0
+              {browseOnly
+                ? t('카드 학습은 기록을 남기지 않아요. 복습 일정은 그대로예요.')
+                : draftCount === 0
                 ? t('답하지 않고 카드만 봐도 완료할 수 있어요. 학습 상태와 복습 일정은 변경되지 않아요.')
                 : t('학습 완료를 누르면 답한 카드의 복습 일정과 학습 상태가 저장돼요. 미응답 카드는 그대로 남아요.')}
             </p>

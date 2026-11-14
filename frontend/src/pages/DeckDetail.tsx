@@ -279,16 +279,24 @@ export default function DeckDetail() {
                 </button>
                 {studyMenu.open && (
                   <div className="top-menu" role="menu">
-                    <Link role="menuitem" to={`/study?deckId=${id}`}>
-                      {ICON.cards} {t('전체 복습')}
+                    {/* 카드 학습 = 채점 없이 넘겨 보기 (11/14 사용자: '순수하게 카드만 보고 싶을 때도 있다') */}
+                    <Link role="menuitem" className="menu-2line" to={`/study?deckId=${id}&mode=browse`}>
+                      {ICON.cards}
+                      <span>{t('카드 학습')}<small>{t('뒤집어 보기만 · 기록 안 남음')}</small></span>
+                    </Link>
+                    <Link role="menuitem" className="menu-2line" to={`/study?deckId=${id}`}>
+                      {ICON.review}
+                      <span>{t('전체 복습')}<small>{t('알아요·몰라요로 복습 일정 관리')}</small></span>
                     </Link>
                     {deck !== null && deck.starredCount > 0 ? (
-                      <Link role="menuitem" to={`/study?deckId=${id}&starredOnly=1`}>
-                        {ICON.star} {t('별표만 복습 ({n}장)', { n: deck.starredCount })}
+                      <Link role="menuitem" className="menu-2line" to={`/study?deckId=${id}&starredOnly=1`}>
+                        {ICON.star}
+                        <span>{t('별표만 복습 ({n}장)', { n: deck.starredCount })}<small>{t('⭐ 표시한 카드만')}</small></span>
                       </Link>
                     ) : (
-                      <span role="menuitem" aria-disabled="true" className="menu-disabled" title={t('별표한 카드가 없어요')}>
-                        {ICON.star} {t('별표만 복습')}
+                      <span role="menuitem" aria-disabled="true" className="menu-disabled menu-2line" title={t('별표한 카드가 없어요')}>
+                        {ICON.star}
+                        <span>{t('별표만 복습')}<small>{t('별표한 카드가 없어요')}</small></span>
                       </span>
                     )}
                   </div>
