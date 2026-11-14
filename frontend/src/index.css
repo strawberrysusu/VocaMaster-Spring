@@ -2267,6 +2267,39 @@ button.mode-btn { cursor: pointer; font-family: inherit; }
 .sheet-select { border: 1px solid var(--border, #e2e2ea); border-radius: 10px; padding: 7px 10px; font-size: 14px; background: #fff; }
 .sheet-check { gap: 8px; cursor: pointer; }
 .sheet-note { margin: 14px 0 0; font-size: 12.5px; }
+.sheet-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+
+/* 📝 온라인 시험지 (3단계, 11/14) */
+.answer-buttons.single { grid-template-columns: 1fr; }
+.otest-summary { margin: 0 0 14px; padding: 12px 16px; background: var(--a-soft, #eef); border-radius: 12px; }
+.otest-star-note { font-size: 14px; color: var(--ink-2, #444); }
+.otest-sheet { display: flex; flex-direction: column; border: 1px solid var(--border, #e2e2ea); border-radius: 14px; background: #fff; overflow: hidden; }
+.otest-head, .otest-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px 10px; align-items: center; padding: 10px 14px; }
+.otest-sheet.jp .otest-head, .otest-sheet.jp .otest-row { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr); }
+.otest-head { background: #f6f6f9; font-size: 12.5px; font-weight: 700; color: #888; border-bottom: 1px solid var(--border, #e2e2ea); }
+.otest-row + .otest-row { border-top: 1px solid #f0f0f4; }
+.otest-row.ok { background: #f3faf5; }
+.otest-row.wrong { background: #fdf4f6; }
+.otest-no { color: #999; font-size: 13px; text-align: center; }
+.otest-word { font-size: 17px; font-weight: 700; color: var(--ink-2, #333); overflow-wrap: anywhere; }
+.otest-word.jp { font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 19px; }
+.otest-input { min-width: 0; width: 100%; box-sizing: border-box; border: 1px solid var(--border, #e2e2ea); border-radius: 9px; padding: 8px 10px; font-size: 15px; background: #fff; color: inherit; }
+.otest-input:focus { outline: 2px solid var(--a-soft, #dde); border-color: var(--a, #55c); }
+.otest-input:disabled { background: transparent; }
+.otest-input.bad { border-color: #e2a3b0; color: #b0485c; text-decoration: line-through; text-decoration-color: rgba(176, 72, 92, 0.5); }
+.otest-noread { color: #c4c4cf; text-align: center; background: #f3f3f6; border-radius: 9px; padding: 8px 0; }
+.otest-answer { grid-column: 2 / -1; display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; font-size: 13.5px; }
+.otest-correct { color: #555; overflow-wrap: anywhere; }
+.otest-row.wrong .otest-correct { color: #99566a; font-weight: 600; }
+.otest-override { padding: 4px 10px; font-size: 12.5px; }
+@media (max-width: 640px) {
+  .otest-head { display: none; }
+  .otest-row, .otest-sheet.jp .otest-row { grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1fr); padding: 10px; }
+  /* 일본어: 단어 한 줄, 그 아래 읽기 · 뜻 */
+  .otest-sheet.jp .otest-word { grid-column: 2 / -1; }
+  .otest-sheet.jp .otest-row > :nth-child(3) { grid-column: 2; }
+  .otest-sheet.jp .otest-row > :nth-child(4) { grid-column: 3; }
+}
 
 .bulk-move {
   border: 1px solid #d8d8e2;

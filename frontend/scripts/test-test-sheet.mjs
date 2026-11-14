@@ -24,15 +24,15 @@ check('crc32 표준 예문', docx.crc32(enc.encode('The quick brown fox jumps ov
 
 // ── 문항 만들기
 const jpCards = [
-  { front: '感謝', reading: 'かんしゃ', back: '감사', starred: true },
-  { front: 'ざら', reading: null, back: '아주 흔함', starred: false },
-  { front: 'ジャンケン', reading: 'じゃんけん', back: '가위바위보', starred: true },
-  { front: '(開催が)危ぶまれる', reading: '(かいさいが)あやぶまれる', back: '(개최가) 우려되다', starred: false },
-  { front: '滅私奉公', reading: 'めっしほうこう', back: '멸사봉공 (사사로운 이익을 버리고 나라·조직을 위해 힘씀)', starred: false },
+  { id: 1, front: '感謝', reading: 'かんしゃ', back: '감사', starred: true },
+  { id: 2, front: 'ざら', reading: null, back: '아주 흔함', starred: false },
+  { id: 3, front: 'ジャンケン', reading: 'じゃんけん', back: '가위바위보', starred: true },
+  { id: 4, front: '(開催が)危ぶまれる', reading: '(かいさいが)あやぶまれる', back: '(개최가) 우려되다', starred: false },
+  { id: 5, front: '滅私奉公', reading: 'めっしほうこう', back: '멸사봉공 (사사로운 이익을 버리고 나라·조직을 위해 힘씀)', starred: false },
 ]
 const enCards = [
-  { front: 'apple', reading: null, back: 'n. 사과', starred: false },
-  { front: 'bottom', reading: null, back: 'n. 바닥, 아래', starred: true },
+  { id: 6, front: 'apple', reading: null, back: 'n. 사과', starred: false },
+  { id: 7, front: 'bottom', reading: null, back: 'n. 바닥, 아래', starred: true },
 ]
 const all = sheet.buildSheet(jpCards, { scope: 'all', count: 'all', shuffle: false })
 check('일본어 덱 판정', all.japanese === true)
@@ -42,6 +42,7 @@ check('한자 단어는 읽기 칸', all.rows[0].needsReading === true && all.ro
 check('가나만 있는 단어는 읽기 칸 없음', all.rows[1].needsReading === false && all.rows[2].needsReading === false)
 check('예문 괄호 단어도 한자가 있으면 읽기 칸', all.rows[3].needsReading === true)
 check('정답지 읽기·뜻', all.rows[0].reading === 'かんしゃ' && all.rows[0].meaning === '감사')
+check('카드 id 유지', all.rows.map((r) => r.cardId).join(',') === '1,2,3,4,5')
 check('읽기 없는 카드는 빈 문자열', all.rows[1].reading === '')
 
 const starred = sheet.buildSheet(jpCards, { scope: 'starred', count: 'all', shuffle: false })

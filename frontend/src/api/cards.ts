@@ -32,3 +32,17 @@ export async function fetchAllCards(deckId: string | number): Promise<{ cards: C
   }
   return { cards, total: first.totalElements }
 }
+
+export interface SetStarredResult {
+  starred: boolean
+  /** 이번 요청으로 값이 실제로 바뀐 카드 (이미 그 값이던 카드는 빠진다) */
+  changedIds: number[]
+}
+
+/** 별표 일괄 설정 (멱등, ADR-053) — 온라인 시험지 오답 자동 ⭐ / '맞음으로' 되돌리기 */
+export function setStarred(deckId: string | number, cardIds: number[], starred: boolean): Promise<SetStarredResult> {
+  return api<SetStarredResult>(`/decks/${deckId}/cards/star`, {
+    method: 'PATCH',
+    body: JSON.stringify({ cardIds, starred }),
+  })
+}

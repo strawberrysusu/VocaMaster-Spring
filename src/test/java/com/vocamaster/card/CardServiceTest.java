@@ -2,7 +2,10 @@ package com.vocamaster.card;
 
 import com.vocamaster.card.dto.CardResponse;
 import com.vocamaster.card.dto.CreateCardRequest;
+import com.vocamaster.card.dto.SetStarredRequest;
+import com.vocamaster.card.dto.SetStarredResponse;
 import com.vocamaster.card.dto.UpdateCardRequest;
+import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
@@ -128,6 +131,80 @@ class CardServiceTest extends AbstractIntegrationTest {
 
         CardResponse toggledBack = cardService.toggleStar(card.getId(), user.getId());
         assertFalse(toggledBack.getStarred());
+    }
+
+    // ─── 별표 일괄 설정 (온라인 시험지, ADR-053) ───
+
+    private Card saveCard(Deck target, String front, boolean starred) {
+        return cardRepository.save(Card.builder().front(front).back(front + " 뜻").deck(target).starred(starred).build());
+    }
+
+    private SetStarredRequest starReq(boolean starred, Long... ids) {
+        SetStarredRequest req = new SetStarredRequest();
+        req.setCardIds(List.of(ids));
+        req.setStarred(starred);
+        return req;
+    }
+
+    @Test
+    @DisplayName("별표 일괄 설정 — 값이 실제로 바뀐 카드만 changedIds, 두 번 보내도 같은 결과 (멱등)")
+    void setStarred_reportsOnlyChanged_andIsIdempotent() {
+        Card a = saveCard(deck, "a", false);
+        Card b = saveCard(deck, "b", true);    // 시험 전에 이미 ⭐
+        Card c = saveCard(deck, "c", false);
+
+        SetStarredResponse first = cardService.setStarred(deck.getId(), user.getId(), starReq(true, c.getId(), a.getId(), b.getId()));
+        assertTrue(first.isStarred());
+        assertEquals(List.of(a.getId(), c.getId()), first.getChangedIds(), "이미 ⭐였던 b는 빠지고 오름차순");
+        entityManager.flush();
+        entityManager.clear();
+        assertTrue(cardRepository.findById(a.getId()).orElseThrow().getStarred());
+        assertTrue(cardRepository.findById(b.getId()).orElseThrow().getStarred());
+        assertTrue(cardRepository.findById(c.getId()).orElseThrow().getStarred());
+
+        SetStarredResponse again = cardService.setStarred(deck.getId(), user.getId(), starReq(true, a.getId(), b.getId(), c.getId()));
+        assertTrue(again.getChangedIds().isEmpty(), "토글이 아니라서 다시 보내도 꺼지지 않는다");
+    }
+
+    @Test
+    @DisplayName("별표 일괄 해제 — '맞음으로' 되돌리기, 이미 꺼진 카드는 그대로")
+    void setStarred_false_unstarsOnlyStarred() {
+        Card a = saveCard(deck, "a", true);
+        Card b = saveCard(deck, "b", false);
+
+        SetStarredResponse res = cardService.setStarred(deck.getId(), user.getId(), starReq(false, a.getId(), b.getId(), a.getId()));
+        assertFalse(res.isStarred());
+        assertEquals(List.of(a.getId()), res.getChangedIds(), "중복 id는 한 번만");
+        entityManager.flush();
+        entityManager.clear();
+        assertFalse(cardRepository.findById(a.getId()).orElseThrow().getStarred());
+    }
+
+    @Test
+    @DisplayName("별표 일괄 설정 — 다른 덱의 카드나 없는 카드가 섞이면 400, 아무것도 안 바뀐다")
+    void setStarred_rejectsCardsOutsideDeck_atomically() {
+        Deck otherDeck = deckRepository.save(Deck.builder().title("Other").user(user).build());
+        Card mine = saveCard(deck, "mine", false);
+        Card foreign = saveCard(otherDeck, "foreign", false);
+
+        assertThrows(BadRequestException.class, () ->
+                cardService.setStarred(deck.getId(), user.getId(), starReq(true, mine.getId(), foreign.getId())));
+        assertThrows(BadRequestException.class, () ->
+                cardService.setStarred(deck.getId(), user.getId(), starReq(true, mine.getId(), 999_999_999L)));
+        entityManager.flush();
+        entityManager.clear();
+        assertFalse(cardRepository.findById(mine.getId()).orElseThrow().getStarred(), "같이 보낸 내 카드도 안 바뀐다");
+        assertFalse(cardRepository.findById(foreign.getId()).orElseThrow().getStarred());
+    }
+
+    @Test
+    @DisplayName("별표 일괄 설정 — 다른 사용자의 덱은 403")
+    void setStarred_otherUsersDeck_forbidden() {
+        Card mine = saveCard(deck, "mine", false);
+        User other = userRepository.save(User.builder().email("star-other@test.com").password("encoded").nickname("other").build());
+
+        assertThrows(ForbiddenException.class, () ->
+                cardService.setStarred(deck.getId(), other.getId(), starReq(true, mine.getId())));
     }
 
     @Test

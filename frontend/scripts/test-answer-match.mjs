@@ -34,7 +34,17 @@ check('읽기 없는 카드', mod.matchesAnswer('apple', 'apple', null), true, '
 check('빈 입력', mod.matchesAnswer('', '感謝', 'かんしゃ'), false, '빈 입력은 오답')
 check('null 입력', mod.matchesAnswer(null, '感謝'), false, 'null 입력은 오답')
 
-const total = cases.length + 6
+// 읽기 채점 (온라인 시험지) — 프론트에만 있음
+check('읽기 그대로', mod.matchesReading('かんしゃ', 'かんしゃ'), true, '기본')
+check('가타카나로 써도', mod.matchesReading('カンシャ', 'かんしゃ'), true, '가타카나·히라가나 같게')
+check('읽기 두 가지 중 하나', mod.matchesReading('つの', 'かど／つの'), true, '전각 빗금')
+check('예문 괄호 문맥 없이', mod.matchesReading('あやぶまれる', '(かいさいが)あやぶまれる'), true, '괄호 문맥')
+check('장음 다르면 오답', mod.matchesReading('こうじょ', 'こうじょう'), false, '장음까지 정확히')
+check('읽기 없는 카드는 채점 불가', mod.matchesReading('かんしゃ', null), false, 'null')
+check('빈 입력 오답', mod.matchesReading('', 'かんしゃ'), false, '빈 입력')
+check('foldKana', mod.foldKana('ジャンケン・ポン') === 'じゃんけん・ぽん', true, '가타카나만 바꾸고 가운뎃점은 그대로')
+
+const total = cases.length + 6 + 8
 if (failed) {
   console.error(`\n${failed}/${total} 실패`)
   process.exit(1)

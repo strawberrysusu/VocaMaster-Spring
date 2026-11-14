@@ -16,6 +16,8 @@ export interface SheetOptions {
 
 export interface SheetRow {
   no: number
+  /** 온라인 시험지가 틀린 카드를 ⭐ 할 때 쓴다 */
+  cardId: number
   word: string
   /** 정답지용 읽기 (없으면 빈 문자열) */
   reading: string
@@ -31,7 +33,7 @@ export interface SheetModel {
   rows: SheetRow[]
 }
 
-type SheetCard = Pick<CardDto, 'front' | 'back' | 'reading' | 'starred'>
+type SheetCard = Pick<CardDto, 'id' | 'front' | 'back' | 'reading' | 'starred'>
 
 // 한자: CJK 통합 한자 + 확장 A + 호환 한자 + 々〆ヶ
 const KANJI = /[㐀-䶿一-鿿豈-﫿々〆ヶ]/
@@ -68,6 +70,7 @@ export function buildSheet(cards: SheetCard[], opts: SheetOptions, random: () =>
     japanese,
     rows: picked.map((c, i) => ({
       no: i + 1,
+      cardId: c.id,
       word: c.front.trim(),
       reading: (c.reading ?? '').trim(),
       meaning: c.back.trim(),
