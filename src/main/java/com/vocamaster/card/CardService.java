@@ -6,7 +6,6 @@ import com.vocamaster.card.dto.SetStarredRequest;
 import com.vocamaster.card.dto.SetStarredResponse;
 import com.vocamaster.card.dto.UpdateCardRequest;
 import com.vocamaster.common.PageableUtils;
-import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckService;
@@ -20,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -102,29 +102,33 @@ public class CardService {
 
     /**
      * 별표 일괄 설정 — 온라인 시험지에서 틀린 카드 자동 ⭐, '맞음으로' 되돌리기 (ADR-053).
-     * 토글이 아니라 값 지정이라 두 번 보내도 같다. 이 덱에 없는 카드가 하나라도 섞이면 아무것도 바꾸지 않는다.
-     * 엔티티로 바꾸는 이유: 벌크 UPDATE는 @UpdateTimestamp를 건너뛰어 updated_at이 안 바뀌고, 값이 실제로 바뀐 카드만 골라 UPDATE 하기도 어렵다.
+     * 토글이 아니라 값 지정이라 두 번 보내도 같다.
+     * <p>이 덱의 카드만 바꾼다. 이 덱에 없는 id(시험 도중 지워진 카드, 다른 덱의 카드)는 건너뛰고 skippedIds로 알려 준다 —
+     * 예전엔 하나라도 섞이면 400이라, 시험 중 카드 한 장만 지워져도 그 시험의 별표가 전부 실패했다 (11/14 검토).
+     * 지워진 카드와 다른 덱 카드를 똑같이 건너뛰므로 응답만 보고 남의 카드 id가 있는지 알 수는 없다.
+     * <p>엔티티로 바꾸는 이유: 벌크 UPDATE는 @UpdateTimestamp를 건너뛰어 updated_at이 안 바뀌고, 값이 실제로 바뀐 카드만 골라 UPDATE 하기도 어렵다.
      */
     @Transactional
     public SetStarredResponse setStarred(Long deckId, Long userId, SetStarredRequest req) {
         deckService.verifyOwner(deckId, userId);
         Set<Long> ids = new LinkedHashSet<>(req.getCardIds());
-        List<Card> cards = cardRepository.findAllById(ids);
-        boolean allInDeck = cards.size() == ids.size()
-                && cards.stream().allMatch(c -> c.getDeck().getId().equals(deckId));
-        if (!allInDeck) {
-            throw new BadRequestException("이 단어장에 없는 카드가 섞여 있습니다");
-        }
         boolean target = req.getStarred();
+
         List<Long> changed = new ArrayList<>();
-        for (Card card : cards) {
+        Set<Long> found = new HashSet<>();
+        for (Card card : cardRepository.findByDeckIdAndIdIn(deckId, ids)) {   // 이 덱에 있는 카드만 온다
+            found.add(card.getId());
             if (!Boolean.valueOf(target).equals(card.getStarred())) {   // 옛 데이터의 null은 '꺼짐'으로 본다
                 card.setStarred(target);
                 changed.add(card.getId());
             }
         }
+        List<Long> skipped = new ArrayList<>(ids);
+        skipped.removeAll(found);   // 보낸 id 중 이 덱에서 못 찾은 것
+
         changed.sort(null);
-        return new SetStarredResponse(target, changed);
+        skipped.sort(null);
+        return new SetStarredResponse(target, changed, skipped);
     }
 
     private CardResponse withProgress(Card card, Long userId) {

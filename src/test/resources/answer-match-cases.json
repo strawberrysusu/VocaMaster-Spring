@@ -51,5 +51,15 @@
 
   { "typed": "危ぶまれる", "answer": "(開催が)危ぶまれる", "expected": true, "why": "뜻→단어 방향: 예문 괄호 문맥" },
   { "typed": "인파", "answer": "인파, 사람들", "expected": true, "why": "기본" },
-  { "typed": "기", "answer": "기사", "expected": false, "why": "부분 일치는 오답" }
+  { "typed": "기", "answer": "기사", "expected": false, "why": "부분 일치는 오답" },
+  { "typed": "회의", "answer": "회의\u2009", "expected": true, "why": "11/14: 정답 끝의 얇은 공백(U+2009)은 무시 — 예전엔 서버(타이핑)만 오답" },
+  { "typed": "회의\u202F", "answer": "회의", "expected": true, "why": "11/14: 입력 끝의 좁은 NBSP(U+202F)도 공백" },
+  { "typed": "\u3000회의\u00A0", "answer": "회의", "expected": true, "why": "11/14: 전각 공백·NBSP는 예전부터 공백 (그대로)" },
+  { "typed": "\uFEFF会議", "answer": "会議", "expected": true, "why": "11/14: 맨 앞 BOM(U+FEFF)은 폭 없는 글자라 없는 것으로" },
+  { "typed": "회의", "answer": "회\u200B의", "expected": true, "why": "11/14: 중간의 제로폭 공백(U+200B)도 없는 것으로" },
+  { "typed": "회 의", "answer": "회\u2003의", "expected": true, "why": "11/14: 중간의 넓은 공백(U+2003)은 보통 공백 하나로" },
+  { "typed": "회의", "answer": "회\u2003의", "expected": false, "why": "11/14: 중간 공백 자체는 그대로 본다 (app le ≠ apple 규칙)" },
+  { "typed": "사과", "answer": "n.\u2003사과", "expected": true, "why": "11/14: 품사 표시 뒤가 유니코드 공백이어도 품사로 본다" },
+  { "typed": "회의", "answer": "회의\u0085", "expected": true, "why": "11/14: NEL(U+0085)도 공백 — Java의 $가 그 앞에서 끝나던 차이 없앰" },
+  { "typed": "\u0001회의", "answer": "회의", "expected": false, "why": "11/14: 제어 문자는 공백이 아니다 — 예전엔 서버 trim()만 지워서 서버·화면이 달랐다" }
 ]

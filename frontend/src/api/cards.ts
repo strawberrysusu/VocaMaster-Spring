@@ -38,6 +38,8 @@ export interface SetStarredResult {
   starred: boolean
   /** 이번 요청으로 값이 실제로 바뀐 카드 (이미 그 값이던 카드는 빠진다) */
   changedIds: number[]
+  /** 건너뛴 카드 — 이 덱에 없는 카드(시험 도중 지워졌거나 다른 덱의 카드). 값을 안 바꾼다 */
+  skippedIds: number[]
 }
 
 /** 서버 별표 일괄 API가 한 번에 받는 카드 수 — SetStarredRequest의 @Size(max = 500)과 같아야 한다 */
@@ -50,12 +52,14 @@ export const STAR_BATCH = 500
  */
 export async function setStarred(deckId: string | number, cardIds: number[], starred: boolean): Promise<SetStarredResult> {
   const changedIds: number[] = []
+  const skippedIds: number[] = []
   for (let start = 0; start < cardIds.length; start += STAR_BATCH) {
     const r = await api<SetStarredResult>(`/decks/${deckId}/cards/star`, {
       method: 'PATCH',
       body: JSON.stringify({ cardIds: cardIds.slice(start, start + STAR_BATCH), starred }),
     })
     changedIds.push(...r.changedIds)
+    skippedIds.push(...(r.skippedIds ?? []))
   }
-  return { starred, changedIds }
+  return { starred, changedIds, skippedIds }
 }

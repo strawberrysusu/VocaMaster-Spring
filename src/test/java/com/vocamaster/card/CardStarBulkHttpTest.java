@@ -52,7 +52,8 @@ class CardStarBulkHttpTest extends AbstractIntegrationTest {
                         .content(body("{'cardIds':[" + card.getId() + "],'starred':true}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.starred").value(true))
-                .andExpect(jsonPath("$.changedIds[0]").value(card.getId()));
+                .andExpect(jsonPath("$.changedIds[0]").value(card.getId()))
+                .andExpect(jsonPath("$.skippedIds").isEmpty());
     }
 
     @Test

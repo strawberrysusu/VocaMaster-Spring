@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { test, expect, makeDeck, listCards, isStarred, toggleStar, overflowX, LONG, makeEmptyDeck, addCard } from './support'
+import { test, expect, makeDeck, listCards, isStarred, toggleStar, overflowX, LONG, makeEmptyDeck, addCard, deleteCard } from './support'
 
 // 온라인 시험지(ADR-053): 채점하면 틀리거나 비운 단어는 자동 ⭐, '맞음으로'는 이 시험이 켠 ⭐만 끈다
 
@@ -70,6 +70,20 @@ test('다시 풀기 중에 새로고침해도 이 시험이 켠 ⭐는 맞음으
   await row(page, '会議').getByRole('button', { name: '맞음으로' }).click()
   await expect(row(page, '会議').getByRole('button', { name: '다시 오답으로' })).toBeVisible()
   expect(await isStarred(request, deckId, '会議')).toBe(false)
+})
+
+// 11/14 검토: 시험 도중 그 덱의 카드가 지워지면(다른 탭·기기) 별표 일괄 요청이 400으로 통째 거절돼,
+// 나머지 틀린 단어까지 ⭐가 안 켜지고 '별표 다시 시도'도 계속 실패했다 → 서버가 지워진 카드만 건너뛴다
+test('시험 도중 카드가 지워져도 나머지 틀린 단어는 ⭐ 되고, 지워진 카드는 건너뛴다', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '지워진카드', ['感謝|かんしゃ|감사', '会議|かいぎ|회의'])
+  await open(page, deckId)
+  await expect(page.locator('.otest-row')).toHaveCount(2)
+  const gone = (await listCards(request, deckId)).find((c) => c.front === '感謝')!
+  await deleteCard(request, gone.id) // 시험지는 열린 채로, 다른 탭에서 지운 것처럼
+
+  await grade(page) // 둘 다 비움 → 둘 다 오답
+  await expect(summary(page)).toContainText('지워진 카드 1개는 건너뜀')
+  expect(await isStarred(request, deckId, '会議')).toBe(true)
 })
 
 // ── 회귀: Codex 검산(11/14)이 찾은 3건. PR #26에서 test.fail로 고치기 전 동작을 재현했고(3건 모두 실패 확인),

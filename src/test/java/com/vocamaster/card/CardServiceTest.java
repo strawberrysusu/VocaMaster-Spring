@@ -5,7 +5,6 @@ import com.vocamaster.card.dto.CreateCardRequest;
 import com.vocamaster.card.dto.SetStarredRequest;
 import com.vocamaster.card.dto.SetStarredResponse;
 import com.vocamaster.card.dto.UpdateCardRequest;
-import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.ForbiddenException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckRepository;
@@ -25,6 +24,7 @@ import com.vocamaster.AbstractIntegrationTest;
 import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -182,6 +182,7 @@ class CardServiceTest extends AbstractIntegrationTest {
         SetStarredResponse first = cardService.setStarred(deck.getId(), user.getId(), starReq(true, c.getId(), a.getId(), b.getId()));
         assertTrue(first.isStarred());
         assertEquals(List.of(a.getId(), c.getId()), first.getChangedIds(), "이미 ⭐였던 b는 빠지고 오름차순");
+        assertTrue(first.getSkippedIds().isEmpty(), "이 덱 카드만 보냈으니 건너뛴 것 없음");
         entityManager.flush();
         entityManager.clear();
         assertTrue(cardRepository.findById(a.getId()).orElseThrow().getStarred());
@@ -207,20 +208,27 @@ class CardServiceTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("별표 일괄 설정 — 다른 덱의 카드나 없는 카드가 섞이면 400, 아무것도 안 바뀐다")
-    void setStarred_rejectsCardsOutsideDeck_atomically() {
+    @DisplayName("별표 일괄 설정 — 지워진 카드·다른 덱 카드는 건너뛰고(skippedIds), 이 덱 카드는 바꾼다")
+    void setStarred_skipsCardsNotInThisDeck() {
         Deck otherDeck = deckRepository.save(Deck.builder().title("Other").user(user).build());
         Card mine = saveCard(deck, "mine", false);
         Card foreign = saveCard(otherDeck, "foreign", false);
+        Card gone = saveCard(deck, "gone", false);
+        Long goneId = gone.getId();
+        cardRepository.delete(gone);   // 시험 도중 다른 탭에서 지운 카드
+        entityManager.flush();
 
-        assertThrows(BadRequestException.class, () ->
-                cardService.setStarred(deck.getId(), user.getId(), starReq(true, mine.getId(), foreign.getId())));
-        assertThrows(BadRequestException.class, () ->
-                cardService.setStarred(deck.getId(), user.getId(), starReq(true, mine.getId(), 999_999_999L)));
+        SetStarredResponse res = cardService.setStarred(deck.getId(), user.getId(),
+                starReq(true, goneId, mine.getId(), foreign.getId()));
+
+        assertEquals(List.of(mine.getId()), res.getChangedIds(), "이 덱 카드는 바뀐다");
+        List<Long> expectedSkipped = new ArrayList<>(List.of(goneId, foreign.getId()));
+        expectedSkipped.sort(null);
+        assertEquals(expectedSkipped, res.getSkippedIds(), "지워진 카드·다른 덱 카드는 건너뜀 (오름차순)");
         entityManager.flush();
         entityManager.clear();
-        assertFalse(cardRepository.findById(mine.getId()).orElseThrow().getStarred(), "같이 보낸 내 카드도 안 바뀐다");
-        assertFalse(cardRepository.findById(foreign.getId()).orElseThrow().getStarred());
+        assertTrue(cardRepository.findById(mine.getId()).orElseThrow().getStarred());
+        assertFalse(cardRepository.findById(foreign.getId()).orElseThrow().getStarred(), "다른 덱 카드는 안 바뀐다");
     }
 
     @Test
