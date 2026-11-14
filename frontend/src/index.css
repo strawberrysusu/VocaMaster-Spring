@@ -200,6 +200,32 @@ body:has(.topbar) {
 
 .top-search:focus-within { background: #fff; border-color: var(--a); }
 
+/* 연관 검색 (11/14 — 치는 동안 맞는 덱이 바로 뜬다, Quizlet식) */
+.search-box { position: relative; width: 100%; max-width: 620px; }
+.search-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 70;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+}
+.suggest-head { margin: 0; padding: 8px 10px 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.suggest-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+.suggest-item.active { background: #f1f1f6; }
+.suggest-item svg { flex-shrink: 0; color: var(--muted); }
+.suggest-text { display: flex; flex-direction: column; min-width: 0; }
+.suggest-title { font-size: 14.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggest-title b { color: var(--a); font-weight: 700; }
+.suggest-meta { font-size: 12px; color: var(--muted); }
+.suggest-all .suggest-title { color: var(--a); font-weight: 600; }
+
 .top-search input {
   flex: 1;
   min-width: 0;
@@ -2602,4 +2628,5 @@ button.mode-btn { cursor: pointer; font-family: inherit; }
 .search-section h2 { display: flex; align-items: center; gap: 8px; font-size: 17px; margin: 0 0 12px; }
 .search-more { color: var(--a); font-weight: 600; font-size: 14px; text-decoration: none; }
 .search-more:hover { text-decoration: underline; }
+button.search-more.as-link { border: none; background: none; padding: 0; font: inherit; font-weight: 600; font-size: 14px; color: var(--a); cursor: pointer; }
 .search-count { font-size: 12px; font-weight: 600; color: var(--sub); background: #f1f1f5; padding: 1px 9px; border-radius: 99px; }

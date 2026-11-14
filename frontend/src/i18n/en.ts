@@ -614,4 +614,8 @@ export const en: Messages = {
   "{n}장을 다 봤어요": "You went through all {n} cards",
   // ── 11/14 검색 화면 → 탐색에서 더 보기 (Codex 검산)
   "탐색에서 더 보기 →": "See more in Explore →",
+  // ── 11/14 위쪽 바 연관 검색
+  "최근 학습": "Recently studied",
+  "\"{q}\" 모든 결과 보기": "See all results for \"{q}\"",
+  "내 덱 {n}개 모두 보기": "Show all {n} of your decks",
 }
