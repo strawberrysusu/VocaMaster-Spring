@@ -114,7 +114,7 @@ export default function ImportCards() {
                 {result.failed.map((f) => (
                   <div key={f.line} className="word-row">
                     <span className="word-idx">{f.line}</span>
-                    <span className="word-back">{f.content}</span>
+                    <span className="word-back">{tImportLine(f.content)}</span>
                   </div>
                 ))}
               </div>

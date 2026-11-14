@@ -268,7 +268,10 @@ export function testSheetDocumentXml(model: SheetModel, info: SheetDocInfo): str
   const widths = columnWidths(model.japanese)
   const n = model.rows.length
   const font = L.font
-  const title = para(run(L.sheetTitle(info.deckTitle), { sizeHalfPt: 30, bold: true, japanese: model.japanese, font }), 'left', 60, true)
+  // 제목에는 화면 언어 낱말('시험지'·'试卷' 등)이 같이 들어간다 — 화면 언어 글꼴이 정해졌으면(일·중 화면) 그 글꼴,
+  // 아니면(한·영 화면) 예전처럼 일본어 덱은 일본어 글꼴
+  const titleStyle = (sizeHalfPt: number): RunStyle => ({ sizeHalfPt, bold: true, japanese: model.japanese && !font, font })
+  const title = para(run(L.sheetTitle(info.deckTitle), titleStyle(30)), 'left', 60, true)
   const meta = para(
     run(info.subtitle, { sizeHalfPt: 18, color: '666666', font }) +
       run(`        ${L.date} ______________     ${L.score} ______ / ${n}`, { sizeHalfPt: 20, font }),
@@ -283,7 +286,7 @@ export function testSheetDocumentXml(model: SheetModel, info: SheetDocInfo): str
   let body = title + meta + qTable
   if (info.answerKey) {
     const pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'
-    const aTitle = para(run(L.answerTitle(info.deckTitle), { sizeHalfPt: 26, bold: true, japanese: model.japanese, font }), 'left', 120, true)
+    const aTitle = para(run(L.answerTitle(info.deckTitle), titleStyle(26)), 'left', 120, true)
     const aTable = table(
       widths,
       headerRow(widths, model.japanese, L) + model.rows.map((r) => answerRow(r, widths, model.japanese, font)).join(''),
