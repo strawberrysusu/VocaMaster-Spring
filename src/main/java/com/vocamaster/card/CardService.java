@@ -74,6 +74,10 @@ public class CardService {
         return withProgress(card, userId);
     }
 
+    // @Transactional: 무트랜잭션이면 읽은 카드가 detached라 save()가 전체 컬럼 merge — 그 사이 켜진 별표를
+    // 낡은 값으로 되돌린다. 트랜잭션 안이면 managed + @DynamicUpdate라 바뀐 컬럼만 UPDATE (DeckService.update와 같은 이유).
+    // saveAndFlush: 응답의 updatedAt이 이번 수정 시각이 되게 (flush 때 @UpdateTimestamp가 찍힌다)
+    @Transactional
     public CardResponse update(Long id, Long userId, UpdateCardRequest req) {
         Card card = getCard(id);
         deckService.verifyOwner(card.getDeck().getId(), userId);
@@ -84,7 +88,7 @@ public class CardService {
         if (req.getExampleSentence() != null) card.setExampleSentence(req.getExampleSentence());
         if (req.getMemo() != null) card.setMemo(blankToNull(req.getMemo()));   // ""로 보내면 설명 삭제 (읽기와 같은 규칙)
         if (req.getPosition() != null) card.setPosition(req.getPosition());
-        return withProgress(cardRepository.save(card), userId);
+        return withProgress(cardRepository.saveAndFlush(card), userId);
     }
 
     public void remove(Long id, Long userId) {
@@ -93,11 +97,13 @@ public class CardService {
         cardRepository.delete(card);
     }
 
+    // @Transactional: update와 같은 이유 — 별표 토글이 그 사이 고친 단어·설명을 되돌리지 않게
+    @Transactional
     public CardResponse toggleStar(Long id, Long userId) {
         Card card = getCard(id);
         deckService.verifyOwner(card.getDeck().getId(), userId);
         card.setStarred(!card.getStarred());
-        return withProgress(cardRepository.save(card), userId);
+        return withProgress(cardRepository.saveAndFlush(card), userId);
     }
 
     /**

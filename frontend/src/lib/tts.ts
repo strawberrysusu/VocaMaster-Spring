@@ -3,6 +3,7 @@
 // 비용 0·약관 문제 0. 단 기기마다 목소리가 다르고 동일 음성은 보장 안 됨. 공개 서비스로 커지면 speak() 한 곳만 공식 API로 교체.
 
 import { voicePreference } from './settings'
+import { detectLang } from './detectLang'
 
 const VOICE_PRIORITY = ['Google', 'Natural', 'Microsoft'] // 이름에 포함되면 우선 (앞일수록 우선) — 설정에서 고른 음성이 최우선
 
@@ -22,13 +23,6 @@ if (typeof speechSynthesis !== 'undefined') {
 
 export function isTtsSupported(): boolean {
   return typeof speechSynthesis !== 'undefined' && typeof SpeechSynthesisUtterance !== 'undefined'
-}
-
-// 텍스트로 언어 판별 — 덱에 언어 필드가 없어서 휴리스틱 (가나·한자 → 일본어, 한글 → 한국어, 그 외 → 영어)
-export function detectLang(text: string): string {
-  if (/[぀-ヿ一-鿿]/.test(text)) return 'ja-JP'
-  if (/[가-힯]/.test(text)) return 'ko-KR'
-  return 'en-US'
 }
 
 // 언어 코드 정확 매칭 — startsWith('ko')는 콘칸어(kok-IN)까지 잡는다 (8/31 폰 Chrome 실측:

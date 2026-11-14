@@ -579,4 +579,9 @@ export const en: Messages = {
   "같은 요청이 동시에 처리되었습니다. 다시 시도해 주세요": "The same request was processed at the same time. Please try again",
   "서버 내부에 오류가 발생했습니다.": "An internal server error occurred.",
   "토큰이 만료되었거나 유효하지 않습니다": "Your session has expired or is invalid",
+  // ── 11/14 Codex 검산: 카드 수정 빈칸 거부·비밀번호 72바이트 (서버 문구)
+  "비워 둘 수 없습니다": "Cannot be empty",
+  "비밀번호가 너무 깁니다 (영문 72자, 한글 24자까지)": "Password is too long (max 72 bytes: 72 letters or digits)",
+  // 개인정보처리방침 문서(privacy.html)는 한국어뿐 — 일·영·중 화면의 링크에 표시 (11/14 검토)
+  "개인정보처리방침 (한국어)": "Privacy Policy (in Korean)",
 }

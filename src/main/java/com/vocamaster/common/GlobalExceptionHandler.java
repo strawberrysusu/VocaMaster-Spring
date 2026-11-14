@@ -112,6 +112,15 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(409, "CONFLICT", "같은 요청이 동시에 처리되었습니다. 다시 시도해 주세요"));
     }
 
+    // 잠금 실패(교착 deadlock·잠금 대기 시간 초과) — 겹치는 요청 둘 중 진 쪽. 그 트랜잭션은 통째로 되돌아갔으니
+    // 다시 보내면 된다 → 500이 아니라 409 (Codex 검산 11/14: 역순 일괄 제출 둘이 동시에 오면 500이었다)
+    @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleLockFailure(org.springframework.dao.PessimisticLockingFailureException ex) {
+        log.warn("잠금 실패 — 동시 요청 충돌: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(409, "CONFLICT", "같은 요청이 동시에 처리되었습니다. 다시 시도해 주세요"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnExpected(Exception ex) {
         // 예상 못 한 예외가 조용히 묻히면 원인 추적 불가 — 반드시 스택트레이스 로깅

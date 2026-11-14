@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api, getToken, logout as clientLogout } from '../api/client'
 import { t } from '../i18n'
+import { jwtEmail } from '../lib/jwt'
 
 type Me = { id: number; email: string; nickname: string; provider: string; createdAt?: string }
 
@@ -15,16 +16,10 @@ interface DeckLite {
   folderId: number | null
 }
 
-// JWT payload에서 이메일 첫 글자 — 별도 /me API 없이 아바타 이니셜용
+// JWT payload에서 이메일 첫 글자 — 별도 /me API 없이 아바타 이니셜용.
+// UTF-8로 읽고(jwt.ts), 첫 '글자'는 Array.from으로 — [0]은 이모지·확장 한자의 반쪽을 집는다 (11/14 검토)
 function emailInitial(): string {
-  const token = getToken()
-  if (!token) return '?'
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-    return (payload.email?.[0] ?? '?').toUpperCase()
-  } catch {
-    return '?'
-  }
+  return (Array.from(jwtEmail(getToken()))[0] ?? '?').toUpperCase()
 }
 
 // 라인 아이콘 (리디자인 목업의 아이콘+텍스트 메뉴 — 의존성 없이 인라인 SVG)

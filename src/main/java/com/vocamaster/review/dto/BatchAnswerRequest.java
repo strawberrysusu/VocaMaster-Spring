@@ -27,8 +27,8 @@ public class BatchAnswerRequest {
 
     @NotEmpty(message = "답변이 비어 있습니다")
     @Size(max = MAX_ANSWERS, message = "한 번에 보낼 수 있는 답변은 " + MAX_ANSWERS + "개까지입니다")
-    @Valid
-    private List<Item> answers;
+    // 원소마다 @NotNull — 목록에 붙인 @Valid만으로는 null 원소를 못 막아 서비스에서 NPE(500)가 났다 (Codex 검산 11/14)
+    private List<@NotNull @Valid Item> answers;
 
     @Getter @Setter
     public static class Item {

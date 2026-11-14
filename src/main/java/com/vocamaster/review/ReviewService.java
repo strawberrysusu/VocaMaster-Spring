@@ -119,9 +119,15 @@ public class ReviewService {
         //    now를 여기서 한 번만 뽑는다: 카드마다 now()를 부르면 자정 경계에서
         //    앞 카드는 어제 날짜로, 뒤 카드와 출석부는 오늘 날짜로 갈린다
         LocalDateTime now = LocalDateTime.now(KST);
+        //    cardId 오름차순으로 반영한다 — card_progress 행 잠금을 늘 같은 순서로 잡아야, 카드가 겹치는 제출 두 개가
+        //    서로 상대가 쥔 잠금을 기다리는 교착(deadlock)이 생기지 않는다 (Codex 검산 11/14: 역순 제출 둘이 동시에 오면 한쪽이 500).
+        //    순서를 바꿔도 결과는 같다 — 카드마다 따로 반영하고, 같은 카드 두 번은 ①에서 막았다. results도 이 순서
+        List<BatchAnswerRequest.Item> ordered = answers.stream()
+                .sorted(Comparator.comparing(BatchAnswerRequest.Item::getCardId))
+                .toList();
         List<ReviewAnswerResponse> results = new ArrayList<>(answers.size());
         Set<Long> deckIds = new LinkedHashSet<>();
-        for (BatchAnswerRequest.Item item : answers) {
+        for (BatchAnswerRequest.Item item : ordered) {
             Card card = loadOwnedCard(userId, item.getCardId());
             deckIds.add(card.getDeck().getId());
             results.add(ReviewAnswerResponse.from(applyAnswer(userId, card, item.getCorrect(), now)));

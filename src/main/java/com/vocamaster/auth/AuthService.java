@@ -41,6 +41,7 @@ public class AuthService {
         if (userRepository.existsByEmail(req.getEmail())) {
             throw new BadRequestException("이미 사용 중인 이메일입니다");
         }
+        PasswordLimit.check(req.getPassword());   // BCrypt 72바이트 — 넘으면 아래 encode()가 500을 냈다
         User user = User.builder()
                 .email(req.getEmail())
                 .password(passwordEncoder.encode(req.getPassword()))
@@ -101,7 +102,10 @@ public class AuthService {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
             String nickname = (name == null || name.isBlank()) ? "구글사용자" : name;
-            if (nickname.length() > 20) nickname = nickname.substring(0, 20);
+            // 20칸에서 자르되 이모지·확장 한자(서로게이트 쌍)를 반으로 가르지 않는다 — 반쪽은 DB에 '?'로 저장된다 (11/14 검토)
+            if (nickname.length() > 20) {
+                nickname = nickname.substring(0, Character.isHighSurrogate(nickname.charAt(19)) ? 19 : 20);
+            }
             user = userRepository.save(User.builder()
                     .email(email).password(null).nickname(nickname).provider("google").build());
         } else if (user.isDeleted()) {

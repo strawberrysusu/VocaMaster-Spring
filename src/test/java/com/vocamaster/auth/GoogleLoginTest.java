@@ -83,4 +83,16 @@ class GoogleLoginTest extends AbstractIntegrationTest {
                 () -> authService.login(req, "test-ua", "127.0.0.1"));
         assertTrue(e.getMessage().contains("구글"), "어느 버튼을 눌러야 하는지 안내해야");
     }
+
+    @Test
+    @DisplayName("구글 이름이 20칸을 넘으면 자르되 이모지를 반으로 가르지 않는다 — 반쪽은 DB에 '?'로 저장됐다")
+    void longGoogleName_isCutWithoutSplittingEmoji() {
+        String email = "goo_cut_" + System.nanoTime() + "@gmail.com";
+        String name = "a".repeat(19) + "😀" + "bc";   // 20번째 칸이 이모지의 앞 반쪽
+
+        authService.loginWithGoogle(email, name, "test-ua", "127.0.0.1");
+
+        String nickname = userRepository.findByEmail(email).orElseThrow().getNickname();
+        assertEquals("a".repeat(19), nickname, "반쪽 이모지 없이 19칸");
+    }
 }
