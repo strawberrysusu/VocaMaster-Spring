@@ -83,6 +83,9 @@ export default function OnlineTest() {
   // 이 시험이 켠 ⭐인지 알 길이 없어진다 (Codex 검산 11/14). 실제로 안 켜졌다면 끄기 요청은 아무것도 안 바꾼다(멱등)
   const [addedStars, setAddedStars] = useState<Set<number>>(new Set())
   const starredAtLoad = useRef<Set<number>>(new Set())
+  // 이 시험의 별표 요청이 성공해 서버에 ⭐가 켜진 것이 확인된 카드 — '새로 켠 별표 N개'는 addedStars 중 이것만 센다.
+  // addedStars는 응답이 끊겨도 '맞음으로'가 끌 수 있게 요청 '전에' 넣어서, 실패한 요청의 카드도 들어 있다 (최종 검토 11/14)
+  const [confirmedOn, setConfirmedOn] = useState<Set<number>>(new Set())
   const [starState, setStarState] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
   // 서버가 건너뛴 카드 수 — 시험 도중 지워진 카드 (11/14 검토: 예전엔 한 장만 지워져도 별표가 전부 실패했다)
   const [skippedCount, setSkippedCount] = useState(0)
@@ -117,6 +120,7 @@ export default function OnlineTest() {
         starredAtLoad.current = new Set(cards.filter((c) => c.starred && !added.has(c.id)).map((c) => c.id))
         attemptRef.current += 1
         setAddedStars(added)
+        setConfirmedOn(new Set(added)) // 이어 푸는 시험은 앞 풀이의 ⭐ 저장이 성공했을 때만 시작된다 (실패하면 다시 풀기를 막음)
         setStarState('idle')
         setSkippedCount(0)
         if (!built) built = buildSheet(cards, { scope, count, shuffle })
@@ -178,6 +182,8 @@ export default function OnlineTest() {
       // 시험을 연 뒤 다른 곳에서 꺼진 ⭐를 다시 켠 경우까지 — changedIds는 서버가 실제로 바꾼 카드
       // 지워진 카드는 서버가 건너뛰었다 — '이 시험이 켠 ⭐'에서도 뺀다
       setAddedStars((prev) => mergeStarResult(prev, r))
+      const skipped = new Set(r.skippedIds)
+      setConfirmedOn((prev) => withIds(prev, wrongIds.filter((id) => !skipped.has(id))))
       if (attemptRef.current === attempt) {
         setSkippedCount(r.skippedIds.length)
         setStarState('done')
@@ -220,11 +226,13 @@ export default function OnlineTest() {
         if (addedStars.has(cardId)) {
           await setStarred(deckId!, [cardId], false)
           setAddedStars((prev) => withoutId(prev, cardId))
+          setConfirmedOn((prev) => withoutId(prev, cardId))
         }
       } else {
         if (!starredAtLoad.current.has(cardId)) setAddedStars((prev) => withIds(prev, [cardId]))
         const r = await setStarred(deckId!, [cardId], true)
         setAddedStars((prev) => mergeStarResult(prev, r)) // 지워진 카드면 서버가 건너뛰니 세지 않는다
+        if (!r.skippedIds.includes(cardId)) setConfirmedOn((prev) => withIds(prev, [cardId]))
       }
       // 그사이 문항이 바뀌었으면(다른 덱 등) i번은 다른 단어다 — 결과 표시는 건드리지 않는다
       if (attemptRef.current !== attempt) return
@@ -236,8 +244,10 @@ export default function OnlineTest() {
     }
   }
 
-  // 별표 저장이 끝나기 전에는 다시 풀 수 없다 — 늦게 온 응답이 새 문항(같은 번호의 다른 단어)을 바꾸던 문제 (Codex 검산 11/14)
-  const starBusy = starState === 'saving' || busyCards.size > 0
+  // 별표 저장이 끝나기 전·실패한 채로는 다시 풀 수 없다
+  //  · 늦게 온 응답이 새 문항(같은 번호의 다른 단어)을 바꾸던 문제 (Codex 검산 11/14)
+  //  · 실패한 ⭐를 다시 시도하지 않고 다음 풀이로 넘어가면 그 단어들은 끝내 ⭐가 안 켜졌다 (최종 검토 11/14)
+  const starBusy = starState === 'saving' || starState === 'error' || busyCards.size > 0
 
   function retryWrong() {
     if (!results || starBusy) return
@@ -252,7 +262,9 @@ export default function OnlineTest() {
   }
 
   const scopeLabel = scope === 'starred' ? t('⭐ 별표만') : t('전체')
-  const starDoneVars = { wrong: wrongCount, added: addedStars.size, skipped: skippedCount }
+  // 새로 켠 별표 = 이 시험이 켠 것 중 서버가 켰다고 확인한 것만
+  const newlyStarred = [...addedStars].filter((id) => confirmedOn.has(id)).length
+  const starDoneVars = { wrong: wrongCount, added: newlyStarred, skipped: skippedCount }
 
   return (
     <>
@@ -289,7 +301,10 @@ export default function OnlineTest() {
                   {starState === 'error' && (
                     <>
                       {' · '}
-                      <button className="btn-ghost-link" onClick={() => void starWrong(results)}>{t('별표 다시 시도')}</button>
+                      {/* '맞음으로' 요청 중에는 막는다 — 그 단어가 아직 오답으로 보여 방금 맞음으로 한 단어에 ⭐가 다시 켜졌다 (최종 검토 11/14) */}
+                      <button className="btn-ghost-link" disabled={busyCards.size > 0} onClick={() => void starWrong(results)}>
+                        {t('별표 다시 시도')}
+                      </button>
                     </>
                   )}
                 </span>
@@ -366,7 +381,7 @@ export default function OnlineTest() {
                   <button
                     className="answer-no"
                     disabled={starBusy}
-                    title={starBusy ? t('별표 저장이 끝나면 누를 수 있어요') : undefined}
+                    title={starState === 'error' ? t('별표를 먼저 다시 시도해 주세요') : starBusy ? t('별표 저장이 끝나면 누를 수 있어요') : undefined}
                     onClick={retryWrong}
                   >
                     {t('틀린 {n}개만 다시 풀기', { n: wrongCount })}

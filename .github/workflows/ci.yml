@@ -176,7 +176,7 @@ jobs:
         run: npm test
 
       - name: 실패 자료 올리기 (화면 녹화·스크린샷·앱 로그)
-        if: failure()
+        if: failure() || cancelled()   # 20분 시간 초과로 끊겨도 앱 로그·trace는 남긴다
         uses: actions/upload-artifact@v4
         with:
           name: e2e-report
@@ -200,40 +200,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 실행 코드 변경 감지 (CI·운영·문서 변경만이면 배포 생략)
-        id: diff
-        env:
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
-          FORCE_DEPLOY: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
-        run: |
-          if [ -z "$BEFORE" ] || echo "$BEFORE" | grep -q '^0*$'; then
-            CHANGED=$(git ls-files)
-          else
-            CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" 2>/dev/null || git ls-files)
-          fi
-          printf '%s\n' "$CHANGED"
-          # CI/deploy-only migration commits must leave the restored production JAR intact.
-          # Test-only edits still run the build job without restarting production.
-          APP_CHANGED=$(printf '%s\n' "$CHANGED" | grep -vE '(^docs/|\.md$)' | grep -E '^(src/main/|frontend/|Dockerfile$|\.dockerignore$|build\.gradle$|settings\.gradle$|gradle/|gradlew$|gradlew\.bat$)' || true)
-          if [ "$FORCE_DEPLOY" = 'true' ] || [ -n "$APP_CHANGED" ]; then
-            echo 'deploy=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'deploy=false' >> "$GITHUB_OUTPUT"
-            echo '앱 실행 코드 변경 없음 — 배포 생략'
-          fi
-
-      - name: Docker build (서버와 같은 amd64, 커밋별 불변 이미지)
-        if: steps.diff.outputs.deploy == 'true'
-        run: |
-          docker build --platform linux/amd64 \
-            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
-            -t "vocamaster:$GITHUB_SHA" .
-          docker save "vocamaster:$GITHUB_SHA" | gzip -1 > "$RUNNER_TEMP/vocamaster-image.tar.gz"
-          sha256sum "$RUNNER_TEMP/vocamaster-image.tar.gz" | cut -d ' ' -f1 > "$RUNNER_TEMP/vocamaster-image.sha256"
-
       - name: SSH 키와 고정 호스트키 준비
-        if: steps.diff.outputs.deploy == 'true'
         env:
           AWS_SSH_KEY: ${{ secrets.AWS_SSH_KEY }}
           AWS_SSH_KNOWN_HOSTS: ${{ vars.AWS_SSH_KNOWN_HOSTS }}
@@ -245,6 +212,46 @@ jobs:
           printf '%s\n' "$AWS_SSH_KEY" > ~/.ssh/vocamaster_aws
           printf '%s\n' "$AWS_SSH_KNOWN_HOSTS" > ~/.ssh/vocamaster_aws_known_hosts
           chmod 600 ~/.ssh/vocamaster_aws ~/.ssh/vocamaster_aws_known_hosts
+
+      # 직전 push(github.event.before)가 아니라 '지금 운영에서 도는 커밋'과 비교한다 (최종 검토 11/14):
+      # 앱 커밋의 화면 테스트가 실패해 배포가 막힌 뒤 테스트만 고친 커밋이 오면, 직전 push와만 비교해서는
+      # 그 앱 변경이 영영 배포되지 않았다. 운영 커밋을 못 읽으면 앱 변경을 놓치지 않게 배포한다.
+      - name: 실행 코드 변경 감지 — 운영에서 도는 커밋과 비교 (CI·운영·문서·테스트만 바뀌었으면 배포 생략)
+        id: diff
+        env:
+          AWS_HOST: ${{ secrets.AWS_HOST }}
+          FORCE_DEPLOY: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
+        run: |
+          [[ "$AWS_HOST" =~ ^[A-Za-z0-9.-]+$ ]]
+          SSH_OPTS=(-i "$HOME/.ssh/vocamaster_aws" -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$HOME/.ssh/vocamaster_aws_known_hosts")
+          FORMAT='{{index .Config.Labels "org.opencontainers.image.revision"}}'
+          DEPLOYED=$(ssh "${SSH_OPTS[@]}" "ubuntu@$AWS_HOST" "sudo -n docker inspect --format '$FORMAT' vocamaster-aws-app-1" 2>/dev/null | tr -d '[:space:]' || true)
+          echo "운영 커밋: ${DEPLOYED:-(못 읽음)} / 이번 커밋: $GITHUB_SHA"
+          if [[ "$DEPLOYED" =~ ^[a-f0-9]{40}$ ]] && git cat-file -e "$DEPLOYED^{commit}" 2>/dev/null; then
+            CHANGED=$(git diff --name-only "$DEPLOYED" "$GITHUB_SHA")
+          else
+            echo '운영 커밋을 확인하지 못함 — 전부 바뀐 것으로 보고 배포'
+            CHANGED=$(git ls-files)
+          fi
+          printf '%s\n' "$CHANGED"
+          # CI/deploy-only migration commits must leave the restored production JAR intact.
+          # Test-only edits (e2e/, src/test/) still run the build and e2e jobs without restarting production.
+          APP_CHANGED=$(printf '%s\n' "$CHANGED" | grep -vE '(^docs/|\.md$)' | grep -E '^(src/main/|frontend/|Dockerfile$|\.dockerignore$|build\.gradle$|settings\.gradle$|gradle/|gradlew$|gradlew\.bat$)' || true)
+          if [ "$FORCE_DEPLOY" = 'true' ] || [ -n "$APP_CHANGED" ]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'deploy=false' >> "$GITHUB_OUTPUT"
+            echo '운영과 앱 실행 코드가 같음 — 배포 생략'
+          fi
+
+      - name: Docker build (서버와 같은 amd64, 커밋별 불변 이미지)
+        if: steps.diff.outputs.deploy == 'true'
+        run: |
+          docker build --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "vocamaster:$GITHUB_SHA" .
+          docker save "vocamaster:$GITHUB_SHA" | gzip -1 > "$RUNNER_TEMP/vocamaster-image.tar.gz"
+          sha256sum "$RUNNER_TEMP/vocamaster-image.tar.gz" | cut -d ' ' -f1 > "$RUNNER_TEMP/vocamaster-image.sha256"
 
       - name: 이미지 전송 및 앱만 갱신 (실패 시 직전 이미지로 앱 롤백)
         if: steps.diff.outputs.deploy == 'true'

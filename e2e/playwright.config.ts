@@ -22,6 +22,7 @@ export default defineConfig({
   testDir: './tests',
   outputDir: './test-results',
   timeout: 60_000,
+  globalTimeout: 15 * 60_000, // CI 잡 제한(20분) 안에서 끝나야 실패 자료(앱 로그·trace)가 남는다
   expect: { timeout: 10_000 },
   workers: 1, // 계정 하나를 나눠 쓰니 차례로
   retries: process.env.CI ? 1 : 0, // CI 일시 오류만 한 번 더 — 다시 해서 통과하면 보고서에 flaky로 남는다
