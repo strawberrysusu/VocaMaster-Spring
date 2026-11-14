@@ -19,8 +19,10 @@ public final class PageableUtils {
     private PageableUtils() {}
 
     public static PageRequest safe(int page, int size, Sort sort) {
-        int safePage = Math.max(0, page);
         int safeSize = Math.max(MIN_SIZE, Math.min(MAX_SIZE, size));
+        // page × size가 int를 넘으면 Spring Data가 예외를 던져 500이 됐다 (11/14 검토: ?page=200000000).
+        // 마지막 페이지 너머는 어차피 빈 페이지라 그 앞에서 멈춘다
+        int safePage = Math.min(Math.max(0, page), Integer.MAX_VALUE / safeSize);
         return PageRequest.of(safePage, safeSize, sort);
     }
 }

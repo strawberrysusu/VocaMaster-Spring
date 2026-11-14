@@ -114,4 +114,17 @@ class CardOverwriteTest extends AbstractIntegrationTest {
         assertNotNull(CardService.class.getMethod("toggleStar", Long.class, Long.class)
                 .getAnnotation(Transactional.class), "CardService.toggleStar에 @Transactional");
     }
+
+    @Test
+    @DisplayName("별표 토글 두 번이 겹쳐도 두 번 다 뒤집힌다 — 읽고 뒤집어 쓰면 같은 값을 읽은 둘이 한 번으로 줄었다")
+    void overlappingToggles_bothApply() {
+        newTx().execute(s1 -> {
+            cardRepository.findById(card.getId()).orElseThrow();   // 첫 토글이 먼저 읽음 (starred = false)
+            newTx().execute(s2 -> cardService.toggleStar(card.getId(), user.getId()));   // 다른 탭의 토글이 먼저 커밋 (→ 켜짐)
+            cardService.toggleStar(card.getId(), user.getId());   // 읽어 둔 false를 뒤집어 쓰면 다시 '켜짐' — 두 번 눌렀는데 켜진 채
+            return null;
+        });
+
+        assertFalse(cardRepository.findById(card.getId()).orElseThrow().getStarred(), "두 번 뒤집혀 다시 꺼짐");
+    }
 }

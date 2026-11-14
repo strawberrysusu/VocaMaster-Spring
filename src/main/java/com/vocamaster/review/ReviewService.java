@@ -95,13 +95,27 @@ public class ReviewService {
                 throw new BadRequestException("같은 카드가 두 번 들어왔습니다 (cardId=" + item.getCardId() + ")");
             }
         }
-        int known = (int) answers.stream().filter(a -> Boolean.TRUE.equals(a.getCorrect())).count();
+        // 지문은 받은 답안 전체로 — 재전송(같은 초안)이면 아래에서 건너뛴 카드가 있어도 같은 값이어야 멱등이 성립한다
         String hash = payloadHash(answers);
+
+        // ①-2 세션 도중 지워진 카드는 건너뛴다 (11/14 검토). 예전엔 그 카드 하나 때문에 제출이 매번 404라
+        //     답안을 통째로 버려야 했다 — 별표 일괄 설정(CardService.setStarred)과 같은 처리. 남의 카드는 ③에서 그대로 403.
+        //     cardId 오름차순으로 반영한다 — card_progress 행 잠금을 늘 같은 순서로 잡아야, 카드가 겹치는 제출 두 개가
+        //     서로 상대가 쥔 잠금을 기다리는 교착(deadlock)이 생기지 않는다 (Codex 검산 11/14: 역순 제출 둘이 동시에 오면 한쪽이 500).
+        //     순서를 바꿔도 결과는 같다 — 카드마다 따로 반영하고, 같은 카드 두 번은 ①에서 막았다. results도 이 순서
+        Map<Long, Card> cards = cardRepository.findAllById(seen).stream()
+                .collect(Collectors.toMap(Card::getId, card -> card));
+        List<BatchAnswerRequest.Item> kept = answers.stream()
+                .filter(a -> cards.containsKey(a.getCardId()))
+                .sorted(Comparator.comparing(BatchAnswerRequest.Item::getCardId))
+                .toList();
+        List<Long> skippedIds = seen.stream().filter(id -> !cards.containsKey(id)).sorted().toList();
+        int known = (int) kept.stream().filter(a -> Boolean.TRUE.equals(a.getCorrect())).count();
 
         // ② 처리권 확보. 예외가 아니라 반환값 0으로 중복을 안다 —
         //    같은 트랜잭션에서 unique 위반을 catch하면 rollback-only에 걸려 뒤이은 조회가 못 나간다
         int claimed = submissionRepository.insertIgnore(
-                userId, request.getSubmissionId(), answers.size(), known, hash);
+                userId, request.getSubmissionId(), kept.size(), known, hash);
         if (claimed == 0) {
             // 진 쪽은 잠금 읽기로 확정본을 본다. 아직 커밋 전이라 못 읽으면 409 — 클라이언트가 재시도한다
             ReviewSubmission done = submissionRepository.findLocking(userId, request.getSubmissionId())
@@ -119,31 +133,30 @@ public class ReviewService {
         //    now를 여기서 한 번만 뽑는다: 카드마다 now()를 부르면 자정 경계에서
         //    앞 카드는 어제 날짜로, 뒤 카드와 출석부는 오늘 날짜로 갈린다
         LocalDateTime now = LocalDateTime.now(KST);
-        //    cardId 오름차순으로 반영한다 — card_progress 행 잠금을 늘 같은 순서로 잡아야, 카드가 겹치는 제출 두 개가
-        //    서로 상대가 쥔 잠금을 기다리는 교착(deadlock)이 생기지 않는다 (Codex 검산 11/14: 역순 제출 둘이 동시에 오면 한쪽이 500).
-        //    순서를 바꿔도 결과는 같다 — 카드마다 따로 반영하고, 같은 카드 두 번은 ①에서 막았다. results도 이 순서
-        List<BatchAnswerRequest.Item> ordered = answers.stream()
-                .sorted(Comparator.comparing(BatchAnswerRequest.Item::getCardId))
-                .toList();
-        List<ReviewAnswerResponse> results = new ArrayList<>(answers.size());
+        List<ReviewAnswerResponse> results = new ArrayList<>(kept.size());
         Set<Long> deckIds = new LinkedHashSet<>();
-        for (BatchAnswerRequest.Item item : ordered) {
-            Card card = loadOwnedCard(userId, item.getCardId());
+        for (BatchAnswerRequest.Item item : kept) {
+            Card card = cards.get(item.getCardId());
+            deckService.verifyOwner(card.getDeck().getId(), userId);   // 남의 덱 카드면 403 — 앞서 반영한 것까지 통째로 롤백
             deckIds.add(card.getDeck().getId());
             results.add(ReviewAnswerResponse.from(applyAnswer(userId, card, item.getCorrect(), now)));
         }
 
         // ④ 출석 도장은 한 번 — 답변 수만큼 더하고, 이벤트는 덱마다 한 발 (200장 = 이벤트 200발 방지).
         //    날짜도 위 now에서 파생 — 카드 시간과 통계 날짜가 갈리지 않게
-        statsService.recordStudy(userId, deckIds, answers.size(), now.toLocalDate());
+        //    전부 지워진 카드였다면 학습한 게 없으니 출석도 찍지 않는다
+        if (!kept.isEmpty()) {
+            statsService.recordStudy(userId, deckIds, kept.size(), now.toLocalDate());
+        }
 
         return BatchAnswerResponse.builder()
                 .submissionId(request.getSubmissionId())
-                .total(answers.size())
+                .total(kept.size())
                 .known(known)
-                .unknown(answers.size() - known)
+                .unknown(kept.size() - known)
                 .alreadySubmitted(false)
                 .results(results)
+                .skippedIds(skippedIds)
                 .build();
     }
 

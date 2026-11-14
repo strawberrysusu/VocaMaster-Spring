@@ -584,4 +584,8 @@ export const en: Messages = {
   "비밀번호가 너무 깁니다 (영문 72자, 한글 24자까지)": "Password is too long (max 72 bytes: 72 letters or digits)",
   // 개인정보처리방침 문서(privacy.html)는 한국어뿐 — 일·영·중 화면의 링크에 표시 (11/14 검토)
   "개인정보처리방침 (한국어)": "Privacy Policy (in Korean)",
+  // ── 11/14 검토: 지워진 카드 건너뜀(화면) + 405·415·413 (서버 문구)
+  "지워진 카드 {n}장은 건너뛰었어요": "Deleted cards skipped: {n}",
+  "지원하지 않는 요청입니다": "Unsupported request",
+  "요청이 너무 큽니다": "Request is too large",
 }

@@ -294,4 +294,21 @@ class ReviewBatchAnswerTest extends AbstractIntegrationTest {
     private long progressId(Card c) {
         return cardProgressRepository.findByUserIdAndCardId(user.getId(), c.getId()).orElseThrow().getId();
     }
+
+    @Test
+    @DisplayName("세션 도중 지워진 카드는 건너뛰고 나머지는 반영 — 예전엔 404로 제출이 통째로 막혔다")
+    void batch_skipsDeletedCards() {
+        Card gone = cardRepository.save(Card.builder().front("gone").back("사라짐").deck(deckA).build());
+        Long goneId = gone.getId();
+        cardRepository.delete(gone);   // 답한 뒤 덱 화면에서 지움
+
+        BatchAnswerResponse res = reviewService.recordAnswers(user.getId(), req("sub-gone", a1.getId(), true, goneId, false));
+
+        assertEquals(1, res.getTotal(), "지워진 카드는 세지 않는다");
+        assertEquals(1, res.getKnown());
+        assertEquals(List.of(goneId), res.getSkippedIds());
+        assertEquals(2, box(a1));
+        // 같은 초안으로 재전송 — 지문은 받은 답안 전체라 같은 제출로 본다
+        assertTrue(reviewService.recordAnswers(user.getId(), req("sub-gone", a1.getId(), true, goneId, false)).isAlreadySubmitted());
+    }
 }

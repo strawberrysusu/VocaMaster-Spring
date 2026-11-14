@@ -20,8 +20,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -159,5 +161,31 @@ class ApiInputBoundaryTest extends AbstractIntegrationTest {
         mvc.perform(json(post("/auth/register"),
                         "{'email':'nick30_" + System.nanoTime() + "@test.com','password':'" + PASSWORD + "','nickname':'" + "닉".repeat(30) + "'}"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("카드 수정에 전각 공백(　)만 → 400 — 일본어 입력기가 넣는 공백도 빈칸")
+    void updateCard_fullWidthSpaceOnly_400() throws Exception {
+        mvc.perform(json(patch("/cards/{id}", card.getId()), "{'front':'\u3000\u3000'}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("front: 비워 둘 수 없습니다")));
+    }
+
+    @Test
+    @DisplayName("아주 큰 ?page= → 빈 페이지 200 (예전엔 page × size가 int를 넘어 500)")
+    void hugePage_isEmptyPageNot500() throws Exception {
+        mvc.perform(get("/public/decks").param("page", "200000000"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("주소창으로 /auth/login(GET) → 405, 글자 본문으로 POST → 415 — 500 '서버 내부 오류'가 아니다")
+    void wrongMethodOrContentType_is4xx() throws Exception {
+        mvc.perform(get("/auth/login"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().exists("Allow"))
+                .andExpect(jsonPath("$.message").value("지원하지 않는 요청입니다"));
+        mvc.perform(post("/auth/login").contentType(MediaType.TEXT_PLAIN).content("email=a"))
+                .andExpect(status().isUnsupportedMediaType());
     }
 }

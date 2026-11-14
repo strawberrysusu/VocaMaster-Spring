@@ -26,6 +26,11 @@ public class BatchAnswerResponse {
      */
     private List<ReviewAnswerResponse> results;
 
+    /**
+     * 세션 도중 지워져서 건너뛴 카드 id (11/14) — total·known에는 들어가지 않는다. <b>재전송이면 null</b>(그때 무엇을 건너뛰었는지 저장하지 않는다)
+     */
+    private List<Long> skippedIds;
+
     public static BatchAnswerResponse alreadySubmitted(ReviewSubmission done) {
         return BatchAnswerResponse.builder()
                 .submissionId(done.getSubmissionId())

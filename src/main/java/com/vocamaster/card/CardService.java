@@ -18,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -97,13 +98,14 @@ public class CardService {
         cardRepository.delete(card);
     }
 
-    // @Transactional: update와 같은 이유 — 별표 토글이 그 사이 고친 단어·설명을 되돌리지 않게
+    // 뒤집기는 DB가 한 번에(toggleStarred) — 겹친 두 번이 한 번으로 줄지 않고, 그 사이 고친 단어·설명도 건드리지 않는다.
+    // @Transactional: 소유 확인·뒤집기·다시 읽기를 한 트랜잭션으로 (CardOverwriteTest)
     @Transactional
     public CardResponse toggleStar(Long id, Long userId) {
         Card card = getCard(id);
         deckService.verifyOwner(card.getDeck().getId(), userId);
-        card.setStarred(!card.getStarred());
-        return withProgress(cardRepository.saveAndFlush(card), userId);
+        cardRepository.toggleStarred(id, LocalDateTime.now());
+        return withProgress(getCard(id), userId);   // 뒤집힌 값을 다시 읽는다
     }
 
     /**

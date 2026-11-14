@@ -23,6 +23,8 @@ interface BatchResult {
   known: number
   unknown: number
   alreadySubmitted: boolean
+  /** 세션 도중 지워져서 서버가 건너뛴 카드 (11/14) — 재전송이면 null */
+  skippedIds?: number[] | null
 }
 
 /** cardId → 알아요(true) / 몰라요(false). 여기 없는 카드는 '미응답' */
@@ -755,6 +757,9 @@ export default function Study() {
                 ? t('답변 없이 카드 보기를 마쳤어요.')
                 : <>{t('이번 답변 {n}장', { n: result.total })} · <b>{t('알아요 {n}', { n: result.known })}</b> · <b>{t('몰라요 {n}', { n: result.unknown })}</b></>}
             </p>
+            {result.skippedIds && result.skippedIds.length > 0 && (
+              <p className="muted" style={{ fontSize: 13.5 }}>{t('지워진 카드 {n}장은 건너뛰었어요', { n: result.skippedIds.length })}</p>
+            )}
             <p className="muted" style={{ fontSize: 13.5 }}>
               {browsedOnly
                 ? t('알아요·몰라요를 선택하지 않아 학습 상태와 복습 일정은 변경하지 않았어요.')

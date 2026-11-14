@@ -30,6 +30,8 @@ check('이메일 칸 없음', jwtEmail(token({ sub: '2' })), '')
 check('가나', detectLang('かいぎ'), 'ja-JP')
 check('BMP 한자', detectLang('会議'), 'ja-JP')
 check('BMP 밖 한자만 (𩸽 U+29E3D)', detectLang('𩸽'), 'ja-JP')
+check('확장 A 한자만 (㐂 U+3402)', detectLang('㐂'), 'ja-JP')
+check('호환 한자만 (﨑 U+FA11)', detectLang('﨑'), 'ja-JP')
 check('한글', detectLang('사과'), 'ko-KR')
 check('영어', detectLang('meticulous'), 'en-US')
 
