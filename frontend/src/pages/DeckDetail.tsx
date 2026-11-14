@@ -5,6 +5,7 @@ import { fetchAllCards, type CardDto, type LearningStatus } from '../api/cards'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
 import Ruby from '../components/Ruby'
+import TestSheetDialog from '../components/TestSheetDialog'
 
 interface Deck {
   id: number
@@ -44,6 +45,7 @@ export default function DeckDetail() {
   const [eReading, setEReading] = useState('')
   const [eBack, setEBack] = useState('')
   const [saving, setSaving] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)   // 📝 종이 시험지 (Word) 설정 창
 
   const load = useCallback(() => {
     const requests = loadRequest.current
@@ -282,6 +284,13 @@ export default function DeckDetail() {
             ) : (
               <button className="mode-stub" disabled title="카드를 먼저 추가하세요">듣기</button>
             )}
+            {cardsLoaded && cards.length >= 1 ? (
+              <button type="button" className="mode-btn" onClick={() => setSheetOpen(true)} title="인쇄해서 손으로 쓰는 시험지 (Word)">
+                시험지
+              </button>
+            ) : (
+              <button className="mode-stub" disabled title="카드를 먼저 추가하세요">시험지</button>
+            )}
           </div>
         </div>
 
@@ -383,6 +392,9 @@ export default function DeckDetail() {
           )}
         </div>
       </div>
+      {sheetOpen && deck && (
+        <TestSheetDialog deckTitle={deck.title} cards={cards} onClose={() => setSheetOpen(false)} />
+      )}
     </>
   )
 }
