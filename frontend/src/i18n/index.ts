@@ -10,6 +10,7 @@
 import { ja, type Messages } from './ja'
 import { en } from './en'
 import { zh } from './zh'
+import { translateServerMessage } from './serverText'
 
 export type Lang = 'ko' | 'ja' | 'en' | 'zh'
 export type Key = keyof Messages
@@ -58,59 +59,13 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
   return text.replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name]) : whole))
 }
 
-// ── 서버 오류 문구 (서버는 한국어로 보낸다)
-// 숫자 같은 값이 끼는 문구('현재 1개')는 사전의 {n} 틀('현재 {n}개')과 모양을 맞춰 본다. 틀은 처음 쓸 때 한 번 만든다
-let patterns: { re: RegExp; key: Key; names: string[] }[] | null = null
-function templatePatterns() {
-  if (!patterns) {
-    patterns = (Object.keys(ja) as Key[])
-      .filter((key) => key.includes('{'))
-      .map((key) => {
-        const names: string[] = []
-        const source = key
-          .split(/(\{\w+\})/)
-          .map((part) => {
-            const hole = /^\{(\w+)\}$/.exec(part)
-            if (hole) {
-              names.push(hole[1])
-              return '(.+?)'
-            }
-            return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-          })
-          .join('')
-        return { re: new RegExp('^' + source + '$'), key, names }
-      })
-  }
-  return patterns
-}
-
-function lookupServerText(text: string): string | null {
-  if (text in ja) return t(text as Key)
-  for (const { re, key, names } of templatePatterns()) {
-    const m = re.exec(text)
-    if (m) return t(key, Object.fromEntries(names.map((name, i) => [name, m[i + 1]])))
-  }
-  return null
-}
-
 /**
- * 서버가 보낸 오류 문구를 고른 언어로.
- * · 통째로 사전에 있거나 {n} 틀과 맞으면 번역
- * · 입력 검사 오류('nickname: 닉네임은 1~30자, password: …')는 조각마다 — 필드 이름은 그대로
- * · 모르는 문구는 그대로 둔다 — 뜻이 사라지는 것보다 한국어라도 보이는 게 낫다
+ * 서버가 보낸 오류 문구(한국어)를 고른 언어로 — 번역 규칙은 serverText.ts
+ * (사전에 그대로 있거나 {n} 틀과 맞으면 번역, 입력 검사 오류는 조각마다, 모르는 문구는 그대로)
  */
 export function tServer(message: string): string {
-  if (current === 'ko' || !message) return message
-  const whole = lookupServerText(message)
-  if (whole !== null) return whole
-  return message
-    .split(', ')
-    .map((part) => {
-      const field = /^([A-Za-z_][\w.[\]]*): (.+)$/.exec(part)
-      if (field) return `${field[1]}: ${lookupServerText(field[2]) ?? field[2]}`
-      return lookupServerText(part) ?? part
-    })
-    .join(', ')
+  if (current === 'ko') return message
+  return translateServerMessage(message, DICTS[current])
 }
 
 /** 언어 바꾸기 — 설정에 저장하고 새로고침 */

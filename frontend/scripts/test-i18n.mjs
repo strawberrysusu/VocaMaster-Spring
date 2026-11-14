@@ -57,6 +57,23 @@ for (const f of files) {
 }
 for (const k of used) if (!(k in ja)) fail(`코드에서 쓰는데 사전에 없음: ${k}`)
 
+// 서버 오류 문구 번역 (serverText.ts) — 통째·{n} 틀·입력 검사 조각·모르는 문구
+const { translateServerMessage } = await loadTs(here('../src/i18n/serverText.ts'))
+const expectServer = (label, got, want) => {
+  if (got !== want) fail(`서버 문구 ${label}: ${got} (기대 ${want})`)
+}
+const LOGIN = '이메일 또는 비밀번호가 올바르지 않습니다'
+const QUIZ = '퀴즈에는 덱에 카드가 최소 2개 필요합니다. 현재 {n}개'
+const LINES = '한 번에 최대  {max}줄까지 등록할 수 있습니다. 현재 {n}줄입니다.'
+for (const [name, dict] of [['ja', ja], ['en', en], ['zh', zh]]) {
+  const S = (msg) => translateServerMessage(msg, dict)
+  expectServer(`${name} 통째`, S(LOGIN), dict[LOGIN])
+  expectServer(`${name} {n} 틀`, S('퀴즈에는 덱에 카드가 최소 2개 필요합니다. 현재 1개'), dict[QUIZ].replace('{n}', '1'))
+  expectServer(`${name} 두 칸 공백 틀`, S('한 번에 최대  1000줄까지 등록할 수 있습니다. 현재 1203줄입니다.'), dict[LINES].replace('{max}', '1000').replace('{n}', '1203'))
+  expectServer(`${name} 입력 검사 조각`, S('nickname: 닉네임은 1~30자, password: 비밀번호는 8자 이상'), `nickname: ${dict['닉네임은 1~30자']}, password: ${dict['비밀번호는 8자 이상']}`)
+  expectServer(`${name} 모르는 문구는 그대로`, S('전혀 모르는 문구'), '전혀 모르는 문구')
+}
+
 if (failed) {
   console.error(`\n${failed}개 실패`)
   process.exit(1)
