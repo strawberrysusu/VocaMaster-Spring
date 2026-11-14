@@ -1,6 +1,7 @@
 # CI/CD (Phase 7 ①+CD, ADR-041)
 # CI: 모든 push/PR에서 전체 테스트(Testcontainers MySQL+Redis) + jar 빌드.
-# CD: master 푸시가 테스트를 통과하면(needs: build) 서울 AWS 서버에 앱만 자동 배포 —
+# E2E: 그 jar를 빈 DB에 띄워 화면 회귀 테스트(Playwright, ADR-055).
+# CD: master 푸시가 테스트·화면 테스트를 통과하면(needs: build, e2e) 서울 AWS 서버에 앱만 자동 배포 —
 #     사람이 손으로 하던 "docker build → save|ssh|load → compose up"을 그대로 기계화.
 #     docs만 바뀐 푸시는 배포 생략 (재시작 다운타임 ~40초를 문서 커밋마다 낼 이유 없음)
 name: CI/CD
@@ -99,8 +100,94 @@ jobs:
           path: build/libs/*SNAPSHOT.jar
           retention-days: 7
 
-  deploy:
+  # 화면 회귀 테스트 (ADR-055) — 위에서 만든 jar를 빈 MySQL·Redis에 띄우고 진짜 Chromium으로 주요 흐름을 누른다.
+  # 계정·덱은 테스트가 매번 새로 만들고, 운영 서버·운영 데이터는 쓰지 않는다. 실패하면 deploy가 돌지 않는다.
+  e2e:
     needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0.46            # 운영(deploy/docker-compose.aws.yml)과 같은 판
+        env:
+          MYSQL_DATABASE: vocamaster
+          MYSQL_ROOT_PASSWORD: e2e-only   # 이 잡 안에서만 사는 빈 DB의 일회용 값
+          TZ: Asia/Seoul                  # 운영 MySQL도 KST
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pe2e-only"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+      redis:
+        image: redis:7.2.16-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 위에서 만든 jar 받기
+        uses: actions/download-artifact@v4
+        with:
+          name: vocamaster-jar
+          path: build/libs
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: E2E deps
+        working-directory: e2e
+        run: npm ci
+
+      - name: Playwright 브라우저 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
+
+      - name: Chromium 설치
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      # playwright.config.ts의 webServer가 jar를 띄우고(dev 프로필 + 아래 DB 주소) 끝나면 내린다
+      - name: 화면 회귀 테스트 (Playwright)
+        working-directory: e2e
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/vocamaster?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: e2e-only
+          SPRING_JPA_SHOW_SQL: 'false'
+        run: npm test
+
+      - name: 실패 자료 올리기 (화면 녹화·스크린샷·앱 로그)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/app.log
+          retention-days: 7
+
+  deploy:
+    needs: [build, e2e]   # 화면 회귀 테스트까지 통과해야 배포
     if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
     runs-on: ubuntu-latest
     timeout-minutes: 25
