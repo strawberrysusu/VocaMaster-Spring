@@ -23,6 +23,8 @@ export interface SheetRow {
   reading: string
   /** 정답지용 뜻 */
   meaning: string
+  /** 설명 줄 (없으면 빈 문자열) — 정답지·온라인 채점 결과에 뜻 아래 작은 글씨로 */
+  memo: string
   /** 읽기를 쓰는 문항인가 — 한자가 있는 일본어 단어만 true */
   needsReading: boolean
 }
@@ -33,7 +35,7 @@ export interface SheetModel {
   rows: SheetRow[]
 }
 
-type SheetCard = Pick<CardDto, 'id' | 'front' | 'back' | 'reading' | 'starred'>
+type SheetCard = Pick<CardDto, 'id' | 'front' | 'back' | 'reading' | 'memo' | 'starred'>
 
 // 한자: CJK 통합 한자 + 확장 A + 호환 한자 + 々〆ヶ
 const KANJI = /[㐀-䶿一-鿿豈-﫿々〆ヶ]/
@@ -74,6 +76,7 @@ export function buildSheet(cards: SheetCard[], opts: SheetOptions, random: () =>
       word: c.front.trim(),
       reading: (c.reading ?? '').trim(),
       meaning: c.back.trim(),
+      memo: (c.memo ?? '').trim(),
       needsReading: japanese && hasKanji(c.front),
     })),
   }

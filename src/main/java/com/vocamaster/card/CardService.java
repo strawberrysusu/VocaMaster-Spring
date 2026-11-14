@@ -43,7 +43,7 @@ public class CardService {
                 .back(req.getBack())
                 .reading(blankToNull(req.getReading()))
                 .exampleSentence(req.getExampleSentence())
-                .memo(req.getMemo())
+                .memo(blankToNull(req.getMemo()))
                 .position(req.getPosition())
                 .deck(deck)
                 .build();
@@ -82,7 +82,7 @@ public class CardService {
         if (req.getBack() != null) card.setBack(req.getBack());
         if (req.getReading() != null) card.setReading(blankToNull(req.getReading()));   // ""로 보내면 읽기 삭제
         if (req.getExampleSentence() != null) card.setExampleSentence(req.getExampleSentence());
-        if (req.getMemo() != null) card.setMemo(req.getMemo());
+        if (req.getMemo() != null) card.setMemo(blankToNull(req.getMemo()));   // ""로 보내면 설명 삭제 (읽기와 같은 규칙)
         if (req.getPosition() != null) card.setPosition(req.getPosition());
         return withProgress(cardRepository.save(card), userId);
     }

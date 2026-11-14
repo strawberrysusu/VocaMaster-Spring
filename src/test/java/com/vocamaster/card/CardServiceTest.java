@@ -133,6 +133,32 @@ class CardServiceTest extends AbstractIntegrationTest {
         assertFalse(toggledBack.getStarred());
     }
 
+    @Test
+    @DisplayName("설명(memo) — 생성·수정, 빈 문자열은 null (읽기와 같은 규칙)")
+    void memo_createUpdateAndBlankToNull() {
+        CreateCardRequest req = new CreateCardRequest();
+        req.setFront("滅私奉公");
+        req.setBack("멸사봉공");
+        req.setMemo("사사로운 이익을 버리고 나라·조직을 위해 힘씀");
+        CardResponse created = cardService.create(deck.getId(), user.getId(), req);
+        assertEquals("사사로운 이익을 버리고 나라·조직을 위해 힘씀", created.getMemo());
+
+        UpdateCardRequest keep = new UpdateCardRequest();
+        keep.setBack("멸사봉공");
+        assertEquals("사사로운 이익을 버리고 나라·조직을 위해 힘씀",
+                cardService.update(created.getId(), user.getId(), keep).getMemo(), "memo를 안 보내면 그대로");
+
+        UpdateCardRequest clear = new UpdateCardRequest();
+        clear.setMemo("   ");
+        assertNull(cardService.update(created.getId(), user.getId(), clear).getMemo(), "빈 문자열은 설명 삭제");
+
+        CreateCardRequest blank = new CreateCardRequest();
+        blank.setFront("会議");
+        blank.setBack("회의");
+        blank.setMemo("");
+        assertNull(cardService.create(deck.getId(), user.getId(), blank).getMemo());
+    }
+
     // ─── 별표 일괄 설정 (온라인 시험지, ADR-053) ───
 
     private Card saveCard(Deck target, String front, boolean starred) {

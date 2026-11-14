@@ -7,6 +7,7 @@ export interface CardDto {
   front: string
   back: string
   reading?: string | null   // 읽기(요미가나) — 없으면 null
+  memo?: string | null      // 설명 줄 — 뜻 아래 작은 글씨 (11/14 4단계), 없으면 null
   starred: boolean
   learningStatus: LearningStatus
   correctStreak: number

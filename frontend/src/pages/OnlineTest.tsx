@@ -288,6 +288,7 @@ export default function OnlineTest() {
                       <span className="otest-correct">
                         {askReading(r) && <span lang="ja">{r.reading} · </span>}
                         {r.meaning}
+                        {r.memo && <span className="otest-memo"> — {r.memo}</span>}
                       </span>
                       {(!((res.readingOk ?? true) && res.meaningOk) || res.override) && (
                         <button className="btn-ghost-link otest-override" disabled={busyRow === i || starState === 'saving'} onClick={() => void toggleOverride(i)}>

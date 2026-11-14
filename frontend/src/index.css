@@ -912,6 +912,22 @@ input {
   color: var(--muted-2);
 }
 
+/* 설명 줄 (11/14 4단계) — 뜻 아래 작은 글씨. 카드 gap(18px)보다 뜻에 붙여 한 덩어리로 보이게 */
+.study-memo {
+  margin-top: -8px;
+  max-width: 34em;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--sub);
+  text-align: center;
+}
+.word-memo { display: block; margin-top: 3px; font-size: 12.5px; line-height: 1.5; color: #9a9aaa; }
+.otest-memo { color: #8a8a99; font-weight: 400; }
+.create-row .memo-input { flex: 1.2; }
+/* 카드 수정 행: 설명 칸은 둘째 줄 전체 (번호 칸 26px + 간격 18px만큼 들여서 단어 칸과 맞춤) */
+.word-row.row-edit { flex-wrap: wrap; }
+.word-row.row-edit .memo-input { order: 10; flex: 1 1 100%; margin-left: 44px; }
+
 .answer-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1222,9 +1238,10 @@ button:disabled {
     align-items: start;
   }
   .word-row.row-edit .word-idx {
-    grid-row: 1 / span 4;
+    grid-row: 1 / span 5;   /* 단어·읽기·뜻·설명·버튼 (11/14 설명 칸 추가) */
     padding-top: 8px;
   }
+  .word-row.row-edit .memo-input { order: 0; margin-left: 0; }
   .word-row.row-edit input {
     grid-column: 2;
     width: 100%;

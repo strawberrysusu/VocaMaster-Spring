@@ -13,6 +13,7 @@ interface StudyCard {
   front: string
   back: string
   reading?: string | null
+  memo?: string | null   // 설명 줄 — 뜻을 확인한 뒤에만 보인다 (11/14)
   starred: boolean
 }
 
@@ -179,6 +180,7 @@ export default function Study() {
               front: c.front,
               back: c.back,
               reading: c.reading,
+              memo: c.memo,
               starred: !!c.starred,
             })),
           )
@@ -625,7 +627,10 @@ export default function Study() {
               {revealed && card.reading && <span className="reading">{card.reading}</span>}
               <span className="study-word">{card.front}</span>
               {revealed ? (
-                <span className="study-answer">{card.back}</span>
+                <>
+                  <span className="study-answer">{card.back}</span>
+                  {card.memo && <span className="study-memo">{card.memo}</span>}
+                </>
               ) : (
                 <span className="study-hint">카드를 눌러 뜻 확인</span>
               )}
