@@ -44,6 +44,11 @@ const withoutId = (prev: Set<number>, id: number) => {
   next.delete(id)
   return next
 }
+/** 별표 요청 결과를 '이 시험이 켠 ⭐'에 반영 — 실제로 켜진 카드는 넣고, 서버가 건너뛴(지워진) 카드는 뺀다 */
+const mergeStarResult = (prev: Set<number>, r: { changedIds: number[]; skippedIds: number[] }) => {
+  const skipped = new Set(r.skippedIds)
+  return new Set([...withIds(prev, r.changedIds)].filter((id) => !skipped.has(id)))
+}
 
 function readDraft(key: string): Draft | null {
   try {
@@ -78,6 +83,8 @@ export default function OnlineTest() {
   const [addedStars, setAddedStars] = useState<Set<number>>(new Set())
   const starredAtLoad = useRef<Set<number>>(new Set())
   const [starState, setStarState] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
+  // 서버가 건너뛴 카드 수 — 시험 도중 지워진 카드 (11/14 검토: 예전엔 한 장만 지워져도 별표가 전부 실패했다)
+  const [skippedCount, setSkippedCount] = useState(0)
   // '맞음으로'·'다시 오답으로' 요청 중인 카드 — 이 동안은 '다시 풀기'를 막는다
   const [busyCards, setBusyCards] = useState<Set<number>>(new Set())
   // 몇 번째 풀이인지 — 문항이 바뀐 뒤(다시 풀기·다른 덱) 늦게 온 응답이 새 결과를 건드리지 않게
@@ -110,6 +117,7 @@ export default function OnlineTest() {
         attemptRef.current += 1
         setAddedStars(added)
         setStarState('idle')
+        setSkippedCount(0)
         if (!built) built = buildSheet(cards, { scope, count, shuffle })
         setRows(built.rows)
         setJapanese(built.japanese)
@@ -167,8 +175,13 @@ export default function OnlineTest() {
       // 500장씩 나눠 보낸다 (api/cards.ts) — '전체' 시험은 오답이 500개를 넘을 수 있다
       const r = await setStarred(deckId!, wrongIds, true)
       // 시험을 연 뒤 다른 곳에서 꺼진 ⭐를 다시 켠 경우까지 — changedIds는 서버가 실제로 바꾼 카드
-      setAddedStars((prev) => withIds(prev, r.changedIds))
-      if (attemptRef.current === attempt) setStarState('done')
+      // 지워진 카드는 서버가 건너뛰었다 — '이 시험이 켠 ⭐'에서도 뺀다
+      setAddedStars((prev) => mergeStarResult(prev, r))
+      if (attemptRef.current === attempt) {
+        setSkippedCount(r.skippedIds.length)
+        setStarState('done')
+        setError('') // '별표 다시 시도'로 성공했으면 앞서 뜬 오류 문구도 지운다
+      }
     } catch (e) {
       if (attemptRef.current !== attempt) return
       setStarState('error')
@@ -210,7 +223,7 @@ export default function OnlineTest() {
       } else {
         if (!starredAtLoad.current.has(cardId)) setAddedStars((prev) => withIds(prev, [cardId]))
         const r = await setStarred(deckId!, [cardId], true)
-        setAddedStars((prev) => withIds(prev, r.changedIds))
+        setAddedStars((prev) => mergeStarResult(prev, r)) // 지워진 카드면 서버가 건너뛰니 세지 않는다
       }
       // 그사이 문항이 바뀌었으면(다른 덱 등) i번은 다른 단어다 — 결과 표시는 건드리지 않는다
       if (attemptRef.current !== attempt) return
@@ -233,6 +246,7 @@ export default function OnlineTest() {
     setAnswers(wrongRows.map(emptyAnswer))
     setResults(null)
     setStarState('idle')
+    setSkippedCount(0)
     window.scrollTo({ top: 0 })
   }
 
@@ -265,7 +279,9 @@ export default function OnlineTest() {
               {wrongCount > 0 && (
                 <span className="otest-star-note">
                   {starState === 'saving' && ' · 틀린 단어 ⭐ 하는 중...'}
-                  {starState === 'done' && ` · 틀린 ${wrongCount}개 ⭐ 완료 (새로 켠 별표 ${addedStars.size}개)`}
+                  {starState === 'done' &&
+                    ` · 틀린 ${wrongCount}개 ⭐ 완료 (새로 켠 별표 ${addedStars.size}개` +
+                      (skippedCount > 0 ? `, 지워진 카드 ${skippedCount}개는 건너뜀)` : ')')}
                   {starState === 'error' && (
                     <>
                       {' · '}

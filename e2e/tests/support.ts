@@ -95,6 +95,12 @@ export async function toggleStar(request: APIRequestContext, cardId: number): Pr
   await ok(await request.patch(`/cards/${cardId}/star`, { headers: auth() }))
 }
 
+/** 카드 지우기 — 다른 탭·기기에서 지운 것처럼 (응답 본문이 없어 상태만 본다) */
+export async function deleteCard(request: APIRequestContext, cardId: number): Promise<void> {
+  const res = await request.delete(`/cards/${cardId}`, { headers: auth() })
+  if (!res.ok()) throw new Error(`${res.status()} ${res.url()} — ${await res.text()}`)
+}
+
 /** 가로 스크롤 크기(px) — 0이어야 정상 */
 export function overflowX(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)

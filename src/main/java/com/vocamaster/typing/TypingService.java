@@ -149,8 +149,11 @@ public class TypingService {
         }
 
         // 3) 채점 — 복수 정답 매칭, 괄호 설명·품사 표시는 걷어내고 비교 (ADR-026 B → ADR-051)
-        String typed = req.getTypedAnswer() == null ? "" : req.getTypedAnswer().trim();
-        boolean isCorrect = isAnswerMatch(typed, question.getCorrectAnswer());
+        String raw = req.getTypedAnswer() == null ? "" : req.getTypedAnswer();
+        String typed = raw.trim();   // 저장·화면 표시용 (예전 그대로)
+        // 채점은 손대지 않은 입력으로 — 공백 정리는 AnswerMatcher가 화면(JS)과 같은 규칙으로 한다.
+        // 여기서 Java trim()을 먼저 하면 화면은 안 지우는 글자(U+0001 같은 제어 문자)까지 지워져 채점이 갈린다 (11/14 검토)
+        boolean isCorrect = isAnswerMatch(raw, question.getCorrectAnswer());
 
         // 4) UPDATE (dirty checking)
         question.setTypedAnswer(typed);

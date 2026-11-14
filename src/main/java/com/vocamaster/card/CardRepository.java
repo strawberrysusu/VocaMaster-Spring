@@ -6,10 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface CardRepository extends JpaRepository<Card, Long> {
     List<Card> findByDeckId(Long deckId);
+    /** 이 덱의 카드 중 id가 ids에 든 것만 — 별표 일괄 설정이 '이 덱 카드만' 바꾸는 데 쓴다 (ADR-053) */
+    List<Card> findByDeckIdAndIdIn(Long deckId, Collection<Long> ids);
     List<Card> findByDeckIdAndStarredTrue(Long deckId);
     Page<Card> findByDeckId(Long deckId, Pageable pageable);
     Page<Card> findByDeckIdAndStarredTrue(Long deckId, Pageable pageable);
