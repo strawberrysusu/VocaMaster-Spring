@@ -51,9 +51,10 @@ for (const width of WIDTHS) {
   })
 }
 
-// 띄어쓰기 없는 긴 영문·숫자 제목 (파일 이름이 그대로 덱 이름이 되는 'txt로 덱 만들기'에서 생길 수 있다)
+// 띄어쓰기 없는 긴 영문·숫자 제목 (파일 이름이 그대로 덱 이름이 되는 'txt로 덱 만들기'에서 생길 수 있다).
+// 11/14 이 테스트가 처음 찾았다(PR #26에서 test.fail로 재현: 덱 목록 820px 578px·덱 화면·온라인 시험 폰 173px·홈 폰 114px 넘침)
+// → PR #27에서 고치고 표시를 뗐다
 test('띄어쓰기 없는 긴 덱 제목도 가로로 넘치지 않는다', async ({ page, request }) => {
-  test.fail(true, '고치기 전: 제목이 줄을 못 바꿔 덱 목록·덱 화면·온라인 시험·홈이 가로로 넘친다 (11/14 이 테스트가 처음 찾음)')
   const long = 'Internationalization_vocabulary_2026'
   const deckId = await makeEmptyDeck(request, long)
   await makeEmptyDeck(request, long) // 덱 목록 한 줄(3칸)을 긴 제목으로 채운다

@@ -24,6 +24,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 제목에는 사용자가 지은 덱 이름이 들어간다 — 띄어쓰기 없는 긴 영문·숫자(파일 이름 등)도 칸 안에서 줄을 바꾼다
+   (11/14 화면 회귀 테스트가 찾음: 덱 화면·온라인 시험 제목이 폰에서 173px 넘침) */
+h1 {
+  overflow-wrap: anywhere;
+}
+
 button {
   font-family: inherit;
   border: 0;
@@ -485,7 +491,8 @@ input {
 /* ── 덱 카드 ── */
 .deck-grid {
   display: grid;
-  grid-template-columns: repeat(var(--deck-cols, 3), 1fr);   /* 설정의 덱 열 수 */
+  /* 설정의 덱 열 수. minmax(0, …): 1fr의 최소값은 '가장 긴 낱말 폭'이라 긴 제목 하나가 칸을 밀어 가로로 넘쳤다 */
+  grid-template-columns: repeat(var(--deck-cols, 3), minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -523,6 +530,7 @@ input {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ink-2);
+  overflow-wrap: anywhere;
 }
 
 .deck-card .meta {
@@ -1207,7 +1215,7 @@ button:disabled {
   }
 
   .deck-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .create-row {
@@ -2150,7 +2158,8 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
 /* ── 홈 대시보드 2차 (8/30 리디자인) — 최근 학습 덱 + 내 폴더 패널 ── */
 .home-2col {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  /* minmax(0, …): 최근 학습 덱 제목(한 줄 말줄임)의 전체 폭이 칸 최소값이 되어 폰에서 114px 넘쳤다 */
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   gap: 16px;
   margin-top: 16px;
 }
@@ -2218,7 +2227,7 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
 .folder-row-arrow { color: #c6c7d2; font-size: 17px; }
 
 @media (max-width: 768px) {
-  .home-2col { grid-template-columns: 1fr; }
+  .home-2col { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ── 폴더에 덱 담기 (8/30) — 빈 폴더에서 덱을 "가져올" 동선이 없던 구멍 수리 ── */

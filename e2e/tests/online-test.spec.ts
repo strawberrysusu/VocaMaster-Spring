@@ -54,11 +54,11 @@ test('폰 화면: 채점 뒤 정답·설명 줄이 붙어도 가로로 넘치지
   expect(await overflowX(page)).toBe(0)
 })
 
-// ── 회귀: Codex 검산(11/14)이 찾은 3건. 고치기 전 동작을 재현해 두고(test.fail = '지금은 실패해야 정상'),
-//    고치는 PR에서 test.fail 표시를 뗀다
+// ── 회귀: Codex 검산(11/14)이 찾은 3건. PR #26에서 test.fail로 고치기 전 동작을 재현했고(3건 모두 실패 확인),
+//    PR #27에서 고친 뒤 표시를 뗐다 — 이제 다시 생기면 이 테스트가 막는다
 test.describe('회귀 — 온라인 시험 별표 (Codex 검산 11/14)', () => {
+  // 고치기 전: 저장 중에도 눌려서, 늦게 온 응답이 다음 시험의 같은 번호(다른 단어)를 정답으로 바꿨다
   test('맞음으로 저장이 끝나기 전에는 "다시 풀기"가 막혀 있다', async ({ page, request }) => {
-    test.fail(true, '고치기 전: 저장 중에도 눌려서, 늦게 온 응답이 다음 시험의 같은 번호(다른 단어)를 정답으로 바꾼다')
     const deckId = await makeDeck(request, '경합', ['感謝|かんしゃ|감사', '会議|かいぎ|회의', '運輸|うんゆ|운수'])
     await open(page, deckId)
     await grade(page) // 전부 비움 → 3개 다 오답·⭐
@@ -81,8 +81,8 @@ test.describe('회귀 — 온라인 시험 별표 (Codex 검산 11/14)', () => {
     await expect(retry).toHaveText('틀린 2개만 다시 풀기')
   })
 
+  // 고치기 전: 501개를 한 번에 보내 400으로 거절됐고, 다시 시도해도 같았다
   test('오답이 500개를 넘어도 전부 ⭐ 된다 (서버는 한 번에 500장까지 받음)', async ({ page, request }) => {
-    test.fail(true, '고치기 전: 501개를 한 번에 보내 400으로 거절되고, 다시 시도해도 같다')
     test.setTimeout(120_000)
     const lines = Array.from({ length: 501 }, (_, i) => `word${i + 1}|뜻${i + 1}`)
     const deckId = await makeDeck(request, '501', lines)
@@ -94,8 +94,8 @@ test.describe('회귀 — 온라인 시험 별표 (Codex 검산 11/14)', () => {
     expect(starred).toBe(501)
   })
 
+  // 고치기 전: 다시 시도 응답이 "바뀐 카드 없음"이라 이 시험이 켠 ⭐인지 몰라서 안 껐다
   test('별표 응답이 끊겨도(서버엔 저장됨) 다시 시도 뒤 맞음으로가 그 ⭐를 끈다', async ({ page, request, errors }) => {
-    test.fail(true, '고치기 전: 다시 시도 응답이 "바뀐 카드 없음"이라 이 시험이 켠 ⭐인지 몰라서 안 끈다')
     const deckId = await makeDeck(request, '응답유실', ['感謝|かんしゃ|감사', '会議|かいぎ|회의'])
     await open(page, deckId)
     // 첫 별표 요청: 서버까지는 보내고(저장됨), 브라우저에는 네트워크 오류로 돌려준다

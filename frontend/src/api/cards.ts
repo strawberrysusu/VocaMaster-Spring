@@ -40,10 +40,22 @@ export interface SetStarredResult {
   changedIds: number[]
 }
 
-/** 별표 일괄 설정 (멱등, ADR-053) — 온라인 시험지 오답 자동 ⭐ / '맞음으로' 되돌리기 */
-export function setStarred(deckId: string | number, cardIds: number[], starred: boolean): Promise<SetStarredResult> {
-  return api<SetStarredResult>(`/decks/${deckId}/cards/star`, {
-    method: 'PATCH',
-    body: JSON.stringify({ cardIds, starred }),
-  })
+/** 서버 별표 일괄 API가 한 번에 받는 카드 수 — SetStarredRequest의 @Size(max = 500)과 같아야 한다 */
+export const STAR_BATCH = 500
+
+/**
+ * 별표 일괄 설정 (멱등, ADR-053) — 온라인 시험지 오답 자동 ⭐ / '맞음으로' 되돌리기.
+ * 500장씩 나눠 차례로 보낸다 ('전체' 시험은 문항 수 제한이 없어 오답이 500개를 넘을 수 있다 — Codex 검산 11/14).
+ * 중간 묶음이 실패하면 앞 묶음은 반영된 채로 오류를 던진다 — 값 지정이라 처음부터 다시 보내도 결과가 같다.
+ */
+export async function setStarred(deckId: string | number, cardIds: number[], starred: boolean): Promise<SetStarredResult> {
+  const changedIds: number[] = []
+  for (let start = 0; start < cardIds.length; start += STAR_BATCH) {
+    const r = await api<SetStarredResult>(`/decks/${deckId}/cards/star`, {
+      method: 'PATCH',
+      body: JSON.stringify({ cardIds: cardIds.slice(start, start + STAR_BATCH), starred }),
+    })
+    changedIds.push(...r.changedIds)
+  }
+  return { starred, changedIds }
 }

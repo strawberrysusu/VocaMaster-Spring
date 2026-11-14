@@ -35,6 +35,12 @@ interface Draft {
 const rowOk = (r: RowResult) => r.override || ((r.readingOk ?? true) && r.meaningOk)
 const askReading = (r: SheetRow) => r.needsReading && r.reading !== ''
 const emptyAnswer = (): Answer => ({ reading: '', meaning: '' })
+const withIds = (prev: Set<number>, ids: number[]) => (ids.length ? new Set([...prev, ...ids]) : prev)
+const withoutId = (prev: Set<number>, id: number) => {
+  const next = new Set(prev)
+  next.delete(id)
+  return next
+}
 
 function readDraft(key: string): Draft | null {
   try {
@@ -62,10 +68,17 @@ export default function OnlineTest() {
   const [results, setResults] = useState<RowResult[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  // 별표: 이 시험이 새로 켠 카드만 기억 (원래 ⭐였던 카드는 '맞음으로'를 눌러도 그대로 둔다)
+  // 별표: 이 시험이 켰거나 켜려고 보낸 카드 — '맞음으로'는 이 카드의 ⭐만 끈다.
+  // 시험을 열 때 이미 ⭐였던 카드(starredAtLoad)는 넣지 않으니 '맞음으로'를 눌러도 그대로 남는다.
+  // 요청을 보내기 '전에' 넣는다: 서버엔 저장됐는데 응답만 끊기면, 다시 시도의 changedIds가 비어
+  // 이 시험이 켠 ⭐인지 알 길이 없어진다 (Codex 검산 11/14). 실제로 안 켜졌다면 끄기 요청은 아무것도 안 바꾼다(멱등)
   const [addedStars, setAddedStars] = useState<Set<number>>(new Set())
+  const starredAtLoad = useRef<Set<number>>(new Set())
   const [starState, setStarState] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
-  const [busyRow, setBusyRow] = useState<number | null>(null)
+  // '맞음으로'·'다시 오답으로' 요청 중인 카드 — 이 동안은 '다시 풀기'를 막는다
+  const [busyCards, setBusyCards] = useState<Set<number>>(new Set())
+  // 몇 번째 풀이인지 — 문항이 바뀐 뒤(다시 풀기·다른 덱) 늦게 온 응답이 새 결과를 건드리지 않게
+  const attemptRef = useRef(0)
   const sheetRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -75,6 +88,10 @@ export default function OnlineTest() {
       .then(([deck, { cards }]) => {
         if (cancelled) return
         setTitle(deck.title)
+        starredAtLoad.current = new Set(cards.filter((c) => c.starred).map((c) => c.id))
+        attemptRef.current += 1
+        setAddedStars(new Set())
+        setStarState('idle')
         let built: { rows: SheetRow[]; japanese: boolean } | null = null
         let restored: Answer[] | null = null
         const draft = readDraft(draftKey)
@@ -131,17 +148,22 @@ export default function OnlineTest() {
   }
 
   async function starWrong(res: RowResult[]) {
+    const attempt = attemptRef.current
     const wrongIds = rows.filter((_, i) => !rowOk(res[i])).map((r) => r.cardId)
     if (wrongIds.length === 0) {
       setStarState('done')
       return
     }
+    setAddedStars((prev) => withIds(prev, wrongIds.filter((id) => !starredAtLoad.current.has(id))))
     setStarState('saving')
     try {
+      // 500장씩 나눠 보낸다 (api/cards.ts) — '전체' 시험은 오답이 500개를 넘을 수 있다
       const r = await setStarred(deckId!, wrongIds, true)
-      setAddedStars((prev) => new Set([...prev, ...r.changedIds]))
-      setStarState('done')
+      // 시험을 연 뒤 다른 곳에서 꺼진 ⭐를 다시 켠 경우까지 — changedIds는 서버가 실제로 바꾼 카드
+      setAddedStars((prev) => withIds(prev, r.changedIds))
+      if (attemptRef.current === attempt) setStarState('done')
     } catch (e) {
+      if (attemptRef.current !== attempt) return
       setStarState('error')
       setError(`틀린 단어 별표를 못 했어요 — ${(e as Error).message}`)
     }
@@ -167,32 +189,38 @@ export default function OnlineTest() {
   // '맞음으로' ↔ '다시 오답으로' — 이 시험이 켠 ⭐만 끄고, 되돌리면 다시 켠다
   async function toggleOverride(i: number) {
     if (!results) return
+    const attempt = attemptRef.current
     const cardId = rows[i].cardId
     const turningOn = !results[i].override
-    setBusyRow(i)
+    setBusyCards((prev) => withIds(prev, [cardId]))
     setError('')
     try {
-      if (turningOn && addedStars.has(cardId)) {
-        await setStarred(deckId!, [cardId], false)
-        setAddedStars((prev) => {
-          const next = new Set(prev)
-          next.delete(cardId)
-          return next
-        })
-      } else if (!turningOn) {
+      if (turningOn) {
+        if (addedStars.has(cardId)) {
+          await setStarred(deckId!, [cardId], false)
+          setAddedStars((prev) => withoutId(prev, cardId))
+        }
+      } else {
+        if (!starredAtLoad.current.has(cardId)) setAddedStars((prev) => withIds(prev, [cardId]))
         const r = await setStarred(deckId!, [cardId], true)
-        if (r.changedIds.length) setAddedStars((prev) => new Set([...prev, ...r.changedIds]))
+        setAddedStars((prev) => withIds(prev, r.changedIds))
       }
+      // 그사이 문항이 바뀌었으면(다른 덱 등) i번은 다른 단어다 — 결과 표시는 건드리지 않는다
+      if (attemptRef.current !== attempt) return
       setResults((prev) => prev && prev.map((r, j) => (j === i ? { ...r, override: turningOn } : r)))
     } catch (e) {
-      setError(`별표를 바꾸지 못했어요 — ${(e as Error).message}`)
+      if (attemptRef.current === attempt) setError(`별표를 바꾸지 못했어요 — ${(e as Error).message}`)
     } finally {
-      setBusyRow(null)
+      setBusyCards((prev) => withoutId(prev, cardId))
     }
   }
 
+  // 별표 저장이 끝나기 전에는 다시 풀 수 없다 — 늦게 온 응답이 새 문항(같은 번호의 다른 단어)을 바꾸던 문제 (Codex 검산 11/14)
+  const starBusy = starState === 'saving' || busyCards.size > 0
+
   function retryWrong() {
-    if (!results) return
+    if (!results || starBusy) return
+    attemptRef.current += 1
     const wrongRows = rows.filter((_, i) => !rowOk(results[i])).map((r, i) => ({ ...r, no: i + 1 }))
     setRows(wrongRows)
     setAnswers(wrongRows.map(emptyAnswer))
@@ -291,7 +319,7 @@ export default function OnlineTest() {
                         {r.memo && <span className="otest-memo"> — {r.memo}</span>}
                       </span>
                       {(!((res.readingOk ?? true) && res.meaningOk) || res.override) && (
-                        <button className="btn-ghost-link otest-override" disabled={busyRow === i || starState === 'saving'} onClick={() => void toggleOverride(i)}>
+                        <button className="btn-ghost-link otest-override" disabled={busyCards.has(r.cardId) || starState === 'saving'} onClick={() => void toggleOverride(i)}>
                           {res.override ? '다시 오답으로' : '맞음으로'}
                         </button>
                       )}
@@ -308,7 +336,14 @@ export default function OnlineTest() {
             {results ? (
               <>
                 {wrongCount > 0 && (
-                  <button className="answer-no" onClick={retryWrong}>틀린 {wrongCount}개만 다시 풀기</button>
+                  <button
+                    className="answer-no"
+                    disabled={starBusy}
+                    title={starBusy ? '별표 저장이 끝나면 누를 수 있어요' : undefined}
+                    onClick={retryWrong}
+                  >
+                    틀린 {wrongCount}개만 다시 풀기
+                  </button>
                 )}
                 <Link to={`/study?deckId=${deckId}&starredOnly=1`} className="answer-yes" style={{ textDecoration: 'none', textAlign: 'center' }}>
                   ⭐ 별표 복습 하러 가기
