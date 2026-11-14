@@ -567,6 +567,7 @@ input {
 
 .create-row input {
   flex: 1;
+  min-width: 0;   /* 11/14: 덱 화면에 '설명' 칸이 더해져 칸 4개가 각자 기본 너비(약 200px) 밑으로 못 줄어 페이지가 옆으로 179px 넘쳤다 */
   border: 0;
   font-size: 15px;
   color: var(--ink-2);

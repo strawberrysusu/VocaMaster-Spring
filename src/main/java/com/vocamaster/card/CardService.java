@@ -103,7 +103,7 @@ public class CardService {
     /**
      * 별표 일괄 설정 — 온라인 시험지에서 틀린 카드 자동 ⭐, '맞음으로' 되돌리기 (ADR-053).
      * 토글이 아니라 값 지정이라 두 번 보내도 같다. 이 덱에 없는 카드가 하나라도 섞이면 아무것도 바꾸지 않는다.
-     * 엔티티로 바꾸는 이유: 벌크 UPDATE는 @UpdateTimestamp(JVM KST)를 건너뛰고, DB NOW()는 컨테이너 UTC라 시간대가 어긋난다.
+     * 엔티티로 바꾸는 이유: 벌크 UPDATE는 @UpdateTimestamp를 건너뛰어 updated_at이 안 바뀌고, 값이 실제로 바뀐 카드만 골라 UPDATE 하기도 어렵다.
      */
     @Transactional
     public SetStarredResponse setStarred(Long deckId, Long userId, SetStarredRequest req) {
