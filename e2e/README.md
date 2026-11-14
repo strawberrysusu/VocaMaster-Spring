@@ -15,6 +15,8 @@ docker run -d --name vm-e2e-mysql -e MYSQL_DATABASE=vocamaster -e MYSQL_ROOT_PAS
 docker run -d --name vm-e2e-redis -p 16379:6379 redis:7.2-alpine
 
 # 2) 앱 jar (React 번들 포함) — 또는 CI의 vocamaster-jar 아티팩트를 받아 E2E_JAR_DIR로 지정
+#    bootJar가 프론트 빌드도 하니 프론트 의존성을 먼저 깐다
+npm ci --prefix frontend
 #    Gradle 8.7은 JDK 17~21에서 돈다 — 기본 JDK가 더 새것이면 JAVA_HOME을 잠깐 바꿔서
 ./gradlew bootJar -x test
 

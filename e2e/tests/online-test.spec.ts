@@ -47,11 +47,15 @@ test('폰 화면: 채점 뒤 정답·설명 줄이 붙어도 가로로 넘치지
   await addCard(request, deckId, { front: 'ざら', back: '아주 흔함' })
   await open(page, deckId)
   await expect(page.locator('.otest-row')).toHaveCount(2)
+  // 페이지 넘침 + 시험지 안에서 잘려 안 보이는 넘침까지 (시험지 자체의 scrollWidth — 최종 검토 11/14)
+  const sheetOverflow = () => page.locator('.otest-sheet').evaluate((el) => el.scrollWidth - el.clientWidth)
   expect(await overflowX(page)).toBe(0)
+  expect(await sheetOverflow()).toBe(0)
   await grade(page)
   await expect(summary(page)).toContainText('⭐ 완료')
   await expect(page.locator('.otest-memo')).toBeVisible()
   expect(await overflowX(page)).toBe(0)
+  expect(await sheetOverflow()).toBe(0)
 })
 
 // 11/14 검토 워크플로가 찾음: 다시 풀기 중 새로고침하면 '이 시험이 켠 ⭐' 기록을 잃어 맞음으로가 ⭐를 못 껐다
@@ -92,6 +96,48 @@ test('시험 도중 카드가 지워져도 나머지 틀린 단어는 ⭐ 되고
   await row(page, '感謝').getByRole('button', { name: '다시 오답으로' }).click()
   await expect(row(page, '感謝').getByRole('button', { name: '맞음으로' })).toBeVisible()
   await expect(summary(page)).toContainText('새로 켠 별표 1개')
+})
+
+// 최종 검토(11/14): 자동 ⭐가 실패한 채로 '다시 풀기'를 누를 수 있어, 실패한 ⭐는 끝내 다시 시도되지 않고
+// '새로 켠 별표' 수만 부풀었다 → 실패하면 '별표 다시 시도'를 먼저, 수는 서버가 확인한 것만
+test('자동 ⭐가 실패한 채로는 다시 풀기가 막히고, 별표 다시 시도가 성공하면 풀 수 있다', async ({ page, request, errors }) => {
+  const deckId = await makeDeck(request, '별표실패', ['感謝|かんしゃ|감사', '会議|かいぎ|회의'])
+  await open(page, deckId)
+  await page.route(STAR_API, (route) => route.abort('failed'), { times: 1 }) // 서버까지 안 감 = 아무것도 저장 안 됨
+  await grade(page)
+  await expect(page.getByRole('button', { name: '별표 다시 시도' })).toBeVisible()
+  errors.length = 0 // 일부러 끊은 요청의 콘솔 오류는 빼고 본다
+  const retest = page.getByRole('button', { name: /다시 풀기/ })
+  await expect(retest).toBeDisabled()
+  await expect(retest).toHaveAttribute('title', '별표를 먼저 다시 시도해 주세요')
+
+  await page.getByRole('button', { name: '별표 다시 시도' }).click()
+  await expect(summary(page)).toContainText('새로 켠 별표 2개')
+  await expect(retest).toBeEnabled()
+  expect(await isStarred(request, deckId, '感謝')).toBe(true)
+  expect(await isStarred(request, deckId, '会議')).toBe(true)
+})
+
+// 최종 검토(11/14): '맞음으로' 요청이 끝나기 전에 '별표 다시 시도'를 누르면 방금 맞음으로 한 단어에 ⭐가 다시 켜졌다
+test('맞음으로 저장 중에는 별표 다시 시도를 누를 수 없다', async ({ page, request, errors }) => {
+  const deckId = await makeDeck(request, '다시시도경합', ['感謝|かんしゃ|감사', '会議|かいぎ|회의'])
+  await open(page, deckId)
+  await page.route(STAR_API, (route) => route.abort('failed'), { times: 1 })
+  await grade(page)
+  await expect(page.getByRole('button', { name: '별표 다시 시도' })).toBeVisible()
+  errors.length = 0
+
+  let release = () => {}
+  const held = new Promise<void>((resolve) => (release = resolve))
+  await page.route(STAR_API, async (route) => {
+    await held
+    await route.continue()
+  }, { times: 1 })
+  await row(page, '会議').getByRole('button', { name: '맞음으로' }).click()
+  await expect(page.getByRole('button', { name: '별표 다시 시도' })).toBeDisabled()
+  release()
+  await expect(row(page, '会議').getByRole('button', { name: '다시 오답으로' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '별표 다시 시도' })).toBeEnabled()
 })
 
 // ── 회귀: Codex 검산(11/14)이 찾은 3건. PR #26에서 test.fail로 고치기 전 동작을 재현했고(3건 모두 실패 확인),

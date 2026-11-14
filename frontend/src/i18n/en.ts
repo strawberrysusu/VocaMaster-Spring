@@ -405,6 +405,7 @@ export const en: Messages = {
   "{n}번 뜻": "Meaning #{n}",
   "다시 오답으로": "Mark wrong",
   "맞음으로": "Mark correct",
+  "별표를 먼저 다시 시도해 주세요": "Retry starring first",
   "별표 저장이 끝나면 누를 수 있어요": "Available once the stars are saved",
   "틀린 {n}개만 다시 풀기": "Retry the wrong ones ({n})",
   "⭐ 별표 복습 하러 가기": "⭐ Review starred words",
