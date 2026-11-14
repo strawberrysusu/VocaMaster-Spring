@@ -696,6 +696,13 @@ input {
   display: flex;
   gap: 8px;
   align-items: center;
+  /* 11/14: 시험지 버튼이 더해져 5개가 되자 좁은 데스크톱 폭에서 글자가 "타/이/핑"처럼 한 자씩 세로로 깨졌다
+     → 버튼 글자는 한 줄로 두고, 자리가 모자라면 버튼째 다음 줄로 */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.mode-buttons > * {
+  white-space: nowrap;
 }
 
 .mode-stub {
@@ -1237,6 +1244,7 @@ button:disabled {
 
   .mode-buttons {
     flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .study-word {
