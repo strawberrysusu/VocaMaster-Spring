@@ -74,6 +74,39 @@ for (const [name, dict] of [['ja', ja], ['en', en], ['zh', zh]]) {
   expectServer(`${name} 모르는 문구는 그대로`, S('전혀 모르는 문구'), '전혀 모르는 문구')
 }
 
+// 가져오기 실패 줄의 '너무 김' 꼬리 (serverText.ts) — 서버 코드(ImportService)가 붙이는 꼬리와 글자까지 같아야 번역된다
+const { translateImportLine, TOO_LONG_SUFFIX } = await loadTs(here('../src/i18n/serverText.ts'))
+const importJava = readFileSync(new URL('../../src/main/java/com/vocamaster/cardimport/ImportService.java', import.meta.url), 'utf8')
+const javaInt = (name) => Number(new RegExp(`${name} = (\\d+);`).exec(importJava)?.[1])
+const javaSuffix = `  (너무 김: 단어·뜻 ${javaInt('MAX_TEXT')}자, 읽기 ${javaInt('MAX_READING')}자 이내)`
+if (!importJava.includes('"  (너무 김: 단어·뜻 " + MAX_TEXT + "자, 읽기 " + MAX_READING + "자 이내)"') || javaSuffix !== TOO_LONG_SUFFIX)
+  fail(`가져오기 '너무 김' 꼬리가 서버 코드와 다름: ${javaSuffix}`)
+for (const [name, dict] of [['ja', ja], ['en', en], ['zh', zh]]) {
+  const line = '会議 | かいぎ | ' + 'x'.repeat(300)
+  expectServer(`${name} 가져오기 너무 김`, translateImportLine(line + TOO_LONG_SUFFIX, dict), line + dict[TOO_LONG_SUFFIX])
+  expectServer(`${name} 가져오기 줄 내용은 그대로`, translateImportLine('a | b | c | d', dict), 'a | b | c | d')
+}
+
+// 영어 단수·복수 (english.ts) — 수가 1이면 단수, 채운 값(사용자 글)은 그대로
+const { englishOne } = await loadTs(here('../src/i18n/english.ts'))
+const fillEn = (text, vars) => englishOne(text, vars).replace(/\{(\w+)\}/g, (whole, n) => (n in vars ? String(vars[n]) : whole))
+const expectEn = (label, got, want) => {
+  if (got !== want) fail(`영어 단수 ${label}: ${got} (기대 ${want})`)
+}
+expectEn('1', fillEn('{n} cards', { n: 1 }), '1 card')
+expectEn('2', fillEn('{n} cards', { n: 2 }), '2 cards')
+expectEn('11', fillEn('{n} cards', { n: 11 }), '11 cards')
+expectEn('자리 둘', fillEn('{decks} decks · {cards} cards', { decks: 1, cards: 3 }), '1 deck · 3 cards')
+expectEn('채운 값은 그대로', fillEn('"{answer}"', { answer: '1 days' }), '"1 days"')
+// 영어 사전 전체: 수가 들어가는 자리를 모두 1로 채워도 '1 …s'(복수)가 남지 않는다
+const TEXT_VARS = new Set(['name', 'word', 'title', 'answer', 'status', 'sheet', 'msg', 'message', 'date', 'content', 'preview', 'prefix', 'names', 'error', 'email', 'ago', 'id'])
+for (const [k, v] of Object.entries(en)) {
+  const vars = {}
+  for (const [, n] of v.matchAll(/\{(\w+)\}/g)) vars[n] = TEXT_VARS.has(n) ? 'X' : 1
+  const out = fillEn(v, vars)
+  if (/(^|[^\d.,/])1 ([a-z]+ )?[a-z]+s\b/.test(out)) fail(`영어 1일 때 복수: ${k} → ${out}`)
+}
+
 if (failed) {
   console.error(`\n${failed}개 실패`)
   process.exit(1)

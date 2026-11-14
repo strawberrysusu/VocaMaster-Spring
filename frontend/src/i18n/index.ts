@@ -10,7 +10,8 @@
 import { ja, type Messages } from './ja'
 import { en } from './en'
 import { zh } from './zh'
-import { translateServerMessage } from './serverText'
+import { translateImportLine, translateServerMessage } from './serverText'
+import { englishOne } from './english'
 
 export type Lang = 'ko' | 'ja' | 'en' | 'zh'
 export type Key = keyof Messages
@@ -45,8 +46,26 @@ function detectLang(): Lang {
 }
 
 let current: Lang = detectLang()
-// html lang — 글꼴이 그 언어 모양(한자 자형 등)으로 고르게. 중국어는 간체(zh-CN)
-if (typeof document !== 'undefined') document.documentElement.lang = current === 'zh' ? 'zh-CN' : current
+
+/** 언어 태그 — html lang·서버 요청의 Accept-Language에 쓴다. 중국어는 간체(zh-CN) */
+export function langTag(): string {
+  return current === 'zh' ? 'zh-CN' : current
+}
+
+// 일본어·중국어 화면은 그 언어의 Noto 글꼴을 더 불러온다 (11/14) — 기본 글꼴(Noto Sans KR)로 그리면 한자가 한국식 모양이 되고,
+// 간체자처럼 한국어 글꼴에 없는 글자는 다른 글꼴로 섞여 보인다. 한국어·영어 화면은 더 받는 것이 없다. 쓰는 곳 = index.css의 html:lang(…)
+const EXTRA_FONT: Partial<Record<Lang, string>> = { ja: 'Noto+Sans+JP', zh: 'Noto+Sans+SC' }
+if (typeof document !== 'undefined') {
+  // html lang — 글꼴이 그 언어 모양(한자 자형 등)으로 고르게
+  document.documentElement.lang = langTag()
+  const family = EXTRA_FONT[current]
+  if (family) {
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = `https://fonts.googleapis.com/css2?family=${family}:wght@400;500;700&display=swap`
+    document.head.appendChild(link)
+  }
+}
 
 export function getLang(): Lang {
   return current
@@ -54,8 +73,10 @@ export function getLang(): Lang {
 
 /** 고른 언어의 문구. 사전에 없으면(있을 수 없지만) 한국어 그대로 */
 export function t(key: Key, vars?: Record<string, string | number>): string {
-  const text: string = current === 'ko' ? key : (DICTS[current][key] ?? key)
-  if (!vars) return text
+  const found: string = current === 'ko' ? key : (DICTS[current][key] ?? key)
+  if (!vars) return found
+  // 영어는 수가 1이면 단수로 ('1 cards' → '1 card', english.ts)
+  const text = current === 'en' ? englishOne(found, vars) : found
   return text.replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name]) : whole))
 }
 
@@ -66,6 +87,20 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
 export function tServer(message: string): string {
   if (current === 'ko') return message
   return translateServerMessage(message, DICTS[current])
+}
+
+/** 가져오기 실패 줄 — 서버가 끝에 붙인 '너무 김' 사유만 고른 언어로 (줄 내용은 사용자가 쓴 글이라 그대로) */
+export function tImportLine(content: string): string {
+  if (current === 'ko') return content
+  return translateImportLine(content, DICTS[current])
+}
+
+/**
+ * 문구 조각 사이 띄어쓰기 — 일본어·중국어는 띄우지 않는다.
+ * JSX에서 {t('…')} <b>…</b>처럼 조각을 이을 때 글자 사이 공백 대신 {gap()}
+ */
+export function gap(): string {
+  return current === 'ja' || current === 'zh' ? '' : ' '
 }
 
 /** 언어 바꾸기 — 설정에 저장하고 새로고침 */

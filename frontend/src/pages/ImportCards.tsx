@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
 import Ruby from '../components/Ruby'
-import { t } from '../i18n'
+import { gap, t, tImportLine } from '../i18n'
 
 // 백엔드(Phase 1 ImportService) 계약 — 구분자 자동 감지(탭·|·:·,·-), 2칸(단어|뜻) / 3칸(단어|읽기|뜻), 1000줄, 중복 스킵
 interface PreviewResp {
@@ -165,7 +165,7 @@ export default function ImportCards() {
                 목록 위에 '아직 저장 안 됨'을 명시한다. (목록 아래 두 번째 등록 버튼은 같은 날 사용자 피드백 "어색하다"로 제거 —
                 오해 방지는 이 띠가 담당) 저장 조건·스냅샷 로직은 그대로 */}
             <p className="preview-notice" role="status">
-              {t('미리보기예요 —')} <b>{t('아직 저장되지 않았습니다.')}</b> {t('「2. 실제 등록」을 눌러야 덱에 들어갑니다.')}
+              {t('미리보기예요 —')} <b>{t('아직 저장되지 않았습니다.')}</b>{gap()}{t('「2. 실제 등록」을 눌러야 덱에 들어갑니다.')}
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
               {t('파싱 {n}장', { n: preview.totalParsed })}{preview.failedCount > 0 && <> · <span style={{ color: '#b0485c' }}>{t('실패 {n}줄', { n: preview.failedCount })}</span></>}
@@ -181,7 +181,7 @@ export default function ImportCards() {
               {preview.failed.map((f) => (
                 <div key={`f${f.line}`} className="word-row" style={{ background: '#fdf1f4' }}>
                   <span className="word-idx" style={{ color: '#b0485c' }}>{f.line}</span>
-                  <span className="word-back" style={{ color: '#b0485c' }}>{t('구분 실패: {content}', { content: f.content })}</span>
+                  <span className="word-back" style={{ color: '#b0485c' }}>{t('구분 실패: {content}', { content: tImportLine(f.content) })}</span>
                 </div>
               ))}
             </div>

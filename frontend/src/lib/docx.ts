@@ -122,10 +122,12 @@ interface RunStyle {
   bold?: boolean
   japanese?: boolean
   color?: string
+  /** 일본어가 아닌 글자의 글꼴 — 없으면 맑은 고딕. 화면 언어를 따른다(SheetDocLabels.font) */
+  font?: string
 }
 
 function run(text: string, st: RunStyle): string {
-  const font = st.japanese ? JP_FONT : KO_FONT
+  const font = st.japanese ? JP_FONT : (st.font ?? KO_FONT)
   const rPr =
     `<w:rFonts w:ascii="${font}" w:eastAsia="${font}" w:hAnsi="${font}" w:cs="${font}"/>` +
     (st.bold ? '<w:b/><w:bCs/>' : '') +
@@ -187,12 +189,12 @@ function columnWidths(japanese: boolean): number[] {
 
 function headerRow(widths: number[], japanese: boolean, L: SheetDocLabels): string {
   const labels = japanese ? [L.no, L.word, L.reading, L.meaning] : [L.no, L.word, L.meaning]
-  const st: RunStyle = { sizeHalfPt: 20, bold: true }
+  const st: RunStyle = { sizeHalfPt: 20, bold: true, font: L.font }
   return row(labels.map((l, i) => cell(widths[i], run(l, st), { fill: HEAD_FILL, align: 'center' })).join(''), 420, true)
 }
 
-function questionRow(r: SheetRow, widths: number[], japanese: boolean): string {
-  const no = cell(widths[0], run(String(r.no), { sizeHalfPt: 20, color: '555555' }), { align: 'center' })
+function questionRow(r: SheetRow, widths: number[], japanese: boolean, font?: string): string {
+  const no = cell(widths[0], run(String(r.no), { sizeHalfPt: 20, color: '555555', font }), { align: 'center' })
   const word = cell(widths[1], run(r.word, { sizeHalfPt: japanese ? 32 : 28, japanese }), { align: 'center' })
   if (!japanese) return row(no + word + cell(widths[2], ''), ROW_H)
   // 한자가 없는 단어(가나만)는 읽기를 쓸 필요가 없어 회색으로 막아 둔다
@@ -200,14 +202,14 @@ function questionRow(r: SheetRow, widths: number[], japanese: boolean): string {
   return row(no + word + reading + cell(widths[3], ''), ROW_H)
 }
 
-function answerRow(r: SheetRow, widths: number[], japanese: boolean): string {
-  const small: RunStyle = { sizeHalfPt: 19 }
-  const no = cell(widths[0], run(String(r.no), { sizeHalfPt: 18, color: '555555' }), { align: 'center' })
+function answerRow(r: SheetRow, widths: number[], japanese: boolean, font?: string): string {
+  const small: RunStyle = { sizeHalfPt: 19, font }
+  const no = cell(widths[0], run(String(r.no), { sizeHalfPt: 18, color: '555555', font }), { align: 'center' })
   const word = cell(widths[1], run(r.word, { sizeHalfPt: 21, japanese }), { align: 'center' })
   // 설명 줄이 있으면 뜻 아래 작은 회색 글씨로 한 줄 더 (11/14 4단계)
   const meaning = (w: number) =>
     r.memo
-      ? cellParas(w, [run(r.meaning, small), run(r.memo, { sizeHalfPt: 15, color: '777777' })])
+      ? cellParas(w, [run(r.meaning, small), run(r.memo, { sizeHalfPt: 15, color: '777777', font })])
       : cell(w, run(r.meaning, small))
   if (!japanese) return row(no + word + meaning(widths[2]), ANSWER_ROW_H)
   const reading = r.needsReading
@@ -233,6 +235,12 @@ export interface SheetDocLabels {
   /** 날짜·점수 줄의 낱말 */
   date: string
   score: string
+  /**
+   * 일본어 단어·읽기가 아닌 글자(제목·머리줄·뜻·날짜 줄)의 글꼴과 Word의 동아시아 언어 — 화면 언어를 따른다.
+   * 없으면 한국어(맑은 고딕·ko-KR). 한국어 글꼴로 일본어·간체자를 쓰면 한자 모양이 한국식이 되거나 다른 글꼴로 섞인다 (11/14)
+   */
+  font?: string
+  eastAsiaLang?: string
 }
 
 export const SHEET_DOC_LABELS_KO: SheetDocLabels = {
@@ -259,25 +267,26 @@ export function testSheetDocumentXml(model: SheetModel, info: SheetDocInfo): str
   const L = info.labels ?? SHEET_DOC_LABELS_KO
   const widths = columnWidths(model.japanese)
   const n = model.rows.length
-  const title = para(run(L.sheetTitle(info.deckTitle), { sizeHalfPt: 30, bold: true, japanese: model.japanese }), 'left', 60, true)
+  const font = L.font
+  const title = para(run(L.sheetTitle(info.deckTitle), { sizeHalfPt: 30, bold: true, japanese: model.japanese, font }), 'left', 60, true)
   const meta = para(
-    run(info.subtitle, { sizeHalfPt: 18, color: '666666' }) +
-      run(`        ${L.date} ______________     ${L.score} ______ / ${n}`, { sizeHalfPt: 20 }),
+    run(info.subtitle, { sizeHalfPt: 18, color: '666666', font }) +
+      run(`        ${L.date} ______________     ${L.score} ______ / ${n}`, { sizeHalfPt: 20, font }),
     'left',
     160,
     true,
   )
   const qTable = table(
     widths,
-    headerRow(widths, model.japanese, L) + model.rows.map((r) => questionRow(r, widths, model.japanese)).join(''),
+    headerRow(widths, model.japanese, L) + model.rows.map((r) => questionRow(r, widths, model.japanese, font)).join(''),
   )
   let body = title + meta + qTable
   if (info.answerKey) {
     const pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'
-    const aTitle = para(run(L.answerTitle(info.deckTitle), { sizeHalfPt: 26, bold: true, japanese: model.japanese }), 'left', 120, true)
+    const aTitle = para(run(L.answerTitle(info.deckTitle), { sizeHalfPt: 26, bold: true, japanese: model.japanese, font }), 'left', 120, true)
     const aTable = table(
       widths,
-      headerRow(widths, model.japanese, L) + model.rows.map((r) => answerRow(r, widths, model.japanese)).join(''),
+      headerRow(widths, model.japanese, L) + model.rows.map((r) => answerRow(r, widths, model.japanese, font)).join(''),
     )
     body += pageBreak + aTitle + aTable
   }
@@ -311,12 +320,13 @@ const DOC_RELS =
   '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
   '</Relationships>'
 
-const STYLES =
+// 문서 기본 글꼴·동아시아 언어 — 한국어는 맑은 고딕·ko-KR, 다른 화면 언어는 SheetDocLabels.font·eastAsiaLang
+const stylesXml = (font: string, eastAsiaLang: string) =>
   XML_HEAD +
   `<w:styles xmlns:w="${W_NS}">` +
   '<w:docDefaults>' +
-  `<w:rPrDefault><w:rPr><w:rFonts w:ascii="${KO_FONT}" w:eastAsia="${KO_FONT}" w:hAnsi="${KO_FONT}" w:cs="${KO_FONT}"/>` +
-  '<w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-US" w:eastAsia="ko-KR" w:bidi="ar-SA"/></w:rPr></w:rPrDefault>' +
+  `<w:rPrDefault><w:rPr><w:rFonts w:ascii="${font}" w:eastAsia="${font}" w:hAnsi="${font}" w:cs="${font}"/>` +
+  `<w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="en-US" w:eastAsia="${eastAsiaLang}" w:bidi="ar-SA"/></w:rPr></w:rPrDefault>` +
   '<w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault>' +
   '</w:docDefaults>' +
   '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>' +
@@ -329,13 +339,14 @@ export const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordproc
 /** 시험지 .docx 바이트 */
 export function buildTestSheetDocx(model: SheetModel, info: SheetDocInfo, date: Date = new Date()): Uint8Array<ArrayBuffer> {
   const enc = new TextEncoder()
+  const L = info.labels ?? SHEET_DOC_LABELS_KO
   return zipStore(
     [
       { name: '[Content_Types].xml', data: enc.encode(CONTENT_TYPES) },
       { name: '_rels/.rels', data: enc.encode(ROOT_RELS) },
       { name: 'word/document.xml', data: enc.encode(testSheetDocumentXml(model, info)) },
       { name: 'word/_rels/document.xml.rels', data: enc.encode(DOC_RELS) },
-      { name: 'word/styles.xml', data: enc.encode(STYLES) },
+      { name: 'word/styles.xml', data: enc.encode(stylesXml(L.font ?? KO_FONT, L.eastAsiaLang ?? 'ko-KR')) },
     ],
     date,
   )

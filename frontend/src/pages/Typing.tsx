@@ -246,7 +246,7 @@ export default function Typing() {
               {result && (
                 <div className="quiz-feedback" style={{ borderTop: 0, paddingTop: 0, marginTop: 14 }}>
                   <p className={result.correct ? 'ok' : 'ng'}>
-                    {result.correct ? t('정답!') : <>{t('오답 — 정답은')} <b>"{result.correctAnswer}"</b> <SpeakButton text={result.correctAnswer} /></>}
+                    {result.correct ? t('정답!') : <>{t('오답 — 정답은')} <b>{t('"{answer}"', { answer: result.correctAnswer })}</b> <SpeakButton text={result.correctAnswer} /></>}
                   </p>
                 </div>
               )}

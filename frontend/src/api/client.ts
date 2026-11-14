@@ -1,6 +1,6 @@
 // API 클라이언트 — 모든 요청이 이 관문을 지난다.
 // 401(미인증/만료)이면 refresh 쿠키(httpOnly)로 access token을 재발급받아 1회 재시도.
-import { t, tServer } from '../i18n'
+import { langTag, t, tServer } from '../i18n'
 
 const TOKEN_KEY = 'vm.accessToken'
 
@@ -82,6 +82,8 @@ export async function api<T>(path: string, options: RequestInit = {}, retried = 
   if (options.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
   const token = getToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
+  // 서버의 기본 입력 검사 문구(message를 안 적은 @NotBlank·@Email 등)가 고른 언어로 오게 (11/14)
+  if (!headers['Accept-Language']) headers['Accept-Language'] = langTag()
 
   const res = await fetch(path, { ...options, headers })
 
