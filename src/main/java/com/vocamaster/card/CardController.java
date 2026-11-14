@@ -64,7 +64,8 @@ public class CardController {
 
     @PatchMapping("/decks/{deckId}/cards/star")
     @Operation(summary = "별표 일괄 설정 (멱등)",
-            description = "온라인 시험지에서 틀린 카드를 한 번에 ⭐ 하거나 되돌릴 때. changedIds = 실제로 값이 바뀐 카드")
+            description = "온라인 시험지에서 틀린 카드를 한 번에 ⭐ 하거나 되돌릴 때. changedIds = 실제로 값이 바뀐 카드, "
+                    + "skippedIds = 이 덱에 없어 건너뛴 카드(시험 도중 지워졌거나 다른 덱)")
     public SetStarredResponse setStarred(@PathVariable Long deckId, @Valid @RequestBody SetStarredRequest req) {
         return cardService.setStarred(deckId, CurrentUser.getId(), req);
     }

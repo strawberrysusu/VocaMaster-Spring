@@ -83,7 +83,15 @@ test('시험 도중 카드가 지워져도 나머지 틀린 단어는 ⭐ 되고
 
   await grade(page) // 둘 다 비움 → 둘 다 오답
   await expect(summary(page)).toContainText('지워진 카드 1개는 건너뜀')
+  await expect(summary(page)).toContainText('새로 켠 별표 1개')
   expect(await isStarred(request, deckId, '会議')).toBe(true)
+
+  // 지워진 카드 줄에서 맞음으로 → 다시 오답으로를 눌러도 '새로 켠 별표'로 세지 않는다 (검증 에이전트가 찾은 것)
+  await row(page, '感謝').getByRole('button', { name: '맞음으로' }).click()
+  await expect(row(page, '感謝').getByRole('button', { name: '다시 오답으로' })).toBeVisible()
+  await row(page, '感謝').getByRole('button', { name: '다시 오답으로' }).click()
+  await expect(row(page, '感謝').getByRole('button', { name: '맞음으로' })).toBeVisible()
+  await expect(summary(page)).toContainText('새로 켠 별표 1개')
 })
 
 // ── 회귀: Codex 검산(11/14)이 찾은 3건. PR #26에서 test.fail로 고치기 전 동작을 재현했고(3건 모두 실패 확인),
@@ -142,6 +150,7 @@ test.describe('회귀 — 온라인 시험 별표 (Codex 검산 11/14)', () => {
 
     await page.getByRole('button', { name: '별표 다시 시도' }).click()
     await expect(summary(page)).toContainText('⭐ 완료')
+    await expect(page.getByRole('alert')).toHaveCount(0) // 성공했으면 앞서 뜬 오류 문구도 사라진다
     await row(page, '会議').getByRole('button', { name: '맞음으로' }).click()
     await expect(row(page, '会議').getByRole('button', { name: '다시 오답으로' })).toBeVisible()
     expect(await isStarred(request, deckId, '会議')).toBe(false)

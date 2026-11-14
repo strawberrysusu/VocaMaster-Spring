@@ -44,6 +44,11 @@ const withoutId = (prev: Set<number>, id: number) => {
   next.delete(id)
   return next
 }
+/** 별표 요청 결과를 '이 시험이 켠 ⭐'에 반영 — 실제로 켜진 카드는 넣고, 서버가 건너뛴(지워진) 카드는 뺀다 */
+const mergeStarResult = (prev: Set<number>, r: { changedIds: number[]; skippedIds: number[] }) => {
+  const skipped = new Set(r.skippedIds)
+  return new Set([...withIds(prev, r.changedIds)].filter((id) => !skipped.has(id)))
+}
 
 function readDraft(key: string): Draft | null {
   try {
@@ -171,11 +176,11 @@ export default function OnlineTest() {
       const r = await setStarred(deckId!, wrongIds, true)
       // 시험을 연 뒤 다른 곳에서 꺼진 ⭐를 다시 켠 경우까지 — changedIds는 서버가 실제로 바꾼 카드
       // 지워진 카드는 서버가 건너뛰었다 — '이 시험이 켠 ⭐'에서도 뺀다
-      const skipped = new Set(r.skippedIds)
-      setAddedStars((prev) => new Set([...withIds(prev, r.changedIds)].filter((id) => !skipped.has(id))))
+      setAddedStars((prev) => mergeStarResult(prev, r))
       if (attemptRef.current === attempt) {
-        setSkippedCount(skipped.size)
+        setSkippedCount(r.skippedIds.length)
         setStarState('done')
+        setError('') // '별표 다시 시도'로 성공했으면 앞서 뜬 오류 문구도 지운다
       }
     } catch (e) {
       if (attemptRef.current !== attempt) return
@@ -218,7 +223,7 @@ export default function OnlineTest() {
       } else {
         if (!starredAtLoad.current.has(cardId)) setAddedStars((prev) => withIds(prev, [cardId]))
         const r = await setStarred(deckId!, [cardId], true)
-        setAddedStars((prev) => withIds(prev, r.changedIds))
+        setAddedStars((prev) => mergeStarResult(prev, r)) // 지워진 카드면 서버가 건너뛰니 세지 않는다
       }
       // 그사이 문항이 바뀌었으면(다른 덱 등) i번은 다른 단어다 — 결과 표시는 건드리지 않는다
       if (attemptRef.current !== attempt) return
