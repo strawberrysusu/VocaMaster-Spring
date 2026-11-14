@@ -8,7 +8,7 @@ test('위쪽 바 검색 — 내 덱을 이름으로 찾아 들어간다', async 
   const deckId = await makeEmptyDeck(request, label)
 
   await page.goto('/app/')
-  const search = page.getByRole('search').getByRole('textbox', { name: '덱 검색' })
+  const search = page.getByRole('combobox', { name: '덱 검색' })
   await search.fill(label)
   await search.press('Enter')
 
@@ -51,4 +51,20 @@ test('폰 — 위쪽 바는 돋보기로 검색 화면에 가고, 메뉴는 아�
   await page.getByRole('link', { name: '덱 검색' }).click()
   await expect(page).toHaveURL(/\/app\/search$/)
   await expect(page.getByRole('textbox', { name: '덱 검색' })).toBeFocused() // 검색 화면의 큰 검색창
+})
+
+test('연관 검색 — 치는 동안 맞는 내 덱이 뜨고, ↓·Enter로 바로 연다', async ({ page, request }) => {
+  const label = `연관${Date.now()}`
+  const deckId = await makeEmptyDeck(request, label)
+
+  await page.goto('/app/')
+  const box = page.getByRole('combobox', { name: '덱 검색' })
+  await box.click()
+  await box.fill(label)
+  await expect(page.getByRole('option').first()).toContainText(label) // 첫 줄 = 이름이 맞는 내 덱 ('모든 결과 보기' 줄에도 검색어가 있어 이름으로는 둘이 걸린다)
+  await expect(page.getByRole('option', { name: /모든 결과 보기/ })).toBeVisible()
+
+  await box.press('ArrowDown') // 첫 줄 = 이름이 맞는 내 덱
+  await box.press('Enter')
+  await expect(page).toHaveURL(new RegExp(`/app/decks/${deckId}$`))
 })

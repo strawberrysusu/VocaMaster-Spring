@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api, getToken, logout as clientLogout } from '../api/client'
 import { getLang, t } from '../i18n'
@@ -6,6 +6,7 @@ import { jwtEmail } from '../lib/jwt'
 import { useDropdown } from '../lib/useDropdown'
 import { ICON } from './icons'
 import LangSwitch from './LangSwitch'
+import SearchBox from './SearchBox'
 
 type Me = { id: number; email: string; nickname: string; provider: string; createdAt?: string }
 
@@ -45,11 +46,6 @@ export default function TopNav({ streak }: { streak?: number }) {
   const plusMenu = useDropdown()
   const profileMenu = useDropdown()
   const loggedIn = !!getToken()
-
-  // 위쪽 검색창 글자는 검색 화면 주소(?q=)를 따라간다 — 다른 화면으로 가면 비워진다
-  const urlQuery = pathname === '/search' ? (new URLSearchParams(search).get('q') ?? '') : ''
-  const [query, setQuery] = useState(urlQuery)
-  useEffect(() => setQuery(urlQuery), [urlQuery])
 
   // 학습 4모드는 몰입 모드 — 위쪽 바·사이드바(모바일 탭바 포함) 없이 풀스크린 (Quizlet 방식, 8/30 사용자 지적).
   // 각 학습 화면에 "← 덱으로" 탈출구가 이미 있다. 본문 여백은 CSS :has(.topbar)·:has(.sidenav)가 따라온다.
@@ -101,12 +97,6 @@ export default function TopNav({ streak }: { streak?: number }) {
     }
   }
 
-  function submitSearch(e: FormEvent) {
-    e.preventDefault()
-    const q = query.trim()
-    navigate(q ? `/search?q=${encodeURIComponent(q)}` : '/search')
-  }
-
   async function logout() {
     await clientLogout()   // 진행 중인 토큰 갱신이 끝난 뒤 로그아웃하고 토큰을 지운다 (A1)
     navigate('/login')   // basename(/app)을 라우터가 처리 — 절대경로 /login은 API 보안에 걸림 (Codex 검산)
@@ -124,17 +114,8 @@ export default function TopNav({ streak }: { streak?: number }) {
         </Link>
 
         <div className="top-center">
-          {loggedIn && (
-            <form className="top-search" role="search" onSubmit={submitSearch}>
-              {ICON.search}
-              <input
-                aria-label={t('덱 검색')}
-                placeholder={t('덱 검색 (내 덱·공개 덱)')}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </form>
-          )}
+          {/* 검색창 + 연관 검색(치는 동안 덱이 바로 뜬다, 11/14) */}
+          {loggedIn && <SearchBox />}
         </div>
 
         <div className="top-actions">
