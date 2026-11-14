@@ -612,4 +612,6 @@ export const en: Messages = {
   "카드를 눌러 뒤집고, 화살표나 옆으로 밀어 넘겨요": "Tap a card to flip it; use the arrows or swipe to move",
   "카드 학습은 기록을 남기지 않아요. 복습 일정은 그대로예요.": "Browsing saves nothing. Your review schedule stays the same.",
   "{n}장을 다 봤어요": "You went through all {n} cards",
+  // ── 11/14 검색 화면 → 탐색에서 더 보기 (Codex 검산)
+  "탐색에서 더 보기 →": "See more in Explore →",
 }

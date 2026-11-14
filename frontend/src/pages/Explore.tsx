@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { afterCopy, copyDeckApi, toggleLikeApi, type PageResp, type PublicDeck } from '../api/publicDecks'
 import TopNav from '../components/TopNav'
@@ -10,8 +10,11 @@ import { t } from '../i18n'
 // 좋아요 초기 상태·내 덱 여부는 서버 필드(likedByMe/mine) 사용 — 세션 내 추적 제거 (백로그 ①③).
 export default function Explore() {
   const [decks, setDecks] = useState<PublicDeck[] | null>(null)
-  const [keyword, setKeyword] = useState('')
-  const [query, setQuery] = useState('')          // 실제 검색에 쓰인 값
+  // ?q= 로 들어오면(검색 화면의 '탐색에서 더 보기', 11/14) 그 검색어로 시작한다
+  const [params] = useSearchParams()
+  const initialQuery = params.get('q') ?? ''
+  const [keyword, setKeyword] = useState(initialQuery)
+  const [query, setQuery] = useState(initialQuery)          // 실제 검색에 쓰인 값
   const [sort, setSort] = useState<'popular' | 'recent'>('popular')
   const [copiedIds, setCopiedIds] = useState<Record<number, boolean>>({})
   const [busyId, setBusyId] = useState<number | null>(null)

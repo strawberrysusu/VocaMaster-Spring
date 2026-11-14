@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -82,5 +83,15 @@ class SpaCacheHeadersTest extends AbstractIntegrationTest {
             header().stringValues("X-Frame-Options", "DENY").match(result);
             header().stringValues("Strict-Transport-Security", "max-age=31536000 ; includeSubDomains").match(result);
         };
+    }
+
+    @Test
+    @DisplayName("루트의 사이트 아이콘(/favicon.svg·/favicon.ico)은 401이 아니라 앱 아이콘으로 돌려보낸다 (Codex 검산 11/14)")
+    void rootFavicon_redirectsToAppIcon() throws Exception {
+        for (String path : new String[] {"/favicon.svg", "/favicon.ico"}) {
+            mvc.perform(get(path).secure(true))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/app/favicon.svg"));
+        }
     }
 }

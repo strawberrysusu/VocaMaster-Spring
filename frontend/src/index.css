@@ -2600,4 +2600,6 @@ button.mode-btn { cursor: pointer; font-family: inherit; }
 .search-page-form input { flex: 1; min-width: 0; border: 0; outline: none; background: none; padding: 8px 0; font-size: 15px; color: var(--ink-2); }
 .search-section { margin-bottom: 30px; }
 .search-section h2 { display: flex; align-items: center; gap: 8px; font-size: 17px; margin: 0 0 12px; }
+.search-more { color: var(--a); font-weight: 600; font-size: 14px; text-decoration: none; }
+.search-more:hover { text-decoration: underline; }
 .search-count { font-size: 12px; font-weight: 600; color: var(--sub); background: #f1f1f5; padding: 1px 9px; border-radius: 99px; }
