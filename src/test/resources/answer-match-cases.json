@@ -61,5 +61,7 @@
   { "typed": "회의", "answer": "회\u2003의", "expected": false, "why": "11/14: 중간 공백 자체는 그대로 본다 (app le ≠ apple 규칙)" },
   { "typed": "사과", "answer": "n.\u2003사과", "expected": true, "why": "11/14: 품사 표시 뒤가 유니코드 공백이어도 품사로 본다" },
   { "typed": "회의", "answer": "회의\u0085", "expected": true, "why": "11/14: NEL(U+0085)도 공백 — Java의 $가 그 앞에서 끝나던 차이 없앰" },
-  { "typed": "\u0001회의", "answer": "회의", "expected": false, "why": "11/14: 제어 문자는 공백이 아니다 — 예전엔 서버 trim()만 지워서 서버·화면이 달랐다" }
+  { "typed": "\u0001회의", "answer": "회의", "expected": false, "why": "11/14: 제어 문자는 공백이 아니다 — 예전엔 서버 trim()만 지워서 서버·화면이 달랐다" },
+  { "typed": "a1σ", "answer": "a1Σ", "expected": true, "why": "11/14: 끝 시그마 — 대문자 Σ를 소문자로 바꿀 때 Java·JS가 σ/ς를 다르게 골라서, 둘 다 σ로 접어 비교" },
+  { "typed": "a1ς", "answer": "a1Σ", "expected": true, "why": "11/14: 끝 시그마 ς로 쳐도 같은 글자로 본다" }
 ]

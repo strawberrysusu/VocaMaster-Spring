@@ -79,7 +79,9 @@ public final class AnswerMatcher {
             return Collections.emptySet();
         }
         Set<String> out = new LinkedHashSet<>();
-        String a = ZERO_WIDTH.matcher(answer).replaceAll("");           // 폭 없는 글자는 처음부터 없는 것으로
+        // 폭 없는 글자는 처음부터 없는 것으로 — normalize()도 지우지만 여기서 먼저 지워야 한다:
+        // "n.(제로폭)사과"에서 n. 뒤가 공백인지 보는 품사 판단이 그 글자에 가로막히기 때문
+        String a = ZERO_WIDTH.matcher(answer).replaceAll("");
         for (String piece : a.split(",")) {                             // 1) 예전 규칙
             add(out, piece);
         }
@@ -107,7 +109,11 @@ public final class AnswerMatcher {
         t = TILDE.matcher(t).replaceAll("");               // 2) 물결표 삭제
         t = SPACES.matcher(t).replaceAll(" ");             // 3) 공백 여러 개(어떤 종류든) → 보통 공백 하나
         t = EDGE_SPACE.matcher(t).replaceAll("");          // 4) 앞뒤 공백 제거
-        return t.toLowerCase(Locale.ROOT);                 // 5) 대소문자 무시
+        // 5) 대소문자 무시 — 대소문자 표는 실행 환경의 유니코드 버전을 따른다(서버 JRE 17 = Unicode 13, 화면 = 브라우저).
+        //    Unicode 14 이후 새 글자는 서버·화면이 다를 수 있다 — 단어장 글자(한·일·영)와는 무관 (ADR-051 한계)
+        t = t.toLowerCase(Locale.ROOT);
+        // 6) 끝 시그마 ς → 보통 시그마 σ — 대문자 Σ를 소문자로 바꿀 때 Java와 JS가 σ/ς를 고르는 규칙이 달라서 하나로 접는다
+        return t.replace('ς', 'σ');
     }
 
     private static void add(Set<String> out, String piece) {

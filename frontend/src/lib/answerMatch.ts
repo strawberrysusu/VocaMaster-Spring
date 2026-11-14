@@ -17,7 +17,8 @@
 // 공백으로 보는 글자 (서버 AnswerMatcher.SPACE와 똑같이 유지) — 탭·줄바꿈 계열, 보통 공백, NEL(U+0085),
 // NBSP(U+00A0), 오검 공백(U+1680), 여러 폭의 공백(U+2000~U+200A), 줄·문단 구분자(U+2028·2029),
 // 좁은 NBSP(U+202F), 수학 공백(U+205F), 전각 공백(U+3000)
-const SPACE = '[\\t\\n\\v\\f\\r \\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]'
+// 글자 그대로 서버와 같게 적는다 — 특히 VT는 \\v가 아니라 \\u000B: Java 정규식의 \v는 '세로 공백 묶음 전체'라 옮겨 적으면 함정
+const SPACE = '[\\t\\n\\u000B\\f\\r \\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]'
 // 폭이 없는 글자(제로폭 공백·제로폭 결합자·단어 결합자·BOM) — 복사해 붙인 글에 숨어 들어와도 없는 것으로 본다
 // eslint-disable-next-line no-misleading-character-class -- 폭 없는 글자를 한 글자씩 지우려는 것 (이모지처럼 이어 붙인 글자가 아님)
 const ZERO_WIDTH = /[\u200B\u200C\u200D\u2060\uFEFF]/g
@@ -28,6 +29,7 @@ const SEPARATORS = /[,，;；/／・]/
 const TILDE = /[~～〜]/g
 const SPACES = new RegExp(SPACE + '+', 'g')
 // 맨 앞·맨 뒤의 공백 하나 (연속 공백은 이미 하나로 줄어 있다). trim() 대신 — 지우는 글자가 서버와 같도록
+// (JS의 $는 m 플래그가 없으면 문자열 맨 끝에서만 맞는다 — Java는 같은 뜻으로 \z를 쓴다)
 const EDGE_SPACE = /^ | $/g
 
 export function normalizeAnswer(s: string): string {
@@ -36,7 +38,8 @@ export function normalizeAnswer(s: string): string {
     .replace(TILDE, '') // 2) 물결표 삭제
     .replace(SPACES, ' ') // 3) 공백 여러 개(어떤 종류든) → 보통 공백 하나
     .replace(EDGE_SPACE, '') // 4) 앞뒤 공백 제거
-    .toLowerCase() // 5) 대소문자 무시
+    .toLowerCase() // 5) 대소문자 무시 — 대소문자 표는 실행 환경(브라우저)의 유니코드 버전을 따른다 (ADR-051 한계)
+    .replace(/ς/g, 'σ') // 6) 끝 시그마 ς → 보통 시그마 σ — Σ를 소문자로 바꿀 때 Java와 JS의 고르는 규칙이 달라서
 }
 
 function stripParentheses(s: string): string {
@@ -57,7 +60,9 @@ export function answerCandidates(answer: string | null | undefined): Set<string>
     const n = normalizeAnswer(piece)
     if (n) out.add(n)
   }
-  const a = answer.replace(ZERO_WIDTH, '') // 폭 없는 글자는 처음부터 없는 것으로
+  // 폭 없는 글자는 처음부터 없는 것으로 — normalizeAnswer도 지우지만 여기서 먼저 지워야 한다:
+  // "n.(제로폭)사과"에서 n. 뒤가 공백인지 보는 품사 판단이 그 글자에 가로막히기 때문
+  const a = answer.replace(ZERO_WIDTH, '')
   a.split(',').forEach(add) // 1) 예전 규칙
   const cleaned = stripParentheses(a) // 2) 설명·표기 기호 걷어내기
     .replace(PART_OF_SPEECH, '$1,')
