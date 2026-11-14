@@ -599,4 +599,9 @@ export const en: Messages = {
   "검색어를 입력하세요": "Enter a search term",
   "\"{q}\" 검색 결과": "Results for \"{q}\"",
   "언어는 화면 오른쪽 위 🌐에서 바꿔요": "Change the language from 🌐 at the top right",
+  // ── 11/14 덱 화면 학습 버튼: 낱말카드 → 전체 복습 / 별표만 복습
+  "낱말카드": "Flashcards",
+  "전체 복습": "Review all",
+  "별표만 복습 ({n}장)": "Review starred only ({n})",
+  "별표만 복습": "Review starred only",
 }

@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api, getToken, logout as clientLogout } from '../api/client'
 import { getLang, t } from '../i18n'
 import { jwtEmail } from '../lib/jwt'
+import { useDropdown } from '../lib/useDropdown'
+import { ICON } from './icons'
 import LangSwitch from './LangSwitch'
 
 type Me = { id: number; email: string; nickname: string; provider: string; createdAt?: string }
@@ -23,26 +25,6 @@ function emailInitial(): string {
   return (Array.from(jwtEmail(getToken()))[0] ?? '?').toUpperCase()
 }
 
-// 라인 아이콘 (의존성 없이 인라인 SVG)
-const svg = (size: number, children: ReactNode) => (
-  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    {children}
-  </svg>
-)
-const ICON = {
-  home: svg(18, <><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V21h13V9.5" /></>),
-  decks: svg(18, <><rect x="4" y="7" width="14" height="13" rx="2.5" /><path d="M8 4h11a2 2 0 0 1 2 2v11" /></>),
-  explore: svg(18, <><circle cx="12" cy="12" r="8.5" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></>),
-  stats: svg(18, <><path d="M5 20V13" /><path d="M12 20V5" /><path d="M19 20v-9" /></>),
-  settings: svg(18, <><path d="M4 8h10" /><circle cx="17" cy="8" r="2.5" /><path d="M20 16H10" /><circle cx="7" cy="16" r="2.5" /></>),
-  folder: svg(16, <path d="M3.5 6.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />),
-  search: svg(18, <><circle cx="11" cy="11" r="7" /><path d="m20 20-3.8-3.8" /></>),
-  plus: svg(20, <><path d="M12 5v14" /><path d="M5 12h14" /></>),
-  file: svg(18, <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></>),
-  shield: svg(18, <><path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z" /></>),
-  logout: svg(18, <><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 16l-4-4 4-4" /><path d="M6 12h10" /></>),
-}
-
 const MENU = [
   { to: '/', label: t('홈'), icon: ICON.home, isActive: (p: string) => p === '/' },
   { to: '/decks', label: t('내 덱'), icon: ICON.decks, isActive: (p: string) => p.startsWith('/decks') || p.startsWith('/import') },
@@ -50,28 +32,6 @@ const MENU = [
   { to: '/stats', label: t('통계'), icon: ICON.stats, isActive: (p: string) => p.startsWith('/stats') },
   { to: '/settings', label: t('설정'), icon: ICON.settings, isActive: (p: string) => p.startsWith('/settings') },
 ]
-
-/** 펼침 메뉴 하나(+ 메뉴·프로필 메뉴) — 바깥을 누르거나 Esc면 닫힌다 */
-function useDropdown() {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-  return { open, setOpen, ref }
-}
 
 // 화면 틀 (11/14 사용자 요청 — Quizlet식): 위쪽 바 = 로고 · 가운데 덱 검색 · 오른쪽 + 만들기 · 🌐 언어 · 프로필,
 // 왼쪽 사이드바 = 메뉴와 내 폴더만. 이 컴포넌트 하나를 모든 화면이 쓴다(이름은 예전 그대로 TopNav).

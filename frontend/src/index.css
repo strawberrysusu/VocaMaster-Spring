@@ -842,6 +842,19 @@ body:has(.topbar) {
   white-space: nowrap;
 }
 
+/* 학습 버튼 글자 옆 아이콘 (11/14) — 아이콘과 글자를 한 줄 가운데로 */
+.mode-buttons .mode-btn,
+.mode-buttons .mode-stub,
+.mode-buttons .mode-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.mode-buttons svg { flex-shrink: 0; }
+.mode-primary svg:last-child { margin-left: -2px; opacity: 0.85; }   /* ▾ 펼침 표시 */
+.mode-menu-wrap .top-menu { left: 0; right: auto; }   /* 낱말카드 버튼 왼쪽 끝에 맞춰 아래로 */
+.top-menu .menu-disabled { display: flex; align-items: center; gap: 10px; padding: 9px 10px; font-size: 14px; color: #b4b5c2; cursor: not-allowed; }
+
 .mode-stub {
   padding: 11px 18px;
   border-radius: 11px;
@@ -1290,7 +1303,7 @@ button:disabled {
   .top-actions { margin-left: auto; gap: 8px; }
   .top-icon-btn { display: flex; }
   .topbar .lang-switch > span { display: none; }   /* 🌐 그림은 빼고 고르기 상자만 */
-  .top-menu { position: fixed; top: calc(var(--topbar-h) + 6px); right: 8px; }
+  .topbar .top-menu { position: fixed; top: calc(var(--topbar-h) + 6px); right: 8px; }   /* 위쪽 바 메뉴만 — 덱 화면 메뉴는 버튼 아래 그대로 */
 
   .sidenav { display: contents; }         /* 칸은 없애고 메뉴만 아래 탭바로 (아래 .side-menu) */
   .side-folders { display: none; }        /* 폴더는 내 덱 화면의 칩으로 */

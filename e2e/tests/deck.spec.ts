@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { test, expect, makeDeck, makeEmptyDeck, addCard, listCards } from './support'
+import { test, expect, makeDeck, makeEmptyDeck, addCard, listCards, toggleStar } from './support'
 
 // 덱 화면·학습 카드의 설명 줄(ADR-054)과 Word 시험지(ADR-052)
 
@@ -79,4 +79,18 @@ test('시험지: Word 파일이 단어가 들어간 채로 받아진다', async 
   // 무압축 zip이라 본문 글자가 그대로 들어 있다 — 단어가 실제로 시험지에 실렸는지
   expect(bytes.includes(Buffer.from('感謝'))).toBe(true)
   expect(bytes.includes(Buffer.from('ざら'))).toBe(true)
+})
+
+// 학습 버튼 (11/14 사용자 요청) — '복습 학습 (Leitner)'·'⭐ 별표 복습' 두 버튼을 '낱말카드' 하나로: 누르면 범위를 고른다
+test('낱말카드 — 누르면 전체 복습 / 별표만 복습 중에서 고른다', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '낱말카드메뉴', ['感謝|かんしゃ|감사', 'ざら|아주 흔함'])
+  const [first] = await listCards(request, deckId)
+  await toggleStar(request, first.id)
+
+  await page.goto(`/app/decks/${deckId}`)
+  await page.locator('.mode-buttons').getByRole('button', { name: '낱말카드' }).click()
+  const menu = page.getByRole('menu')
+  await expect(menu.getByRole('menuitem', { name: '전체 복습' })).toHaveAttribute('href', `/app/study?deckId=${deckId}`)
+  await menu.getByRole('menuitem', { name: '별표만 복습 (1장)' }).click()
+  await expect(page).toHaveURL(new RegExp(`/app/study\\?deckId=${deckId}&starredOnly=1$`))
 })
