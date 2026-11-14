@@ -31,7 +31,7 @@ interface Folder {
 }
 
 const SECONDS_PER_CARD = 25 // 예상 시간 어림값 — 카드당 평균 답변 시간
-const DATE_LOCALE: Record<Lang, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US' } // 머리의 날짜를 화면 언어로
+const DATE_LOCALE: Record<Lang, string> = { ko: 'ko-KR', ja: 'ja-JP', en: 'en-US', zh: 'zh-CN' } // 머리의 날짜를 화면 언어로
 
 export default function Home() {
   const [summary, setSummary] = useState<TodaySummary | null>(null)

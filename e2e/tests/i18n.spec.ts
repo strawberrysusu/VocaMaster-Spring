@@ -24,10 +24,10 @@ async function freshAccount(page: Page): Promise<{ token: string; deckId: number
   return { token: accessToken, deckId: ((await deck.json()) as { deckId: number }).deckId }
 }
 
-async function chooseLang(page: Page, lang: 'ja' | 'en' | 'ko') {
+async function chooseLang(page: Page, lang: 'ja' | 'en' | 'zh' | 'ko') {
   await page.goto('/app/settings')
   await page.getByLabel('Language').selectOption(lang) // 고르면 새로고침
-  await expect(page.locator('html')).toHaveAttribute('lang', lang)
+  await expect(page.locator('html')).toHaveAttribute('lang', lang === 'zh' ? 'zh-CN' : lang)
 }
 
 /** 화면 글자에서 한글을 찾는다 — 언어 고르기의 '한국어'만 빼고 */
@@ -40,7 +40,7 @@ async function koreanLeft(page: Page): Promise<string[]> {
     .slice(0, 8)
 }
 
-for (const lang of ['ja', 'en'] as const) {
+for (const lang of ['ja', 'en', 'zh'] as const) {
   test(`언어 ${lang}: 주요 화면에 한국어 문구가 남지 않는다`, async ({ page }) => {
     test.setTimeout(120_000)
     const { deckId } = await freshAccount(page)
@@ -90,4 +90,25 @@ test('언어: 한국어로 되돌리면 예전 화면 그대로', async ({ page 
   await chooseLang(page, 'ko')
   await page.goto('/app/decks')
   await expect(page.getByRole('heading', { name: '내 덱' })).toBeVisible()
+})
+
+// 서버가 보내는 오류 문구(한국어)도 고른 언어로 (tServer) — 로그인 안 한 새 브라우저에서 틀린 비밀번호로
+test.describe('서버 오류 문구', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+  for (const lang of ['ja', 'en', 'zh'] as const) {
+    test(`언어 ${lang}: 로그인 실패 문구가 그 언어로`, async ({ page, errors }) => {
+      await page.goto('/app/login')
+      await page.getByLabel('Language').selectOption(lang) // 고르면 새로고침
+      await expect(page.locator('html')).toHaveAttribute('lang', lang === 'zh' ? 'zh-CN' : lang)
+      await page.locator('.auth-page input').nth(0).fill(`nobody-${Date.now()}@example.test`)
+      await page.locator('.auth-page input').nth(1).fill('wrong-password-123')
+      await page.locator('.auth-page button.primary').click()
+      const alert = page.getByRole('alert')
+      await expect(alert).toBeVisible()
+      const text = (await alert.textContent()) ?? ''
+      expect(text.trim().length).toBeGreaterThan(0)
+      expect(text, '한국어가 남지 않아야 함').not.toMatch(HANGUL)
+      errors.length = 0 // 로그인 실패 응답(401)의 콘솔 오류는 일부러 낸 것
+    })
+  }
 })
