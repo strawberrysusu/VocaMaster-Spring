@@ -54,3 +54,17 @@ export function matchesAnswer(typed: string | null | undefined, ...answers: Arra
   if (!t) return false
   return answers.some((a) => answerCandidates(a).has(t))
 }
+
+/** 가타카나 → 히라가나 (읽기 채점용 — カンシャ로 써도 かんしゃ와 같게 본다) */
+export function foldKana(s: string): string {
+  return s.replace(/[\u30A1-\u30F6]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60))
+}
+
+/**
+ * 읽기 채점 (온라인 시험지) — 뜻과 같은 후보 규칙에 가타카나·히라가나 구분 없이.
+ * "(かいさいが)あやぶまれる" → "あやぶまれる"도 정답, "かど／つの" → 둘 중 하나.
+ */
+export function matchesReading(typed: string | null | undefined, reading: string | null | undefined): boolean {
+  if (reading == null) return false
+  return matchesAnswer(foldKana(typed ?? ''), foldKana(reading))
+}

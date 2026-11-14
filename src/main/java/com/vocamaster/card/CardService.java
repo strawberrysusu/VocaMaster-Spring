@@ -2,8 +2,11 @@ package com.vocamaster.card;
 
 import com.vocamaster.card.dto.CardResponse;
 import com.vocamaster.card.dto.CreateCardRequest;
+import com.vocamaster.card.dto.SetStarredRequest;
+import com.vocamaster.card.dto.SetStarredResponse;
 import com.vocamaster.card.dto.UpdateCardRequest;
 import com.vocamaster.common.PageableUtils;
+import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.deck.Deck;
 import com.vocamaster.deck.DeckService;
@@ -14,9 +17,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -91,6 +98,33 @@ public class CardService {
         deckService.verifyOwner(card.getDeck().getId(), userId);
         card.setStarred(!card.getStarred());
         return withProgress(cardRepository.save(card), userId);
+    }
+
+    /**
+     * 별표 일괄 설정 — 온라인 시험지에서 틀린 카드 자동 ⭐, '맞음으로' 되돌리기 (ADR-053).
+     * 토글이 아니라 값 지정이라 두 번 보내도 같다. 이 덱에 없는 카드가 하나라도 섞이면 아무것도 바꾸지 않는다.
+     * 엔티티로 바꾸는 이유: 벌크 UPDATE는 @UpdateTimestamp(JVM KST)를 건너뛰고, DB NOW()는 컨테이너 UTC라 시간대가 어긋난다.
+     */
+    @Transactional
+    public SetStarredResponse setStarred(Long deckId, Long userId, SetStarredRequest req) {
+        deckService.verifyOwner(deckId, userId);
+        Set<Long> ids = new LinkedHashSet<>(req.getCardIds());
+        List<Card> cards = cardRepository.findAllById(ids);
+        boolean allInDeck = cards.size() == ids.size()
+                && cards.stream().allMatch(c -> c.getDeck().getId().equals(deckId));
+        if (!allInDeck) {
+            throw new BadRequestException("이 단어장에 없는 카드가 섞여 있습니다");
+        }
+        boolean target = req.getStarred();
+        List<Long> changed = new ArrayList<>();
+        for (Card card : cards) {
+            if (!Boolean.valueOf(target).equals(card.getStarred())) {   // 옛 데이터의 null은 '꺼짐'으로 본다
+                card.setStarred(target);
+                changed.add(card.getId());
+            }
+        }
+        changed.sort(null);
+        return new SetStarredResponse(target, changed);
     }
 
     private CardResponse withProgress(Card card, Long userId) {

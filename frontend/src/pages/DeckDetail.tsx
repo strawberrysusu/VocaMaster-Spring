@@ -285,7 +285,7 @@ export default function DeckDetail() {
               <button className="mode-stub" disabled title="카드를 먼저 추가하세요">듣기</button>
             )}
             {cardsLoaded && cards.length >= 1 ? (
-              <button type="button" className="mode-btn" onClick={() => setSheetOpen(true)} title="인쇄해서 손으로 쓰는 시험지 (Word)">
+              <button type="button" className="mode-btn" onClick={() => setSheetOpen(true)} title="종이(Word) 또는 온라인으로 푸는 쓰기 시험">
                 시험지
               </button>
             ) : (
@@ -393,7 +393,7 @@ export default function DeckDetail() {
         </div>
       </div>
       {sheetOpen && deck && (
-        <TestSheetDialog deckTitle={deck.title} cards={cards} onClose={() => setSheetOpen(false)} />
+        <TestSheetDialog deckId={id!} deckTitle={deck.title} cards={cards} onClose={() => setSheetOpen(false)} />
       )}
     </>
   )
