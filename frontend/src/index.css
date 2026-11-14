@@ -2428,3 +2428,25 @@ button.mode-btn { cursor: pointer; font-family: inherit; }
 .pw-form .btn-primary {
   align-self: flex-start;
 }
+
+/* 언어 고르기 (ADR-056) — 로그인 화면 위쪽, 설정 화면 한 줄 */
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.lang-switch select {
+  font: inherit;
+  color: var(--ink-2);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 8px;
+}
+.auth-lang {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}

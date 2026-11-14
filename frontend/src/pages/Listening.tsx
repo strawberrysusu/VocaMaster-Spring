@@ -5,6 +5,7 @@ import { fetchAllCards, type CardDto } from '../api/cards'
 import TopNav from '../components/TopNav'
 import { isTtsSupported, speakTimes } from '../lib/tts'
 import { matchesAnswer, normalizeAnswer } from '../lib/answerMatch'
+import { t } from '../i18n'
 
 // 듣기 받아쓰기 (백로그 ⑭, 8/28 시험지 개편) — 어학원 시험 그대로:
 // 문제 N개가 세로로 쭉 깔리고, "전체 재생"이 1번부터 순서대로 불러준다.
@@ -26,12 +27,12 @@ function meaningMatch(typed: string, back: string): boolean {
 }
 
 function spellingMatch(typed: string, card: CardDto): boolean {
-  const t = normalizeAnswer(typed)
-  if (!t) return false
+  const typedNorm = normalizeAnswer(typed)
+  if (!typedNorm) return false
   // 예전 규칙(단어·읽기 통째로) + 공통 규칙(예문 괄호 문맥 "(開催が)危ぶまれる", 표기 두 가지 "器械/機械" 등)
   return (
-    t === normalizeAnswer(card.front) ||
-    (!!card.reading && t === normalizeAnswer(card.reading)) ||
+    typedNorm === normalizeAnswer(card.front) ||
+    (!!card.reading && typedNorm === normalizeAnswer(card.reading)) ||
     matchesAnswer(typed, card.front, card.reading)
   )
 }
@@ -151,25 +152,24 @@ export default function Listening() {
       <TopNav />
       <div className="shell">
         <p style={{ margin: '0 0 14px' }}>
-          <Link to={`/decks/${deckId}`} className="hero-secondary">← 덱으로</Link>
+          <Link to={`/decks/${deckId}`} className="hero-secondary">{t('← 덱으로')}</Link>
         </p>
         <div className="page-head">
           <div>
-            <h1>🎧 듣기 받아쓰기</h1>
+            <h1>{t('🎧 듣기 받아쓰기')}</h1>
             <p className="sub">
-              시험지처럼 — 전체 재생이 1번부터 불러주면 Tab으로 내려가며 받아쓰고, 마지막에 채점 ·
-              연습 모드(기록 저장 없음)
+              {t('시험지처럼 — 전체 재생이 1번부터 불러주면 Tab으로 내려가며 받아쓰고, 마지막에 채점 · 연습 모드(기록 저장 없음)')}
             </p>
           </div>
         </div>
 
         {error && <p className="error" role="alert">{error}</p>}
-        {!isTtsSupported() && <p className="error">이 브라우저는 음성 재생을 지원하지 않아요 — Chrome/Edge에서 열어주세요.</p>}
+        {!isTtsSupported() && <p className="error">{t('이 브라우저는 음성 재생을 지원하지 않아요 — Chrome/Edge에서 열어주세요.')}</p>}
 
         {phase === 'setup' && (
           <div className="quiz-setup">
             <div className="setup-row">
-              <span className="setup-label">문제 수</span>
+              <span className="setup-label">{t('문제 수')}</span>
               <input
                 type="number"
                 className="count-input"
@@ -178,54 +178,54 @@ export default function Listening() {
                 value={count}
                 onChange={(e) => setCount(Number(e.target.value))}
               />
-              <span className="muted" style={{ fontSize: 13 }}>/ 카드 {activePool.length}장{starredOnly ? ' (별표)' : ''}</span>
+              <span className="muted" style={{ fontSize: 13 }}>{starredOnly ? t('/ 카드 {n}장 (별표)', { n: activePool.length }) : t('/ 카드 {n}장', { n: activePool.length })}</span>
             </div>
             <div className="setup-row">
-              <span className="setup-label">범위</span>
+              <span className="setup-label">{t('범위')}</span>
               <div className="sort-tabs">
-                <button className={!starredOnly ? 'active' : ''} onClick={() => setStarredOnly(false)}>전체</button>
+                <button className={!starredOnly ? 'active' : ''} onClick={() => setStarredOnly(false)}>{t('전체')}</button>
                 <button
                   className={starredOnly ? 'active' : ''}
                   disabled={pool.filter((c) => c.starred).length === 0}
-                  title={pool.some((c) => c.starred) ? '' : '★ 표시한 카드가 없어요'}
+                  title={pool.some((c) => c.starred) ? '' : t('★ 표시한 카드가 없어요')}
                   onClick={() => setStarredOnly(true)}
                 >
-                  ⭐ 별표만
+                  {t('⭐ 별표만')}
                 </button>
               </div>
             </div>
             <div className="setup-row">
-              <span className="setup-label">출제 순서</span>
+              <span className="setup-label">{t('출제 순서')}</span>
               <div className="sort-tabs">
-                <button className={!ordered ? 'active' : ''} onClick={() => setOrdered(false)}>무작위</button>
-                <button className={ordered ? 'active' : ''} onClick={() => setOrdered(true)}>1번부터</button>
+                <button className={!ordered ? 'active' : ''} onClick={() => setOrdered(false)}>{t('무작위')}</button>
+                <button className={ordered ? 'active' : ''} onClick={() => setOrdered(true)}>{t('1번부터')}</button>
               </div>
             </div>
             <div className="setup-row">
-              <span className="setup-label">속도</span>
+              <span className="setup-label">{t('속도')}</span>
               <div className="sort-tabs">
-                <button className={rate === 0.75 ? 'active' : ''} onClick={() => setRate(0.75)}>느리게</button>
-                <button className={rate === 0.92 ? 'active' : ''} onClick={() => setRate(0.92)}>보통</button>
-                <button className={rate === 1.15 ? 'active' : ''} onClick={() => setRate(1.15)}>빠르게</button>
+                <button className={rate === 0.75 ? 'active' : ''} onClick={() => setRate(0.75)}>{t('느리게')}</button>
+                <button className={rate === 0.92 ? 'active' : ''} onClick={() => setRate(0.92)}>{t('보통')}</button>
+                <button className={rate === 1.15 ? 'active' : ''} onClick={() => setRate(1.15)}>{t('빠르게')}</button>
               </div>
             </div>
             <div className="setup-row">
-              <span className="setup-label">반복</span>
+              <span className="setup-label">{t('반복')}</span>
               <div className="sort-tabs">
                 {[2, 3, 5].map((n) => (
-                  <button key={n} className={times === n ? 'active' : ''} onClick={() => setTimes(n)}>{n}회</button>
+                  <button key={n} className={times === n ? 'active' : ''} onClick={() => setTimes(n)}>{t('{n}회', { n })}</button>
                 ))}
               </div>
-              <span className="setup-label" style={{ marginLeft: 10 }}>간격</span>
+              <span className="setup-label" style={{ marginLeft: 10 }}>{t('간격')}</span>
               <div className="sort-tabs">
                 {[1, 1.8, 3].map((g) => (
-                  <button key={g} className={gapSec === g ? 'active' : ''} onClick={() => setGapSec(g)}>{g}초</button>
+                  <button key={g} className={gapSec === g ? 'active' : ''} onClick={() => setGapSec(g)}>{t('{n}초', { n: g })}</button>
                 ))}
               </div>
             </div>
             <div className="answer-buttons">
               <button className="answer-yes" disabled={activePool.length === 0 || !isTtsSupported()} onClick={start}>
-                🔊 시험 시작 (전체 재생)
+                {t('🔊 시험 시작 (전체 재생)')}
               </button>
             </div>
           </div>
@@ -236,13 +236,13 @@ export default function Listening() {
             <div className="listen-toolbar">
               {graded ? (
                 <p className="result-line" style={{ margin: 0 }}>
-                  스펠링 <b>{spellScore}/{queue.length}</b> · 뜻 <b>{meanScore}/{queue.length}</b>
+                  {t('스펠링')} <b>{spellScore}/{queue.length}</b> · {t('뜻')} <b>{meanScore}/{queue.length}</b>
                 </p>
               ) : (
                 <>
-                  <button className="answer-no" onClick={() => playAll(queue, 0)}>▶ 전체 재생 (1번부터)</button>
+                  <button className="answer-no" onClick={() => playAll(queue, 0)}>{t('▶ 전체 재생 (1번부터)')}</button>
                   <span className="muted" style={{ fontSize: 12.5 }}>
-                    행의 🔊 = 그 문제만 다시 듣기 ({times}회)
+                    {t('행의 🔊 = 그 문제만 다시 듣기 ({n}회)', { n: times })}
                   </span>
                 </>
               )}
@@ -253,17 +253,17 @@ export default function Listening() {
                 <div key={i}>
                   <div className={`listen-row ${playingIdx === i ? 'playing' : ''}`}>
                     <span className="word-idx">{i + 1}</span>
-                    <button className="listen-play" title="이 문제 다시 듣기" onClick={() => playOne(queue, i)}>
+                    <button className="listen-play" title={t('이 문제 다시 듣기')} onClick={() => playOne(queue, i)}>
                       🔊
                     </button>
                     <input
-                      placeholder="스펠링 (단어 또는 읽기)"
+                      placeholder={t('스펠링 (단어 또는 읽기)')}
                       value={it.spelling}
                       disabled={graded}
                       onChange={(e) => updateItem(i, 'spelling', e.target.value)}
                     />
                     <input
-                      placeholder="뜻"
+                      placeholder={t('뜻')}
                       value={it.meaning}
                       disabled={graded}
                       onChange={(e) => updateItem(i, 'meaning', e.target.value)}
@@ -276,7 +276,7 @@ export default function Listening() {
                   </div>
                   {graded && !(it.spellingOk && it.meaningOk) && (
                     <p className="listen-answer">
-                      정답: <b>{it.card.front}</b>
+                      {t('정답:')} <b>{it.card.front}</b>
                       {it.card.reading && <span className="muted">（{it.card.reading}）</span>} — {it.card.back}
                     </p>
                   )}
@@ -287,13 +287,13 @@ export default function Listening() {
             <div className="answer-buttons" style={{ marginTop: 20 }}>
               {graded ? (
                 <>
-                  <button className="answer-no" onClick={() => setPhase('setup')}>다시 설정</button>
+                  <button className="answer-no" onClick={() => setPhase('setup')}>{t('다시 설정')}</button>
                   <Link to={`/decks/${deckId}`} className="answer-yes" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                    덱으로
+                    {t('덱으로')}
                   </Link>
                 </>
               ) : (
-                <button className="answer-yes" onClick={grade}>채점하기</button>
+                <button className="answer-yes" onClick={grade}>{t('채점하기')}</button>
               )}
             </div>
           </>

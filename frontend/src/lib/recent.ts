@@ -1,5 +1,6 @@
 // 최근 학습 덱 기록 (8/30, 홈 대시보드 2차) — 서버 API 없이 이 브라우저의 localStorage로.
 // 기기별로 따로 쌓이는 "이어하기" 편의 기능이라 서버 동기화 대상이 아니다 (백엔드 동결 준수).
+import { t } from '../i18n'
 
 const KEY = 'vm.recentStudy'
 const LEGACY_KEY = 'vm.lastStudyDeckId' // 구버전: 마지막 1개만 저장하던 키
@@ -50,12 +51,12 @@ export function getRecentStudy(): RecentEntry[] {
 // "오늘 / 어제 / N일 전" — 달력 날짜 기준
 export function agoLabel(at: number): string {
   if (!at) return ''
-  const day = (t: number) => {
-    const d = new Date(t)
+  const day = (ms: number) => {
+    const d = new Date(ms)
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
   }
   const days = Math.round((day(Date.now()) - day(at)) / 86400000)
-  if (days <= 0) return '오늘'
-  if (days === 1) return '어제'
-  return `${days}일 전`
+  if (days <= 0) return t('오늘')
+  if (days === 1) return t('어제')
+  return t('{n}일 전', { n: days })
 }

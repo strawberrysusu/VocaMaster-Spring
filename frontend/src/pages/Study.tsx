@@ -7,6 +7,7 @@ import { recordRecentStudy } from '../lib/recent'
 import { loadSettings, saveSettings } from '../lib/settings'
 import { isTtsSupported, speak, stopSpeaking } from '../lib/tts'
 import TopNav from '../components/TopNav'
+import { t } from '../i18n'
 
 interface StudyCard {
   cardId: number
@@ -484,7 +485,7 @@ export default function Study() {
     // 미제출 답안이 있으면 확인. 탭을 통째로 닫는 경우는 beforeunload가 맡는다
     if (draftCount > 0 && !result) {
       const ok = window.confirm(
-        `아직 제출하지 않은 답이 ${draftCount}개 있어요.\n지금 나가면 반영되지 않습니다. 나갈까요?`,
+        t('아직 제출하지 않은 답이 {n}개 있어요.', { n: draftCount }) + '\n' + t('지금 나가면 반영되지 않습니다. 나갈까요?'),
       )
       if (!ok) e.preventDefault()
     }
@@ -540,32 +541,32 @@ export default function Study() {
         {/* 몰입 모드(사이드바 없음)에서 최초 로딩이 실패하면 갇힌다 — 탈출·재시도 제공 (Codex UI 검산) */}
         {error && queue === null && (
           <p style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-            <button className="btn-primary" onClick={loadQueue}>다시 시도</button>
-            <Link to={backTo} className="hero-secondary">← 돌아가기</Link>
+            <button className="btn-primary" onClick={loadQueue}>{t('다시 시도')}</button>
+            <Link to={backTo} className="hero-secondary">{t('← 돌아가기')}</Link>
           </p>
         )}
 
-        {queue === null && !error && <p className="muted">불러오는 중...</p>}
+        {queue === null && !error && <p className="muted">{t('불러오는 중...')}</p>}
 
         {/* ── 미제출 초안 복구 ── */}
         {pendingRetry && (
           <div className="result-panel">
-            <h2>{retryBlocked ? '이 답안은 보낼 수 없어요' : '보낸 결과를 확인하지 못했어요'}</h2>
+            <h2>{retryBlocked ? t('이 답안은 보낼 수 없어요') : t('보낸 결과를 확인하지 못했어요')}</h2>
             <p className="result-line">
-              <b>{attemptedCount}장</b>을 보냈지만 서버에 반영됐는지 확인하지 못했어요.
+              <b>{t('{n}장', { n: attemptedCount })}</b>{t('을 보냈지만 서버에 반영됐는지 확인하지 못했어요.')}
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
               {retryBlocked
-                ? '저장된 답안이 서버 기록과 맞지 않아요. 이 세션은 버리고 새로 시작해야 합니다.'
-                : '보낸 그대로 다시 보냅니다. 이미 반영됐다면 두 번 세어지지 않고, 아직이면 이번에 반영돼요. 확인될 때까지 답은 고칠 수 없어요.'}
+                ? t('저장된 답안이 서버 기록과 맞지 않아요. 이 세션은 버리고 새로 시작해야 합니다.')
+                : t('보낸 그대로 다시 보냅니다. 이미 반영됐다면 두 번 세어지지 않고, 아직이면 이번에 반영돼요. 확인될 때까지 답은 고칠 수 없어요.')}
             </p>
             <div className="answer-buttons" style={{ marginTop: 26 }}>
               <button className="answer-no" disabled={submitting} onClick={discardDraft}>
-                버리기
+                {t('버리기')}
               </button>
               {!retryBlocked && (
                 <button className="answer-yes" disabled={submitting} onClick={submit}>
-                  {submitting ? '보내는 중...' : '다시 보내기'}
+                  {submitting ? t('보내는 중...') : t('다시 보내기')}
                 </button>
               )}
             </div>
@@ -574,9 +575,9 @@ export default function Study() {
 
         {queue !== null && total === 0 && !pendingRetry && !result && (
           <div className="stub">
-            <h2>{deckId ? (starredOnly ? '★ 표시한 카드가 없어요' : '이 덱에는 카드가 없어요') : '지금 복습할 카드가 없어요 🎉'}</h2>
+            <h2>{deckId ? (starredOnly ? t('★ 표시한 카드가 없어요') : t('이 덱에는 카드가 없어요')) : t('지금 복습할 카드가 없어요 🎉')}</h2>
             <p>
-              <Link to={backTo} className="link" style={{ color: 'var(--a)' }}>← 돌아가기</Link>
+              <Link to={backTo} className="link" style={{ color: 'var(--a)' }}>{t('← 돌아가기')}</Link>
             </p>
           </div>
         )}
@@ -585,9 +586,9 @@ export default function Study() {
         {!result && !reviewing && !pendingRetry && card && (
           <>
             <div className="study-top">
-              <Link to={backTo} className="hero-secondary" onClick={confirmQuit}>← 그만하기</Link>
+              <Link to={backTo} className="hero-secondary" onClick={confirmQuit}>{t('← 그만하기')}</Link>
               <span className="muted" style={{ fontSize: 13.5 }}>
-                {idx + 1} / {total} · 답함 {answeredInQueue}
+                {idx + 1} / {total} · {t('답함 {n}', { n: answeredInQueue })}
               </span>
             </div>
             {/* 막대 = 지금 위치(idx+1 / total). 답해서 넘어가든 화살표로 넘어가든 오르고, 이전으로 가면 준다.
@@ -599,7 +600,7 @@ export default function Study() {
               aria-valuemin={0}
               aria-valuemax={total}
               aria-valuenow={idx + 1}
-              aria-valuetext={`${total}장 중 ${idx + 1}번째, ${answeredInQueue}장 답함`}
+              aria-valuetext={t('{total}장 중 {i}번째, {n}장 답함', { total, i: idx + 1, n: answeredInQueue })}
             >
               <div className="progress-fill" style={{ width: `${((idx + 1) / total) * 100}%` }} />
             </div>
@@ -621,8 +622,8 @@ export default function Study() {
               onPointerCancel={(e) => onCardPointerEnd(e, false)}
             >
               {/* 스와이프 중 방향 표시 — 민 거리에 비례해 진해진다 */}
-              <span className="swipe-tag yes" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, dragX) / SWIPE_COMMIT) }}>알아요</span>
-              <span className="swipe-tag no" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, -dragX) / SWIPE_COMMIT) }}>몰라요</span>
+              <span className="swipe-tag yes" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, dragX) / SWIPE_COMMIT) }}>{t('알아요')}</span>
+              <span className="swipe-tag no" aria-hidden="true" style={{ opacity: Math.min(1, Math.max(0, -dragX) / SWIPE_COMMIT) }}>{t('몰라요')}</span>
               {/* 읽기는 답의 절반(한자→읽기 회상 훈련) — 뜻 확인 후에만 공개. 읽기 없는 카드(영어 등)는 표시 없음 */}
               {revealed && card.reading && <span className="reading">{card.reading}</span>}
               <span className="study-word">{card.front}</span>
@@ -632,7 +633,7 @@ export default function Study() {
                   {card.memo && <span className="study-memo">{card.memo}</span>}
                 </>
               ) : (
-                <span className="study-hint">카드를 눌러 뜻 확인</span>
+                <span className="study-hint">{t('카드를 눌러 뜻 확인')}</span>
               )}
             </button>
 
@@ -654,10 +655,10 @@ export default function Study() {
                   className={`study-action-btn sound-action${autoSpeak ? '' : ' off'}`}
                   onClick={toggleSound}
                   aria-pressed={autoSpeak}
-                  title={autoSpeak ? '뒤집을 때 발음 자동 재생 — 누르면 끔' : '소리 꺼짐 — 누르면 켬'}
+                  title={autoSpeak ? t('뒤집을 때 발음 자동 재생 — 누르면 끔') : t('소리 꺼짐 — 누르면 켬')}
                 >
                   <span aria-hidden="true">{autoSpeak ? '🔊' : '🔇'}</span>
-                  <span>{autoSpeak ? '소리 켬' : '소리 끔'}</span>
+                  <span>{autoSpeak ? t('소리 켬') : t('소리 끔')}</span>
                 </button>
               )}
               <button
@@ -666,10 +667,10 @@ export default function Study() {
                 onClick={toggleStar}
                 disabled={starring}
                 aria-pressed={card.starred}
-                title={card.starred ? '별표 해제' : '다시 보고 싶은 단어로 표시'}
+                title={card.starred ? t('별표 해제') : t('다시 보고 싶은 단어로 표시')}
               >
                 <span aria-hidden="true">{card.starred ? '★' : '☆'}</span>
-                <span>{card.starred ? '별표됨' : '별표'}</span>
+                <span>{card.starred ? t('별표됨') : t('별표')}</span>
               </button>
             </div>
 
@@ -686,7 +687,7 @@ export default function Study() {
                 onClick={() => pick(false)}
                 disabled={flyingCls}
               >
-                몰라요
+                {t('몰라요')}
               </button>
               <button
                 className={`answer-yes${picked === true ? ' picked' : ''}`}
@@ -694,29 +695,29 @@ export default function Study() {
                 onClick={() => pick(true)}
                 disabled={flyingCls}
               >
-                알아요
+                {t('알아요')}
               </button>
             </div>
             {!revealed && (
               <p className="muted study-tip" style={{ textAlign: 'center', fontSize: 13.5, marginTop: 10 }}>
-                떠올렸으면 바로 답해도 되고, 카드를 눌러 뜻을 확인해도 돼요
-                <span className="only-touch"> · 옆으로 밀어서 답할 수도 있어요</span>
+                {t('떠올렸으면 바로 답해도 되고, 카드를 눌러 뜻을 확인해도 돼요')}
+                <span className="only-touch"> · {t('옆으로 밀어서 답할 수도 있어요')}</span>
               </p>
             )}
 
             <div className="study-nav">
-              <button className="nav-btn" onClick={goPrev} disabled={idx === 0 || flyingCls}>← 이전</button>
+              <button className="nav-btn" onClick={goPrev} disabled={idx === 0 || flyingCls}>{t('← 이전')}</button>
               <span className="muted" style={{ fontSize: 12.5 }}>
-                {picked === undefined ? '아직 답하지 않음' : picked ? '이번 답변: 알아요' : '이번 답변: 몰라요'}
+                {picked === undefined ? t('아직 답하지 않음') : picked ? t('이번 답변: 알아요') : t('이번 답변: 몰라요')}
               </span>
-              <button className="nav-btn" onClick={goNext} disabled={flyingCls}>다음 →</button>
+              <button className="nav-btn" onClick={goNext} disabled={flyingCls}>{t('다음 →')}</button>
             </div>
             {/* 마우스·키보드 환경에서만 보인다 (CSS hover:hover) */}
             <p className="muted kbd-hint" aria-hidden="true">
-              <kbd>Space</kbd> / <kbd>↑</kbd> 뒤집기 · <kbd>A</kbd> 몰라요 · <kbd>D</kbd> 알아요 · <kbd>S</kbd> 별표 · <kbd>←</kbd> <kbd>→</kbd> 이동
+              <kbd>Space</kbd> / <kbd>↑</kbd> {t('뒤집기')} · <kbd>A</kbd> {t('몰라요')} · <kbd>D</kbd> {t('알아요')} · <kbd>S</kbd> {t('별표')} · <kbd>←</kbd> <kbd>→</kbd> {t('이동')}
             </p>
             <p className="muted study-foot">
-              답은 아직 저장되지 않았어요. 되돌아가서 얼마든지 고칠 수 있고, 마지막에 한 번에 제출됩니다.
+              {t('답은 아직 저장되지 않았어요. 되돌아가서 얼마든지 고칠 수 있고, 마지막에 한 번에 제출됩니다.')}
             </p>
           </>
         )}
@@ -724,22 +725,22 @@ export default function Study() {
         {/* ── 제출 전 검토 ── */}
         {!result && reviewing && !pendingRetry && queue !== null && total > 0 && (
           <div className="result-panel">
-            <h2>{draftCount === 0 ? '카드 보기를 마칠까요?' : '제출할까요?'}</h2>
+            <h2>{draftCount === 0 ? t('카드 보기를 마칠까요?') : t('제출할까요?')}</h2>
             <p className="result-line">
-              {total}장 중 <b>{answeredInQueue}장</b> 답함
-              {answeredInQueue < total && <> · 미응답 {total - answeredInQueue}장</>}
+              {t('{n}장 중', { n: total })} <b>{t('{n}장', { n: answeredInQueue })}</b> {t('답함')}
+              {answeredInQueue < total && <> · {t('미응답 {n}장', { n: total - answeredInQueue })}</>}
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
               {draftCount === 0
-                ? '답하지 않고 카드만 봐도 완료할 수 있어요. 학습 상태와 복습 일정은 변경되지 않아요.'
-                : '학습 완료를 누르면 답한 카드의 복습 일정과 학습 상태가 저장돼요. 미응답 카드는 그대로 남아요.'}
+                ? t('답하지 않고 카드만 봐도 완료할 수 있어요. 학습 상태와 복습 일정은 변경되지 않아요.')
+                : t('학습 완료를 누르면 답한 카드의 복습 일정과 학습 상태가 저장돼요. 미응답 카드는 그대로 남아요.')}
             </p>
             <div className="answer-buttons" style={{ marginTop: 26 }}>
               <button className="answer-no" onClick={() => { setReviewing(false); setIdx(0) }}>
-                {draftCount === 0 ? '돌아가서 더 보기' : '돌아가서 고치기'}
+                {draftCount === 0 ? t('돌아가서 더 보기') : t('돌아가서 고치기')}
               </button>
               <button className="answer-yes" disabled={submitting} onClick={submit}>
-                {submitting ? '제출 중...' : '학습 완료'}
+                {submitting ? t('제출 중...') : t('학습 완료')}
               </button>
             </div>
           </div>
@@ -748,31 +749,31 @@ export default function Study() {
         {/* ── 제출 완료 ── */}
         {result && (
           <div className="result-panel">
-            <h2>{browsedOnly ? '카드 보기 완료' : '복습 완료 🎉'}</h2>
+            <h2>{browsedOnly ? t('카드 보기 완료') : t('복습 완료 🎉')}</h2>
             <p className="result-line">
               {browsedOnly
-                ? '답변 없이 카드 보기를 마쳤어요.'
-                : <>이번 답변 {result.total}장 · <b>알아요 {result.known}</b> · <b>몰라요 {result.unknown}</b></>}
+                ? t('답변 없이 카드 보기를 마쳤어요.')
+                : <>{t('이번 답변 {n}장', { n: result.total })} · <b>{t('알아요 {n}', { n: result.known })}</b> · <b>{t('몰라요 {n}', { n: result.unknown })}</b></>}
             </p>
             <p className="muted" style={{ fontSize: 13.5 }}>
               {browsedOnly
-                ? '알아요·몰라요를 선택하지 않아 학습 상태와 복습 일정은 변경하지 않았어요.'
+                ? t('알아요·몰라요를 선택하지 않아 학습 상태와 복습 일정은 변경하지 않았어요.')
                 : result.alreadySubmitted
-                  ? '이미 제출된 세션이라 진행도는 다시 움직이지 않았어요.'
-                  : '이번 답변을 학습 상태와 복습 일정에 반영했어요.'}
+                  ? t('이미 제출된 세션이라 진행도는 다시 움직이지 않았어요.')
+                  : t('이번 답변을 학습 상태와 복습 일정에 반영했어요.')}
             </p>
             {!browsedOnly && (
               <p className="muted" style={{ fontSize: 13.5 }}>
-                누적 학습 상태는 3회 연속 정답이면 ‘알아요’, 한 번이라도 틀리면 ‘몰라요’가 돼요.
-                {deckId && <> <Link to={backTo} style={{ color: 'var(--a)' }}>덱에서 학습 상태 확인 →</Link></>}
+                {t('누적 학습 상태는 3회 연속 정답이면 ‘알아요’, 한 번이라도 틀리면 ‘몰라요’가 돼요.')}
+                {deckId && <> <Link to={backTo} style={{ color: 'var(--a)' }}>{t('덱에서 학습 상태 확인 →')}</Link></>}
               </p>
             )}
             <div className="answer-buttons" style={{ marginTop: 26 }}>
               <Link to="/" className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                홈으로
+                {t('홈으로')}
               </Link>
               <button className="answer-yes" onClick={loadQueue}>
-                한 번 더
+                {t('한 번 더')}
               </button>
             </div>
           </div>

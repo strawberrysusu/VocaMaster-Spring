@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
+import { t } from '../i18n'
 
 interface FailedLine {
   line: number
@@ -73,7 +74,7 @@ export default function ImportFiles() {
       const title = (prefix.trim() ? `${prefix.trim()} ` : '') + f.name.replace(/\.[^.]+$/, '')
       try {
         const text = preprocess(await f.text())
-        if (!text.trim()) throw new Error('빈 파일')
+        if (!text.trim()) throw new Error(t('빈 파일'))
         // 덱 생성+카드 등록 단일 트랜잭션 API — 등록이 실패하면 빈 덱도 안 남는다 (Codex 검산 8/29)
         const res = await api<{ deckId: number; imported: number; skipped: number; failedCount: number; failed: FailedLine[] }>(
           '/decks/import-file',
@@ -101,23 +102,23 @@ export default function ImportFiles() {
       <TopNav />
       <div className="shell">
         <p style={{ margin: '0 0 14px' }}>
-          <Link to="/decks" className="hero-secondary">← 내 덱</Link>
+          <Link to="/decks" className="hero-secondary">{t('← 내 덱')}</Link>
         </p>
         <div className="page-head">
           <div>
-            <h1>파일로 덱 만들기</h1>
+            <h1>{t('파일로 덱 만들기')}</h1>
             <p className="sub">
-              txt 파일 여러 개를 고르면 <b>파일명이 곧 덱 이름</b>이 됩니다 · 한 줄에 카드 하나
-              (단어|뜻 또는 단어|읽기|뜻, 탭·쉼표 자동 감지) · 읽기의 전각 괄호（）는 자동으로 벗겨요
+              {t('txt 파일 여러 개를 고르면')} <b>{t('파일명이 곧 덱 이름')}</b>
+              {t('이 됩니다 · 한 줄에 카드 하나 (단어|뜻 또는 단어|읽기|뜻, 탭·쉼표 자동 감지) · 읽기의 전각 괄호（）는 자동으로 벗겨요')}
             </p>
           </div>
         </div>
 
         <div className="quiz-setup">
           <div className="setup-row">
-            <span className="setup-label">이름 앞에 붙일 말</span>
+            <span className="setup-label">{t('이름 앞에 붙일 말')}</span>
             <input
-              placeholder="예: N1 (선택)"
+              placeholder={t('예: N1 (선택)')}
               value={prefix}
               disabled={busy}
               maxLength={30}
@@ -126,15 +127,15 @@ export default function ImportFiles() {
             />
             {prefix.trim() && files.length > 0 && (
               <span className="muted" style={{ fontSize: 12.5 }}>
-                → "{prefix.trim()} {files[0].name.replace(/\.[^.]+$/, '')}" 식으로 만들어져요
+                {t('→ "{prefix} {name}" 식으로 만들어져요', { prefix: prefix.trim(), name: files[0].name.replace(/\.[^.]+$/, '') })}
               </span>
             )}
           </div>
 
           <div className="setup-row">
-            <span className="setup-label">넣을 폴더</span>
+            <span className="setup-label">{t('넣을 폴더')}</span>
             <select value={folderId} disabled={busy} onChange={(e) => setFolderId(e.target.value === '' ? '' : Number(e.target.value))} style={{ maxWidth: 220 }}>
-              <option value="">📂 미분류</option>
+              <option value="">{t('📂 미분류')}</option>
               {folders.map((f) => (
                 <option key={f.id} value={f.id}>📁 {f.name}</option>
               ))}
@@ -152,22 +153,22 @@ export default function ImportFiles() {
                 setResults([])
               }}
             />
-            📁 파일 선택 (여러 개 가능)
+            {t('📁 파일 선택 (여러 개 가능)')}
           </label>
 
           {files.length > 0 && (
             <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-              선택됨: {files.map((f) => f.name).join(', ')}
+              {t('선택됨: {names}', { names: files.map((f) => f.name).join(', ') })}
             </p>
           )}
 
           <p className="muted" style={{ margin: 0, fontSize: 12.5 }}>
-            ⚠️ 같은 파일을 두 번 넣으면 같은 이름의 덱이 하나 더 생깁니다 (합치기 아님)
+            {t('⚠️ 같은 파일을 두 번 넣으면 같은 이름의 덱이 하나 더 생깁니다 (합치기 아님)')}
           </p>
 
           <div className="answer-buttons">
             <button className="answer-yes" disabled={busy || files.length === 0} onClick={run}>
-              {busy ? `등록 중… (${current})` : `${files.length}개 파일로 덱 만들기`}
+              {busy ? t('등록 중… ({name})', { name: current }) : t('{n}개 파일로 덱 만들기', { n: files.length })}
             </button>
           </div>
         </div>
@@ -176,7 +177,7 @@ export default function ImportFiles() {
           <div style={{ marginTop: 18 }}>
             {done && (
               <p className="result-line" style={{ fontSize: 15 }}>
-                <b>완료 🎉 덱 {results.filter((r) => r.deckId).length}개 · 카드 {totalImported}장 등록</b>
+                <b>{t('완료 🎉 덱 {decks}개 · 카드 {cards}장 등록', { decks: results.filter((r) => r.deckId).length, cards: totalImported })}</b>
               </p>
             )}
             <div className="word-list">
@@ -188,8 +189,8 @@ export default function ImportFiles() {
                     </span>
                     <span className="word-back" style={r.error ? { color: '#b0485c' } : undefined}>
                       {r.error
-                        ? `실패: ${r.error}`
-                        : <>{r.imported}장 등록{(r.skipped ?? 0) > 0 && <> · 중복 {r.skipped}</>}{(r.failedCount ?? 0) > 0 && <> · 실패 {r.failedCount}줄</>}</>}
+                        ? t('실패: {error}', { error: r.error })
+                        : <>{t('{n}장 등록', { n: r.imported ?? '' })}{(r.skipped ?? 0) > 0 && <> · {t('중복 {n}', { n: r.skipped ?? 0 })}</>}{(r.failedCount ?? 0) > 0 && <> · {t('실패 {n}줄', { n: r.failedCount ?? 0 })}</>}</>}
                     </span>
                   </div>
                   {/* 실패 줄 상세 — 서버가 원래 주던 목록인데 그동안 화면이 버리고 숫자만 보여줬다 (8/28) */}
@@ -197,11 +198,11 @@ export default function ImportFiles() {
                     <div style={{ margin: '2px 0 8px 30px' }}>
                       {r.failed!.map((f) => (
                         <p key={f.line} className="muted" style={{ margin: '2px 0', fontSize: 12.5, color: '#b0485c' }}>
-                          {f.line}행: {f.content}
+                          {t('{n}행: {content}', { n: f.line, content: f.content })}
                         </p>
                       ))}
                       <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
-                        실패 원인은 둘 중 하나예요 — 칸 모양이 안 맞음(구분자 기준 2~3칸 아님, 단어/뜻 빈칸) 또는 글자 수 초과(단어·뜻 255자, 읽기 200자)
+                        {t('실패 원인은 둘 중 하나예요 — 칸 모양이 안 맞음(구분자 기준 2~3칸 아님, 단어/뜻 빈칸) 또는 글자 수 초과(단어·뜻 255자, 읽기 200자)')}
                       </p>
                     </div>
                   )}

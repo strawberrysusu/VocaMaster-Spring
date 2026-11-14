@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import { recordRecentStudy } from '../lib/recent'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
+import { t } from '../i18n'
 
 // 백엔드(Phase 2 타이핑 세션 API) 계약 — direction 소문자, 채점은 서버(복수 정답·대소문자 무시·괄호 설명 제외, ADR-026 → ADR-051)
 type Direction = 'front_to_back' | 'back_to_front'
@@ -135,10 +136,10 @@ export default function Typing() {
       <TopNav />
       <div className="shell study-shell">
         <div className="study-top">
-          <Link to={`/decks/${deckId}`} className="hero-secondary">← 덱으로</Link>
+          <Link to={`/decks/${deckId}`} className="hero-secondary">{t('← 덱으로')}</Link>
           {session && !summary && (
             <span className="muted" style={{ fontSize: 13.5 }}>
-              {idx + 1} / {total} · 정답 {correctCount}
+              {idx + 1} / {total} · {t('정답 {n}', { n: correctCount })}
             </span>
           )}
         </div>
@@ -147,26 +148,26 @@ export default function Typing() {
 
         {!session && (
           <div className="quiz-setup">
-            <h2>타이핑</h2>
-            <p className="muted">직접 쳐서 답해요 · 대소문자·앞뒤 공백 무시 · 뜻이 "사과, 능금"처럼 여러 개면 하나만 맞아도 정답 · 괄호 안 설명과 n. v. 같은 품사 표시는 안 쳐도 돼요</p>
+            <h2>{t('타이핑')}</h2>
+            <p className="muted">{t('직접 쳐서 답해요 · 대소문자·앞뒤 공백 무시 · 뜻이 "사과, 능금"처럼 여러 개면 하나만 맞아도 정답 · 괄호 안 설명과 n. v. 같은 품사 표시는 안 쳐도 돼요')}</p>
             <div className="setup-row">
-              <span className="setup-label">방향</span>
+              <span className="setup-label">{t('방향')}</span>
               <div className="sort-tabs">
                 <button className={direction === 'front_to_back' ? 'active' : ''} disabled={busy} onClick={() => setDirection('front_to_back')}>
-                  단어 보고 뜻 쓰기
+                  {t('단어 보고 뜻 쓰기')}
                 </button>
                 <button className={direction === 'back_to_front' ? 'active' : ''} disabled={busy} onClick={() => setDirection('back_to_front')}>
-                  뜻 보고 단어 쓰기
+                  {t('뜻 보고 단어 쓰기')}
                 </button>
               </div>
             </div>
             <div className="setup-row">
-              <span className="setup-label">문제 수</span>
+              <span className="setup-label">{t('문제 수')}</span>
               <div className="sort-tabs">
                 <input
                   type="number"
                   className="count-input"
-                  aria-label="문제 수"
+                  aria-label={t('문제 수')}
                   min={1}
                   max={cardCount ?? undefined}
                   value={count}
@@ -179,23 +180,23 @@ export default function Typing() {
                 ))}
                 {cardCount !== null && cardCount > 0 && (
                   <button className={count === cardCount ? 'active' : ''} disabled={busy} onClick={() => setCount(cardCount)}>
-                    전체 {cardCount}
+                    {t('전체 {n}', { n: cardCount })}
                   </button>
                 )}
               </div>
             </div>
             <div className="setup-row">
-              <span className="setup-label">범위</span>
+              <span className="setup-label">{t('범위')}</span>
               <div className="sort-tabs">
-                <button className={!wrongOnly && !starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(false); setStarredOnly(false) }}>전체</button>
-                <button className={wrongOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(true); setStarredOnly(false) }}>오답만</button>
-                <button className={starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setStarredOnly(true); setWrongOnly(false) }}>⭐ 별표만</button>
+                <button className={!wrongOnly && !starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(false); setStarredOnly(false) }}>{t('전체')}</button>
+                <button className={wrongOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(true); setStarredOnly(false) }}>{t('오답만')}</button>
+                <button className={starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setStarredOnly(true); setWrongOnly(false) }}>{t('⭐ 별표만')}</button>
               </div>
             </div>
             <button className="cta" style={{ marginTop: 8 }} disabled={busy} onClick={() => start()}>
-              {busy ? '준비 중...' : '시작'}
+              {busy ? t('준비 중...') : t('시작')}
             </button>
-            <p className="muted" style={{ fontSize: 12.5 }}>'오답만'은 타이핑에서 지금까지 틀린 카드, '별표만'은 ★ 표시한 카드예요 (카드 1장부터 가능)</p>
+            <p className="muted" style={{ fontSize: 12.5 }}>{t("'오답만'은 타이핑에서 지금까지 틀린 카드, '별표만'은 ★ 표시한 카드예요 (카드 1장부터 가능)")}</p>
           </div>
         )}
 
@@ -205,7 +206,7 @@ export default function Typing() {
               <div className="progress-fill" style={{ width: `${((idx + (result ? 1 : 0)) / total) * 100}%` }} />
             </div>
             <div className="quiz-card">
-              <p className="quiz-kicker">{direction === 'front_to_back' ? '이 단어의 뜻을 입력하세요' : '이 뜻의 단어를 입력하세요'}</p>
+              <p className="quiz-kicker">{direction === 'front_to_back' ? t('이 단어의 뜻을 입력하세요') : t('이 뜻의 단어를 입력하세요')}</p>
               <p className="quiz-question">
                 {/* 읽기는 답의 절반(한자→읽기 회상) — 채점 후에만 공개. 복습·퀴즈와 같은 규칙 */}
                 {result !== null && q.reading && <span className="reading">{q.reading}</span>}
@@ -228,24 +229,24 @@ export default function Typing() {
                     // 일본어·한국어 IME: 변환 확정 Enter는 '조합 중'이라 제출로 치지 않는다 (keyCode 229 = 구형 브라우저 신호)
                     if (e.key === 'Enter' && (e.nativeEvent.isComposing || e.keyCode === 229)) e.preventDefault()
                   }}
-                  placeholder="정답 입력 후 Enter"
+                  placeholder={t('정답 입력 후 Enter')}
                   readOnly={!!result || busy}
                   maxLength={500}
                   autoComplete="off"
                   autoCapitalize="off"
                   spellCheck={false}
-                  aria-label="답 입력"
+                  aria-label={t('답 입력')}
                 />
                 {!result ? (
-                  <button type="submit" className="btn-primary" disabled={busy || !typed.trim()}>확인</button>
+                  <button type="submit" className="btn-primary" disabled={busy || !typed.trim()}>{t('확인')}</button>
                 ) : (
-                  <button type="submit" className="btn-primary">{idx + 1 < total ? '다음 (Enter)' : '결과 보기'}</button>
+                  <button type="submit" className="btn-primary">{idx + 1 < total ? t('다음 (Enter)') : t('결과 보기')}</button>
                 )}
               </form>
               {result && (
                 <div className="quiz-feedback" style={{ borderTop: 0, paddingTop: 0, marginTop: 14 }}>
                   <p className={result.correct ? 'ok' : 'ng'}>
-                    {result.correct ? '정답!' : <>오답 — 정답은 <b>"{result.correctAnswer}"</b> <SpeakButton text={result.correctAnswer} /></>}
+                    {result.correct ? t('정답!') : <>{t('오답 — 정답은')} <b>"{result.correctAnswer}"</b> <SpeakButton text={result.correctAnswer} /></>}
                   </p>
                 </div>
               )}
@@ -255,9 +256,9 @@ export default function Typing() {
 
         {summary && (
           <div className="result-panel">
-            <h2>타이핑 완료 {summary.accuracy >= 80 ? '🎉' : ''}</h2>
+            <h2>{t('타이핑 완료')} {summary.accuracy >= 80 ? '🎉' : ''}</h2>
             <p className="result-line">
-              {summary.total}문제 중 <b>정답 {summary.correct}</b> · <b>오답 {summary.wrong}</b> · 정답률 {summary.accuracy}%
+              {t('{n}문제 중', { n: summary.total })} <b>{t('정답 {n}', { n: summary.correct })}</b> · <b>{t('오답 {n}', { n: summary.wrong })}</b> · {t('정답률 {n}%', { n: summary.accuracy })}
             </p>
             {summary.wrong > 0 && (
               <div className="word-list" style={{ marginTop: 18, textAlign: 'left' }}>
@@ -265,7 +266,7 @@ export default function Typing() {
                   <div key={x.questionId} className="word-row">
                     <span className="word-front">{x.question}</span>
                     <span className="word-back">
-                      <s style={{ color: '#b0485c' }}>{x.typedAnswer || '(빈 답)'}</s> → {x.correctAnswer}
+                      <s style={{ color: '#b0485c' }}>{x.typedAnswer || t('(빈 답)')}</s> → {x.correctAnswer}
                     </span>
                   </div>
                 ))}
@@ -273,14 +274,14 @@ export default function Typing() {
             )}
             <div className="answer-buttons" style={{ marginTop: 26 }}>
               <Link to={`/decks/${deckId}`} className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                덱으로
+                {t('덱으로')}
               </Link>
               {summary.wrong > 0 && session ? (
                 <button className="answer-yes" disabled={busy} onClick={() => start({ sourceSessionId: session.sessionId })}>
-                  이번 오답 다시 ({summary.wrong})
+                  {t('이번 오답 다시 ({n})', { n: summary.wrong })}
                 </button>
               ) : (
-                <button className="answer-yes" disabled={busy} onClick={() => start()}>한 번 더</button>
+                <button className="answer-yes" disabled={busy} onClick={() => start()}>{t('한 번 더')}</button>
               )}
             </div>
           </div>

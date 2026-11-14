@@ -95,9 +95,25 @@ export function estimatePages(rowCount: number, withAnswerKey: boolean): { sheet
   return { sheet, answerKey }
 }
 
+/**
+ * 파일 이름에 들어가는 글자 — 기본은 한국어. 화면(TestSheetDialog)이 고른 언어의 문구를 넘긴다.
+ * 이 파일은 i18n을 import 하지 않는다: scripts/load-ts.mjs가 상대 경로 import를 못 풀어서 (다국어 11/14)
+ */
+export interface SheetFileLabels {
+  /** 덱 이름이 비었을 때 대신 쓰는 이름 */
+  fallback: string
+  /** 정리한 덱 이름 → 파일 이름 */
+  fileName: (base: string) => string
+}
+
+export const SHEET_FILE_LABELS_KO: SheetFileLabels = {
+  fallback: '단어장',
+  fileName: (base) => `${base}_시험지.docx`,
+}
+
 /** Windows 파일 이름에 못 쓰는 글자를 지운 "덱이름_시험지.docx" */
-export function sheetFileName(deckTitle: string): string {
+export function sheetFileName(deckTitle: string, labels: SheetFileLabels = SHEET_FILE_LABELS_KO): string {
   // eslint-disable-next-line no-control-regex -- 파일 이름에 못 쓰는 제어 문자를 일부러 지운다
-  const base = deckTitle.replace(/[\\/:*?"<>|\u0000-\u001F]/g, ' ').replace(/\s+/g, ' ').trim() || '단어장'
-  return `${base}_시험지.docx`
+  const base = deckTitle.replace(/[\\/:*?"<>|\u0000-\u001F]/g, ' ').replace(/\s+/g, ' ').trim() || labels.fallback
+  return labels.fileName(base)
 }

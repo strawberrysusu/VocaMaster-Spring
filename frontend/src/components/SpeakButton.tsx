@@ -1,5 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from 'react'
 import { isTtsSupported, speak } from '../lib/tts'
+import { t } from '../i18n'
 
 // 🔊 발음 듣기 — 진짜 <button>. 버튼 안에 중첩하면 HTML 규칙 위반 + Enter/Space가 부모로 전파되므로
 // 호출자는 반드시 '형제'로 배치한다 (Study 카드는 카드 아래 액션 바에 형제로 놓는다)
@@ -26,8 +27,8 @@ export default function SpeakButton({
     <button
       type="button"
       className={`speak-btn ${size} ${className}`}
-      aria-label={`${text} 발음 듣기`}
-      title="발음 듣기"
+      aria-label={t('{word} 발음 듣기', { word: text })}
+      title={t('발음 듣기')}
       onClick={onClick}
       onKeyDown={onKeyDown}
     >

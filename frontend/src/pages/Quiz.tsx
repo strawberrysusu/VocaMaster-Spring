@@ -5,6 +5,7 @@ import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
 import { loadSettings, saveSettings } from '../lib/settings'
 import { recordRecentStudy } from '../lib/recent'
+import { t } from '../i18n'
 
 // 백엔드(Phase 2 퀴즈 세션 API) 계약 — direction은 소문자 'front_to_back' | 'back_to_front' (Direction.from)
 type Direction = 'front_to_back' | 'back_to_front'
@@ -159,10 +160,10 @@ export default function Quiz() {
       <TopNav />
       <div className="shell study-shell">
         <div className="study-top">
-          <Link to={`/decks/${deckId}`} className="hero-secondary">← 덱으로</Link>
+          <Link to={`/decks/${deckId}`} className="hero-secondary">{t('← 덱으로')}</Link>
           {session && !summary && (
             <span className="muted" style={{ fontSize: 13.5 }}>
-              {idx + 1} / {total} · 정답 {correctCount}
+              {idx + 1} / {total} · {t('정답 {n}', { n: correctCount })}
             </span>
           )}
         </div>
@@ -172,26 +173,26 @@ export default function Quiz() {
         {/* 설정 — 세션 전 */}
         {!session && (
           <div className="quiz-setup">
-            <h2>퀴즈</h2>
-            <p className="muted">4~6지선다 · 틀린 문제는 기록돼서 나중에 오답만 다시 풀 수 있어요</p>
+            <h2>{t('퀴즈')}</h2>
+            <p className="muted">{t('4~6지선다 · 틀린 문제는 기록돼서 나중에 오답만 다시 풀 수 있어요')}</p>
             <div className="setup-row">
-              <span className="setup-label">방향</span>
+              <span className="setup-label">{t('방향')}</span>
               <div className="sort-tabs">
                 <button className={direction === 'front_to_back' ? 'active' : ''} disabled={busy} onClick={() => setDirection('front_to_back')}>
-                  단어 → 뜻
+                  {t('단어 → 뜻')}
                 </button>
                 <button className={direction === 'back_to_front' ? 'active' : ''} disabled={busy} onClick={() => setDirection('back_to_front')}>
-                  뜻 → 단어
+                  {t('뜻 → 단어')}
                 </button>
               </div>
             </div>
             <div className="setup-row">
-              <span className="setup-label">문제 수</span>
+              <span className="setup-label">{t('문제 수')}</span>
               <div className="sort-tabs">
                 <input
                   type="number"
                   className="count-input"
-                  aria-label="문제 수"
+                  aria-label={t('문제 수')}
                   min={1}
                   max={cardCount ?? undefined}
                   value={count}
@@ -206,13 +207,13 @@ export default function Quiz() {
                 ))}
                 {cardCount !== null && cardCount > 0 && (
                   <button className={count === cardCount ? 'active' : ''} disabled={busy} onClick={() => setCount(cardCount)}>
-                    전체 {cardCount}
+                    {t('전체 {n}', { n: cardCount })}
                   </button>
                 )}
               </div>
             </div>
             <div className="setup-row">
-              <span className="setup-label">선택지</span>
+              <span className="setup-label">{t('선택지')}</span>
               <div className="sort-tabs">
                 {([4, 5, 6] as const).map((n) => (
                   <button
@@ -224,23 +225,23 @@ export default function Quiz() {
                       saveSettings({ ...loadSettings(), quizChoices: n })   // 다음에도 기억
                     }}
                   >
-                    {n}지선다
+                    {t('{n}지선다', { n })}
                   </button>
                 ))}
               </div>
             </div>
             <div className="setup-row">
-              <span className="setup-label">범위</span>
+              <span className="setup-label">{t('범위')}</span>
               <div className="sort-tabs">
-                <button className={!wrongOnly && !starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(false); setStarredOnly(false) }}>전체</button>
-                <button className={wrongOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(true); setStarredOnly(false) }}>오답만</button>
-                <button className={starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setStarredOnly(true); setWrongOnly(false) }}>⭐ 별표만</button>
+                <button className={!wrongOnly && !starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(false); setStarredOnly(false) }}>{t('전체')}</button>
+                <button className={wrongOnly ? 'active' : ''} disabled={busy} onClick={() => { setWrongOnly(true); setStarredOnly(false) }}>{t('오답만')}</button>
+                <button className={starredOnly ? 'active' : ''} disabled={busy} onClick={() => { setStarredOnly(true); setWrongOnly(false) }}>{t('⭐ 별표만')}</button>
               </div>
             </div>
             <button className="cta" style={{ marginTop: 8 }} disabled={busy} onClick={() => start()}>
-              {busy ? '준비 중...' : '시작'}
+              {busy ? t('준비 중...') : t('시작')}
             </button>
-            <p className="muted" style={{ fontSize: 12.5 }}>덱의 서로 다른 답이 모자라면 선택지가 그만큼만 나와요 (최소 2). '오답만'은 지금까지 틀린 카드, '별표만'은 ★ 표시한 카드예요</p>
+            <p className="muted" style={{ fontSize: 12.5 }}>{t("덱의 서로 다른 답이 모자라면 선택지가 그만큼만 나와요 (최소 2). '오답만'은 지금까지 틀린 카드, '별표만'은 ★ 표시한 카드예요")}</p>
           </div>
         )}
 
@@ -251,7 +252,7 @@ export default function Quiz() {
               <div className="progress-fill" style={{ width: `${((idx + (picked ? 1 : 0)) / total) * 100}%` }} />
             </div>
             <div className="quiz-card">
-              <p className="quiz-kicker">{direction === 'front_to_back' ? '이 단어의 뜻은?' : '이 뜻의 단어는?'}</p>
+              <p className="quiz-kicker">{direction === 'front_to_back' ? t('이 단어의 뜻은?') : t('이 뜻의 단어는?')}</p>
               <p className="quiz-question">
                 {/* 읽기는 답의 절반(한자→읽기 회상) — 채점 후에만 공개. 복습 카드(8/28)와 같은 규칙 */}
                 {picked !== null && q.reading && <span className="reading">{q.reading}</span>}
@@ -277,24 +278,24 @@ export default function Quiz() {
               {picked && (
                 <div className="quiz-feedback">
                   <p className={picked.correct ? 'ok' : 'ng'}>
-                    {picked.correct ? '정답!' : `오답 — 정답은 "${picked.correctAnswer}"`}
+                    {picked.correct ? t('정답!') : t('오답 — 정답은 "{answer}"', { answer: picked.correctAnswer })}
                   </p>
                   <button className="btn-primary" onClick={next}>
-                    {idx + 1 < total ? '다음 (Enter)' : '결과 보기'}
+                    {idx + 1 < total ? t('다음 (Enter)') : t('결과 보기')}
                   </button>
                 </div>
               )}
             </div>
-            <p className="muted" style={{ textAlign: 'center', fontSize: 12.5 }}>숫자 키 1~6으로 고를 수 있어요</p>
+            <p className="muted" style={{ textAlign: 'center', fontSize: 12.5 }}>{t('숫자 키 1~6으로 고를 수 있어요')}</p>
           </>
         )}
 
         {/* 요약 */}
         {summary && (
           <div className="result-panel">
-            <h2>퀴즈 완료 {summary.accuracy >= 80 ? '🎉' : ''}</h2>
+            <h2>{t('퀴즈 완료')} {summary.accuracy >= 80 ? '🎉' : ''}</h2>
             <p className="result-line">
-              {summary.total}문제 중 <b>정답 {summary.correct}</b> · <b>오답 {summary.wrong}</b> · 정답률 {summary.accuracy}%
+              {t('{n}문제 중', { n: summary.total })} <b>{t('정답 {n}', { n: summary.correct })}</b> · <b>{t('오답 {n}', { n: summary.wrong })}</b> · {t('정답률 {n}%', { n: summary.accuracy })}
             </p>
             {summary.wrong > 0 && (
               <div className="word-list" style={{ marginTop: 18, textAlign: 'left' }}>
@@ -310,14 +311,14 @@ export default function Quiz() {
             )}
             <div className="answer-buttons" style={{ marginTop: 26 }}>
               <Link to={`/decks/${deckId}`} className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                덱으로
+                {t('덱으로')}
               </Link>
               {summary.wrong > 0 && session ? (
                 <button className="answer-yes" disabled={busy} onClick={() => start({ sourceSessionId: session.sessionId })}>
-                  이번 오답 다시 ({summary.wrong})
+                  {t('이번 오답 다시 ({n})', { n: summary.wrong })}
                 </button>
               ) : (
-                <button className="answer-yes" disabled={busy} onClick={() => start()}>한 번 더</button>
+                <button className="answer-yes" disabled={busy} onClick={() => start()}>{t('한 번 더')}</button>
               )}
             </div>
           </div>
