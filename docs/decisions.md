@@ -1804,7 +1804,7 @@ attempted  = POST를 시도한 순간 동결된 답안  ← 있으면 편집 금
 **교훈:** '기존 동작'은 그 자체로 근거가 아니다. 제품 결정은 사용자 몫이고, 검산자가 "의도인지 확인하라"고 하면 확인해야 한다.
 
 **백로그로 남긴 것 (배포 직후 손대지 않음):**
-- `review_submissions.created_at`이 `NOW(6)`(컨테이너 MySQL = UTC)라 KST 통일 원칙에서 벗어난다. 운영 실측으로 확인: 같은 사건이 영수증 `06:06:09`(UTC) / 진행도 `15:06:09`(KST). 읽는 코드가 없어 지금 깨지는 건 없다
+- (11/14 주: 아래는 Oracle 시절 실측 — 9/30 AWS 이전 뒤 운영 MySQL은 `@@system_time_zone`=KST라 지금은 해당 없음) `review_submissions.created_at`이 `NOW(6)`(컨테이너 MySQL = UTC)라 KST 통일 원칙에서 벗어난다. 운영 실측으로 확인: 같은 사건이 영수증 `06:06:09`(UTC) / 진행도 `15:06:09`(KST). 읽는 코드가 없어 지금 깨지는 건 없다
 - 백업 스크립트가 비밀번호를 명령줄 인자로 넘긴다(`ps`에 노출). `--defaults-extra-file`로 전환
 - 카드 조회 IN 배치 최적화, 오래된 영수증 정리
 
@@ -1892,7 +1892,7 @@ attempted  = POST를 시도한 순간 동결된 답안  ← 있으면 편집 금
 
 ### API 계약
 - 덱 주인만(403), 덱에 없는 카드·없는 카드가 하나라도 섞이면 **400 + 아무것도 안 바꿈**, 빈 목록·`starred` 없음 400, 한 번에 500장까지
-- 벌크 UPDATE가 아니라 엔티티로 바꾼다 — 벌크는 `@UpdateTimestamp`(JVM KST)를 건너뛰고, DB `NOW()`는 컨테이너 UTC라 시간대가 어긋난다
+- 벌크 UPDATE가 아니라 엔티티로 바꾼다 — 벌크는 `@UpdateTimestamp`를 건너뛰어 `updated_at`이 안 바뀌고, 값이 실제로 바뀐 카드만 UPDATE 하기도 어렵다 (11/14 정정: 처음엔 'DB `NOW()`가 UTC'라고 적었으나 운영 MySQL은 `@@system_time_zone`=KST로 실측됨)
 - 테스트: `CardServiceTest` 4건(바뀐 것만·멱등 / 해제 / 원자적 거절 / 403), `CardStarBulkHttpTest` 3건(200 JSON / 400 검증 / 로그인 필요)
 
 ---
