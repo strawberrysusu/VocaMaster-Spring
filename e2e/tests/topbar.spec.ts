@@ -84,3 +84,49 @@ test('연관 검색 — 줄을 고른 뒤 Esc로 닫고 Enter면 고른 덱이 �
   await box.press('Enter')
   await expect(page).toHaveURL(/\/app\/search\?q=/)
 })
+
+test('연관 검색 — 고른 직후 늦게 온 공개 덱 결과가 목록을 바꿔도 고른 줄이 다른 덱으로 바뀌지 않는다', async ({ page, request }) => {
+  const label = `지연${Date.now()}`
+  await makeEmptyDeck(request, label)
+  const fake = (id: number, title: string) => ({
+    content: [{ id, title, description: '', authorNickname: '누군가', cardCount: 1, likeCount: 0, copyCount: 0, likedByMe: false, mine: false }],
+    totalPages: 1,
+    totalElements: 1,
+    number: 0,
+    size: 10,
+  })
+  // 첫 검색어의 공개 덱은 바로, 바꾼 검색어의 공개 덱은 '풀어 줄 때까지' 늦게 온다
+  let calls = 0
+  let release: () => void = () => {}
+  const late = new Promise<void>((r) => (release = r))
+  await page.route('**/public/decks?**', async (route) => {
+    calls++
+    if (calls === 1) return route.fulfill({ json: fake(900000001, `${label} 옛 공개`) })
+    await late
+    return route.fulfill({ json: fake(900000002, `${label}z 새 공개`) })
+  })
+
+  await page.goto('/app/')
+  const box = page.getByRole('combobox', { name: '덱 검색' })
+  await box.click()
+  await box.fill(label)
+  await expect(page.getByRole('option', { name: /옛 공개/ })).toBeVisible()
+
+  await box.fill(`${label}z`) // 검색어를 바꾸면 옛 공개 덱은 바로 치운다 — 남은 줄 = '모든 결과 보기'
+  await expect(page.getByRole('option', { name: /옛 공개/ })).toHaveCount(0)
+  await box.press('ArrowDown') // '모든 결과 보기'를 고른다
+  release() // 이제 새 공개 덱이 도착 → 목록 [새 공개, 모든 결과 보기]
+  await expect(page.getByRole('option', { name: /새 공개/ })).toBeVisible()
+  await expect(page.getByRole('option', { name: /모든 결과 보기/ })).toHaveAttribute('aria-selected', 'true')
+  await box.press('Enter')
+  await expect(page).toHaveURL(/\/app\/search\?q=/) // 번호로 기억했다면 같은 자리의 '새 공개' 덱이 열렸다
+})
+
+test('탐색 — 검색어를 달고 들어왔다가 메뉴 탐색으로 다시 오면 검색이 비워진다', async ({ page }) => {
+  await page.goto('/app/explore?q=zzzz')
+  const input = page.getByRole('textbox', { name: '공개 덱 검색' })
+  await expect(input).toHaveValue('zzzz')
+  await page.getByRole('navigation', { name: '주 메뉴' }).getByRole('link', { name: '탐색' }).click()
+  await expect(page).toHaveURL(/\/app\/explore$/)
+  await expect(input).toHaveValue('')
+})

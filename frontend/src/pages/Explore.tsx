@@ -12,9 +12,9 @@ export default function Explore() {
   const [decks, setDecks] = useState<PublicDeck[] | null>(null)
   // ?q= 로 들어오면(검색 화면의 '탐색에서 더 보기', 11/14) 그 검색어로 시작한다
   const [params] = useSearchParams()
-  const initialQuery = params.get('q') ?? ''
-  const [keyword, setKeyword] = useState(initialQuery)
-  const [query, setQuery] = useState(initialQuery)          // 실제 검색에 쓰인 값
+  const urlQuery = params.get('q') ?? ''
+  const [keyword, setKeyword] = useState(urlQuery)
+  const [query, setQuery] = useState(urlQuery)          // 실제 검색에 쓰인 값
   const [sort, setSort] = useState<'popular' | 'recent'>('popular')
   const [copiedIds, setCopiedIds] = useState<Record<number, boolean>>({})
   const [busyId, setBusyId] = useState<number | null>(null)
@@ -23,6 +23,14 @@ export default function Explore() {
   // '더 보기'(이어 붙이기)가 아니라 페이지 교체 — 쌓이면 과부하가 되돌아온다 (사용자 피드백)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
+
+  // 주소의 검색어가 바뀌면 입력·결과도 따라간다 — 같은 화면이라 처음 값만 쓰면, 메뉴 '탐색'으로 다시 와서
+  // 주소에서 검색어가 사라져도 지난 검색이 남았다 (Codex 4차 검산 11/14)
+  useEffect(() => {
+    setKeyword(urlQuery)
+    setQuery(urlQuery)
+    setPage(0)
+  }, [urlQuery])
 
   useEffect(() => {
     setDecks(null)

@@ -48,7 +48,9 @@ export default function SearchBox() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [myDecks, setMyDecks] = useState<MyDeck[] | null>(null)
   const [publicHits, setPublicHits] = useState<PublicDeck[]>([])
-  const [active, setActive] = useState(-1)
+  // 고른 줄은 '몇 번째'가 아니라 그 줄의 주소로 기억한다 — 공개 덱 결과가 늦게 와서 목록이 바뀌어도
+  // 같은 번호의 다른 덱이 열리지 않게 (Codex 4차 검산 11/14). 목록에서 사라지면 자연히 '안 고름'(-1)
+  const [activeTo, setActiveTo] = useState<string | null>(null)
 
   // 검색창 글자는 검색 화면 주소(?q=)를 따라간다 — 다른 화면으로 가면 비워진다
   const urlQuery = pathname === '/search' ? (new URLSearchParams(search).get('q') ?? '') : ''
@@ -68,10 +70,8 @@ export default function SearchBox() {
   // 공개 덱 — 치다가 잠깐 멈췄을 때만 부르고, 늦게 온 옛 결과는 버린다
   const q = query.trim()
   useEffect(() => {
-    if (!box.open || !q) {
-      setPublicHits([])
-      return
-    }
+    setPublicHits([])   // 검색어가 바뀌면 지난 검색어의 공개 덱은 바로 치운다 — 남겨 두면 새 검색어의 결과처럼 보여 골라진다
+    if (!box.open || !q) return
     let alive = true
     const timer = window.setTimeout(() => {
       api<PageResp<PublicDeck>>(`/public/decks?${new URLSearchParams({ keyword: q, size: '10', sort: 'popular' })}`)
@@ -111,8 +111,10 @@ export default function SearchBox() {
     return [...myHits, ...pubHits, all]
   }, [myDecks, publicHits, q])
 
-  // 목록이 바뀌거나 닫히면 고른 줄을 푼다 — 안 풀면 Esc로 닫은 뒤의 Enter가 안 보이는 줄을 연다
-  useEffect(() => setActive(-1), [q, items.length, box.open])
+  const active = activeTo === null ? -1 : items.findIndex((s) => s.to === activeTo)
+
+  // 검색어가 바뀌거나 닫히면 고른 줄을 푼다 — 안 풀면 Esc로 닫은 뒤의 Enter가 안 보이는 줄을 연다
+  useEffect(() => setActiveTo(null), [q, box.open])
 
   function go(to: string) {
     box.setOpen(false)
@@ -135,12 +137,10 @@ export default function SearchBox() {
       // -1(아무것도 안 고름, 검색창) → 0 → … → 마지막 → 다시 -1 로 돈다
       const step = e.key === 'ArrowDown' ? 1 : -1
       const n = items.length
-      setActive((i) => {
-        const next = i + step
-        if (next < -1) return n - 1
-        if (next >= n) return -1
-        return next
-      })
+      let next = active + step
+      if (next < -1) next = n - 1
+      if (next >= n) next = -1
+      setActiveTo(next === -1 ? null : items[next].to)
     }
   }
 
@@ -185,7 +185,7 @@ export default function SearchBox() {
                 className={`suggest-item${i === active ? ' active' : ''}${s.kind === 'all' ? ' suggest-all' : ''}`}
                 onMouseDown={(e) => e.preventDefault()}   // 누르는 순간 검색창이 포커스를 잃어 목록이 먼저 닫히지 않게
                 onClick={() => go(s.to)}
-                onMouseEnter={() => setActive(i)}
+                onMouseEnter={() => setActiveTo(s.to)}
               >
                 {s.kind === 'all' ? ICON.search : s.kind === 'public' ? ICON.explore : ICON.cards}
                 <span className="suggest-text">
