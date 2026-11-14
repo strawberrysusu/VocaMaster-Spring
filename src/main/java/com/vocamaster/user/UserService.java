@@ -5,6 +5,7 @@ import com.vocamaster.auth.RefreshTokenRepository;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.NotFoundException;
 import com.vocamaster.user.dto.ChangePasswordRequest;
+import com.vocamaster.user.dto.RankingMaskRequest;
 import com.vocamaster.user.dto.UpdateMeRequest;
 import com.vocamaster.user.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
@@ -69,6 +70,14 @@ public class UserService {
         // '모든 기기에서 즉시 로그아웃'이 아니다 — 안내 문구가 이보다 세게 말하면 거짓말이 된다.
         // 즉시 차단이 필요해지면 tokenVersion/passwordChangedAt 도입 검토 (지금은 백로그)
         refreshTokenRepository.revokeAllByUserId(userId, LocalDateTime.now());
+    }
+
+    /** 학습 랭킹에서 닉네임 가리기 (ADR-059) — @DynamicUpdate라 이 칸만 UPDATE */
+    @Transactional
+    public UserResponse setRankingMasked(Long userId, RankingMaskRequest req) {
+        User user = findUser(userId);
+        user.setRankingMasked(req.getMasked());
+        return UserResponse.from(userRepository.save(user));
     }
 
     private User findUser(Long userId) {

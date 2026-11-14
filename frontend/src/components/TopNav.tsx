@@ -31,6 +31,7 @@ const MENU = [
   { to: '/decks', label: t('내 덱'), icon: ICON.decks, isActive: (p: string) => p.startsWith('/decks') || p.startsWith('/import') },
   { to: '/explore', label: t('탐색'), icon: ICON.explore, isActive: (p: string) => p.startsWith('/explore') || p.startsWith('/public') },
   { to: '/stats', label: t('통계'), icon: ICON.stats, isActive: (p: string) => p.startsWith('/stats') },
+  { to: '/ranking', label: t('랭킹'), icon: ICON.trophy, isActive: (p: string) => p.startsWith('/ranking') },   // 학습 랭킹 (ADR-059)
   { to: '/settings', label: t('설정'), icon: ICON.settings, isActive: (p: string) => p.startsWith('/settings') },
 ]
 

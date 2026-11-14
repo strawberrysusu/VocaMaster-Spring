@@ -7,6 +7,7 @@ import DeckDetail from './pages/DeckDetail'
 import Study from './pages/Study'
 import Explore from './pages/Explore'
 import Search from './pages/Search'
+import Ranking from './pages/Ranking'
 import PublicDeckDetail from './pages/PublicDeckDetail'
 import Quiz from './pages/Quiz'
 import Typing from './pages/Typing'
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         <Route path="/explore" element={<RequireAuth><Explore /></RequireAuth>} />
         <Route path="/search" element={<RequireAuth><Search /></RequireAuth>} />
+        <Route path="/ranking" element={<RequireAuth><Ranking /></RequireAuth>} />
         {/* 공개 덱 상세는 비로그인 열람 허용 — UNLISTED "링크 받은 사람은 본다"(ADR-030)와 일치.
             좋아요·복사는 눌렀을 때 로그인으로 유도 (화면 안에서 처리) */}
         <Route path="/explore/:id" element={<PublicDeckDetail />} />

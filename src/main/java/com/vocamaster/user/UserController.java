@@ -2,6 +2,7 @@ package com.vocamaster.user;
 
 import com.vocamaster.auth.CustomUserDetails;
 import com.vocamaster.user.dto.ChangePasswordRequest;
+import com.vocamaster.user.dto.RankingMaskRequest;
 import com.vocamaster.user.dto.UpdateMeRequest;
 import com.vocamaster.user.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,6 +32,13 @@ public class UserController {
     public UserResponse updateMe(@AuthenticationPrincipal CustomUserDetails me,
                                  @Valid @RequestBody UpdateMeRequest req) {
         return userService.updateMe(me.getUserId(), req);
+    }
+
+    @PatchMapping("/me/ranking")
+    @Operation(summary = "학습 랭킹에서 닉네임 가리기 켜기/끄기 — 켜면 랭킹에 'qjw***'처럼 앞 몇 글자만")
+    public UserResponse setRankingMasked(@AuthenticationPrincipal CustomUserDetails me,
+                                         @Valid @RequestBody RankingMaskRequest req) {
+        return userService.setRankingMasked(me.getUserId(), req);
     }
 
     @PatchMapping("/me/password")

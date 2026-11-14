@@ -14,9 +14,10 @@ public class UserResponse {
     private String nickname;
     private String provider;        // local | google — 프로필 팝오버의 가입 경로 뱃지 (ADR-047)
     private LocalDateTime createdAt;
+    private boolean rankingMasked;   // 학습 랭킹에서 닉네임 가리기 (설정 화면 스위치, ADR-059)
 
     public static UserResponse from(User user) {
         return new UserResponse(user.getId(), user.getEmail(), user.getNickname(),
-                user.getProvider(), user.getCreatedAt());
+                user.getProvider(), user.getCreatedAt(), user.isRankingMasked());
     }
 }
