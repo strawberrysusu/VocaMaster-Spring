@@ -1,5 +1,6 @@
 package com.vocamaster.cardimport;
 
+import com.vocamaster.common.ValidationPatterns;
 import com.vocamaster.card.Card;
 import com.vocamaster.card.CardRepository;
 import com.vocamaster.cardimport.dto.ImportFileRequest;
@@ -139,7 +140,9 @@ public class ImportService {
             String front = parts[0].trim();
             String back = parts.length >= 2 ? parts[parts.length - 1].trim() : "";
             String reading = parts.length == 3 ? parts[1].trim() : "";
-            boolean shapeOk = (parts.length == 2 || parts.length == 3) && !front.isEmpty() && !back.isEmpty();
+            // 단어·뜻은 만들 때·수정 때와 같은 빈칸 규칙 — 전각 공백(　)이나 안 보이는 글자만 있어도 빈칸 (11/14 검토)
+            boolean shapeOk = (parts.length == 2 || parts.length == 3)
+                    && ValidationPatterns.hasText(front) && ValidationPatterns.hasText(back);
             if (!shapeOk) {
                 failed.add(Map.of("line", i + 1, "content", line));
             } else if (front.length() > MAX_TEXT || back.length() > MAX_TEXT || reading.length() > MAX_READING) {

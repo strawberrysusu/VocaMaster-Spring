@@ -23,6 +23,13 @@ interface BatchResult {
   known: number
   unknown: number
   alreadySubmitted: boolean
+  /** 세션 도중 지워져서 서버가 건너뛴 카드 (11/14) — 재전송이면 null */
+  skippedIds?: number[] | null
+  /**
+   * 답 없이 카드만 훑어보고 끝냄 — 서버에 보내지 않은 화면 쪽 결과에만 true.
+   * total 0으로 추측하면 안 된다: 답한 카드가 전부 지워져도 서버는 total 0을 돌려준다 (11/14 검토)
+   */
+  browsedOnly?: boolean
 }
 
 /** cardId → 알아요(true) / 몰라요(false). 여기 없는 카드는 '미응답' */
@@ -302,7 +309,7 @@ export default function Study() {
         // 카드만 훑어본 세션도 끝낼 수 있다. 답안이 없으므로 서버에는 제출하지 않는다.
         clearDraft()
         setError('')
-        setResult({ total: 0, known: 0, unknown: 0, alreadySubmitted: false })
+        setResult({ total: 0, known: 0, unknown: 0, alreadySubmitted: false, browsedOnly: true })
         return
       }
       // ★ 저장이 먼저, 전송이 나중. 순서가 뒤바뀌면 응답 유실 시 '무엇을 보냈는지'를 잃는다
@@ -501,7 +508,7 @@ export default function Study() {
    */
   const pendingRetry = attempted !== null && !result
   const attemptedCount = attempted ? Object.keys(attempted).length : 0
-  const browsedOnly = result?.total === 0
+  const browsedOnly = result?.browsedOnly === true
 
   // ── 키보드 단축키: Space·↑ 뒤집기 · A 몰라요 · D 알아요 · S 별표 · ← → 이동 ──
   // e.code를 쓴다 — 한글 IME면 e.key가 'ㅁ'·'ㅇ'으로 오지만 code는 KeyA·KeyD 그대로다 (Quizlet과 같은 배치).
@@ -755,6 +762,9 @@ export default function Study() {
                 ? t('답변 없이 카드 보기를 마쳤어요.')
                 : <>{t('이번 답변 {n}장', { n: result.total })} · <b>{t('알아요 {n}', { n: result.known })}</b> · <b>{t('몰라요 {n}', { n: result.unknown })}</b></>}
             </p>
+            {result.skippedIds && result.skippedIds.length > 0 && (
+              <p className="muted" style={{ fontSize: 13.5 }}>{t('지워진 카드 {n}장은 건너뛰었어요', { n: result.skippedIds.length })}</p>
+            )}
             <p className="muted" style={{ fontSize: 13.5 }}>
               {browsedOnly
                 ? t('알아요·몰라요를 선택하지 않아 학습 상태와 복습 일정은 변경하지 않았어요.')

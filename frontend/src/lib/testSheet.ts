@@ -37,9 +37,13 @@ export interface SheetModel {
 
 type SheetCard = Pick<CardDto, 'id' | 'front' | 'back' | 'reading' | 'memo' | 'starred'>
 
-// 한자: CJK 통합 한자 + 확장 A + 호환 한자 + 々〆ヶ
-const KANJI = /[㐀-䶿一-鿿豈-﫿々〆ヶ]/
-const KANA = /[぀-ゟ゠-ヿ]/
+// 한자: CJK 통합 한자 4E00–9FFF + 확장 A 3400–4DBF + 호환 한자 F900–FAFF + BMP 밖 확장 B~ 20000–3FFFF
+// (𠮟 U+20B9F는 2010년부터 상용한자 표기) + 々〆ヶ (Codex 검산 11/14)
+// · u 플래그: 없으면 BMP 밖 글자를 반쪽(서로게이트) 둘로 봐서 못 찾는다
+// · \u 표기: 글자를 그대로 쓰면 편집기·도구의 NFC 정규화가 호환 한자 豈(F900)를 8C48로 바꿔 범위가 한글까지 넓어진다
+const KANJI = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u{20000}-\u{3FFFF}\u3005\u3006\u30F6]/u
+// 가나: 히라가나 3040–309F + 가타카나 30A0–30FF
+const KANA = /[\u3040-\u309F\u30A0-\u30FF]/
 
 export function hasKanji(s: string): boolean {
   return KANJI.test(s)

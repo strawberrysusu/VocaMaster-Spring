@@ -112,8 +112,25 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(409, "CONFLICT", "같은 요청이 동시에 처리되었습니다. 다시 시도해 주세요"));
     }
 
+    // 잠금 실패(교착 deadlock·잠금 대기 시간 초과) — 겹치는 요청 둘 중 진 쪽. 그 트랜잭션은 통째로 되돌아갔으니
+    // 다시 보내면 된다 → 500이 아니라 409 (Codex 검산 11/14: 역순 일괄 제출 둘이 동시에 오면 500이었다)
+    @ExceptionHandler(org.springframework.dao.PessimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleLockFailure(org.springframework.dao.PessimisticLockingFailureException ex) {
+        log.warn("잠금 실패 — 동시 요청 충돌: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(409, "CONFLICT", "같은 요청이 동시에 처리되었습니다. 다시 시도해 주세요"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnExpected(Exception ex) {
+        // 스프링 MVC가 '요청이 틀렸다'며 던지는 예외(405 메서드·415 Content-Type·413 크기 등)는 자기 상태 코드를 안다 —
+        // 500으로 바꾸지 말고 그 코드 그대로 (11/14 검토: 주소창으로 /auth/login을 열면 500 '서버 내부 오류'였다). 405의 Allow 헤더도 그대로
+        if (ex instanceof org.springframework.web.ErrorResponse mvc && mvc.getStatusCode().is4xxClientError()) {
+            int status = mvc.getStatusCode().value();
+            String message = status == 413 ? "요청이 너무 큽니다" : "지원하지 않는 요청입니다";
+            return ResponseEntity.status(status).headers(mvc.getHeaders())
+                    .body(ErrorResponse.of(status, HttpStatus.valueOf(status).name(), message));
+        }
         // 예상 못 한 예외가 조용히 묻히면 원인 추적 불가 — 반드시 스택트레이스 로깅
         log.error("Unexpected server error", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

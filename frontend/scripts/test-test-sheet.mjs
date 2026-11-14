@@ -79,6 +79,14 @@ check('섞은 뒤에도 번호는 1부터 차례로', shuffled.rows.map((r) => r
 const en = sheet.buildSheet(enCards, { scope: 'all', count: 'all', shuffle: false })
 check('영어 덱 판정', en.japanese === false && en.rows.every((r) => !r.needsReading))
 
+// BMP 밖 한자(𠮟 U+20B9F·𠮷 U+20BB7)도 한자로 — 정규식에 u 플래그가 없으면 반쪽 글자 둘로 봐서 놓친다 (Codex 검산 11/14)
+const astral = sheet.buildSheet([{ id: 1, front: '𠮟る', reading: 'しかる', back: '꾸짖다', starred: false }], { scope: 'all', count: 'all', shuffle: false })
+check('BMP 밖 한자 + 가나 단어는 읽기 칸', astral.japanese === true && astral.rows[0].needsReading === true)
+const astralOnly = sheet.buildSheet([{ id: 1, front: '𠮷', reading: 'きち', back: '길할 길', starred: false }], { scope: 'all', count: 'all', shuffle: false })
+check('BMP 밖 한자만 있어도 일본어 양식', astralOnly.japanese === true && astralOnly.rows[0].needsReading === true)
+// 한글은 한자가 아니다 — 정규식의 호환 한자 豈(F900)가 정규화로 8C48이 되면 범위가 한글까지 넓어져 이게 깨진다 (11/14 검토)
+check('한글은 한자로 안 잡힘', !sheet.hasKanji('사과') && !sheet.hasKanji('꾸짖다'))
+
 check('파일 이름 정리', sheet.sheetFileName('N1 Day20/p039:040?') === 'N1 Day20 p039 040_시험지.docx', sheet.sheetFileName('N1 Day20/p039:040?'))
 check('빈 제목 파일 이름', sheet.sheetFileName('  ') === '단어장_시험지.docx')
 const est = sheet.estimatePages(30, true)

@@ -277,4 +277,38 @@ class ReviewBatchAnswerTest extends AbstractIntegrationTest {
                 .orElse(0);
         assertEquals(3, count);
     }
+
+    @Test
+    @DisplayName("역순으로 보내도 cardId 오름차순으로 반영 — 잠금을 늘 같은 순서로 잡아야 동시 제출 두 개가 교착(deadlock)에 안 걸린다")
+    void batch_appliesInCardIdOrder() {
+        // 처음 만난 카드라 성적표가 INSERT 된다 — 자동 증가 id 순서가 곧 처리(잠금) 순서
+        reviewService.recordAnswers(user.getId(),
+                req("sub-order", b1.getId(), true, a2.getId(), true, a1.getId(), true));   // 만든 순서는 a1 < a2 < b1
+
+        long p1 = progressId(a1);
+        long p2 = progressId(a2);
+        long p3 = progressId(b1);
+        assertTrue(p1 < p2 && p2 < p3, "cardId 오름차순으로 처리해야 한다 (Codex 검산 11/14): " + p1 + ", " + p2 + ", " + p3);
+    }
+
+    private long progressId(Card c) {
+        return cardProgressRepository.findByUserIdAndCardId(user.getId(), c.getId()).orElseThrow().getId();
+    }
+
+    @Test
+    @DisplayName("세션 도중 지워진 카드는 건너뛰고 나머지는 반영 — 예전엔 404로 제출이 통째로 막혔다")
+    void batch_skipsDeletedCards() {
+        Card gone = cardRepository.save(Card.builder().front("gone").back("사라짐").deck(deckA).build());
+        Long goneId = gone.getId();
+        cardRepository.delete(gone);   // 답한 뒤 덱 화면에서 지움
+
+        BatchAnswerResponse res = reviewService.recordAnswers(user.getId(), req("sub-gone", a1.getId(), true, goneId, false));
+
+        assertEquals(1, res.getTotal(), "지워진 카드는 세지 않는다");
+        assertEquals(1, res.getKnown());
+        assertEquals(List.of(goneId), res.getSkippedIds());
+        assertEquals(2, box(a1));
+        // 같은 초안으로 재전송 — 지문은 받은 답안 전체라 같은 제출로 본다
+        assertTrue(reviewService.recordAnswers(user.getId(), req("sub-gone", a1.getId(), true, goneId, false)).isAlreadySubmitted());
+    }
 }

@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { api, clearToken, getToken, logout as clientLogout } from '../api/client'
 import LangSwitch from '../components/LangSwitch'
 import TopNav from '../components/TopNav'
-import { gap, t } from '../i18n'
+import { gap, getLang, t } from '../i18n'
+import { jwtEmail } from '../lib/jwt'
 import { ACCENTS, loadSettings, saveSettings, type AccentKey, type Settings as SettingsT } from '../lib/settings'
 import { isTtsSupported, speak, voicesFor } from '../lib/tts'
 
@@ -13,13 +14,7 @@ const SAMPLE: Record<'en' | 'ja' | 'ko', string> = { en: 'meticulous', ja: 'か�
 const LANG_LABEL: Record<'en' | 'ja' | 'ko', string> = { en: t('영어'), ja: t('일본어'), ko: t('한국어') }
 
 function emailFromToken(): string {
-  const token = getToken()
-  if (!token) return ''
-  try {
-    return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).email ?? ''
-  } catch {
-    return ''
-  }
+  return jwtEmail(getToken())   // UTF-8로 읽는다 — 한글 이메일이면 탈퇴 확인이 늘 실패하던 것 (11/14 검토)
 }
 
 // 설정 — 전부 이 브라우저에만 저장. 목업의 스위치 4개(accent·deckColumns·quizAutoAdvance·음성)를 실물로.
@@ -282,7 +277,7 @@ export default function Settings() {
             */}
             <p className="muted">
               {t('탈퇴하면 계정이 즉시 비활성화되어 로그인할 수 없고, 공개한 단어장도 탐색에 노출되지 않아요. 남은 데이터의 완전 삭제를 원하시면')}{gap()}
-              <a className="doc-link" href="/privacy.html" target="_blank" rel="noreferrer">{t('개인정보처리방침')}</a>{t('의 메일로 요청해 주세요.')}
+              <a className="doc-link" href="/privacy.html" target="_blank" rel="noreferrer">{getLang() === 'ko' ? t('개인정보처리방침') : t('개인정보처리방침 (한국어)')}</a>{t('의 메일로 요청해 주세요.')}
             </p>
             {withdrawError && <p className="error" role="alert">{withdrawError}</p>}
             <button className="danger-btn" disabled={withdrawing} onClick={withdraw}>

@@ -1,5 +1,6 @@
 package com.vocamaster.user;
 
+import com.vocamaster.auth.PasswordLimit;
 import com.vocamaster.auth.RefreshTokenRepository;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.NotFoundException;
@@ -49,6 +50,7 @@ public class UserService {
         if (user.getPassword() == null) {
             throw new BadRequestException("구글 로그인 계정은 비밀번호를 사용하지 않습니다");
         }
+        PasswordLimit.check(req.getNewPassword());   // BCrypt 72바이트 — 넘으면 아래 encode()가 500을 냈다
 
         // 400이어야 한다. 401로 던지면 프런트 공용 api()가 '토큰 만료'로 오인해
         // refresh 후 같은 요청을 한 번 더 쏜다 — 이미 로그인한 사용자의 '입력값 오류'이지

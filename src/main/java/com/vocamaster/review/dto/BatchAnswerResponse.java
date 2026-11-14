@@ -22,8 +22,14 @@ public class BatchAnswerResponse {
      * 카드별 반영 결과. <b>재전송이면 null</b> —
      * StudyRecord에 '그 답변 직후의 박스'를 저장하지 않으므로, 지금 CardProgress를 읽어 봐야
      * 그 사이 다른 학습으로 바뀐 값일 수 있다. 없는 값을 그럴듯하게 지어내지 않는다.
+     * 순서는 cardId 오름차순(서버가 잠금 순서를 맞추려고 그 순서로 반영한다, 11/14) — 요청 순서가 아니다.
      */
     private List<ReviewAnswerResponse> results;
+
+    /**
+     * 세션 도중 지워져서 건너뛴 카드 id (11/14) — total·known에는 들어가지 않는다. <b>재전송이면 null</b>(그때 무엇을 건너뛰었는지 저장하지 않는다)
+     */
+    private List<Long> skippedIds;
 
     public static BatchAnswerResponse alreadySubmitted(ReviewSubmission done) {
         return BatchAnswerResponse.builder()

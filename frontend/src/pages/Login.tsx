@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { setToken } from '../api/client'
 import LangSwitch from '../components/LangSwitch'
-import { langTag, t, tServer } from '../i18n'
+import { getLang, langTag, t, tServer } from '../i18n'
 import { isPlainEnter } from '../lib/keys'
 
 export default function Login() {
@@ -111,6 +111,7 @@ export default function Login() {
             )}
             <input
               placeholder={t('닉네임')}
+              maxLength={30}
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               onKeyDown={(e) => isPlainEnter(e) && submit()}
@@ -137,7 +138,7 @@ export default function Login() {
         </button>
       </div>
       <p className="auth-foot">
-        <a className="doc-link" href="/privacy.html" target="_blank" rel="noreferrer">{t('개인정보처리방침')}</a>
+        <a className="doc-link" href="/privacy.html" target="_blank" rel="noreferrer">{getLang() === 'ko' ? t('개인정보처리방침') : t('개인정보처리방침 (한국어)')}</a>
       </p>
     </div>
   )
