@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, clearToken, getToken, logout as clientLogout } from '../api/client'
-import LangSwitch from '../components/LangSwitch'
 import TopNav from '../components/TopNav'
 import { gap, getLang, t } from '../i18n'
 import { jwtEmail } from '../lib/jwt'
@@ -141,7 +140,7 @@ export default function Settings() {
 
         <section className="stat-card settings-section">
           <h2>{t('언어')}</h2>
-          <LangSwitch />
+          <p className="muted" style={{ margin: 0 }}>{t('언어는 화면 오른쪽 위 🌐에서 바꿔요')}</p>
         </section>
 
         <section className="stat-card settings-section">

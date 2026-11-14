@@ -65,7 +65,7 @@ input {
 /* ── 좌측 사이드바 (리디자인 8/30 — 상단 가로 탭에서 전환, Quizlet식) ── */
 .sidenav {
   position: fixed;
-  top: 0;
+  top: var(--topbar-h);   /* 위쪽 바 아래에서 시작 (11/14) */
   left: 0;
   bottom: 0;
   width: 232px;
@@ -73,19 +73,8 @@ input {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 20px 14px 16px;
+  padding: 16px 14px 16px;
   z-index: 50;
-}
-
-.side-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 8px 18px;
-}
-
-.side-account-mobile {
-  display: none;   /* 모바일 상단 헤더에서만 */
 }
 
 .side-menu {
@@ -156,18 +145,148 @@ input {
   gap: 10px;
 }
 
-.side-account {
+.side-foot .streak-pill { align-self: flex-start; }
+
+/* ── 위쪽 바 (11/14 사용자 요청, Quizlet식) — 로고 · 가운데 덱 검색 · 오른쪽 + 만들기 · 🌐 언어 · 프로필 ── */
+:root {
+  --topbar-h: 64px;
+}
+
+body:has(.topbar) {
+  padding-top: var(--topbar-h);   /* 위쪽 바가 고정이라 본문을 그만큼 내린다 */
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-h);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px 0 0;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar .logo {
+  width: 232px;            /* 사이드바 폭과 줄을 맞춘다 */
+  flex-shrink: 0;
+  padding-left: 24px;
+}
+
+.top-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.top-search {
+  width: 100%;
+  max-width: 620px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: #f3f3f7;
+  border: 1px solid transparent;
+  color: var(--muted);
+}
+
+.top-search:focus-within { background: #fff; border-color: var(--a); }
+
+.top-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--ink-2);
+}
+
+.top-actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 4px;
+  flex-shrink: 0;
 }
 
-.side-account .avatar-wrap { display: flex; }
-.side-account .nav-logout { margin-left: auto; }
-.side-foot .streak-pill { align-self: flex-start; }
-.side-foot .profile-pop { bottom: 44px; top: auto; left: 0; right: auto; }
-.side-login-btn { text-decoration: none; padding: 9px 16px; font-size: 13.5px; text-align: center; }
+.top-icon-btn {
+  display: none;           /* 폰에서만 (검색창 대신 돋보기) */
+  width: 38px;
+  height: 38px;
+  border-radius: 99px;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-2);
+}
+
+.top-plus {
+  width: 38px;
+  height: 38px;
+  border-radius: 99px;
+  border: none;
+  background: var(--a);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.top-plus:hover { filter: brightness(1.08); }
+.topbar .lang-switch select { border-radius: 99px; padding: 6px 10px; }
+.top-login-btn { text-decoration: none; padding: 8px 16px; font-size: 13.5px; }
+
+/* 펼침 메뉴 (+ 만들기 · 프로필) */
+.menu-wrap { position: relative; display: flex; }
+
+.top-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 70;
+  min-width: 220px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.top-menu [role='menuitem'] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink-2);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.top-menu [role='menuitem']:hover,
+.top-menu [role='menuitem']:focus-visible { background: #f4f4f8; }
+.top-menu-sep { height: 1px; margin: 6px 4px; background: var(--border); }
+.profile-menu { min-width: 260px; }
+.pm-head { display: flex; align-items: center; gap: 12px; padding: 8px 8px 6px; }
+.pm-head .avatar { width: 40px; height: 40px; font-size: 15px; flex-shrink: 0; }
+.pm-who { min-width: 0; }
+.pm-who .pp-email { margin-bottom: 6px; }
 
 .logo {
   display: flex;
@@ -1163,24 +1282,19 @@ button:disabled {
     padding: 24px 16px 96px;   /* 하단 탭바 높이만큼 바닥 여유 */
   }
 
-  .sidenav {
-    position: static;
-    width: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    flex-direction: row;
-    align-items: center;
-    padding: 10px 16px;
-  }
+  :root { --topbar-h: 56px; }
+  .topbar { padding: 0 12px; gap: 8px; }
+  .topbar .logo { width: auto; padding-left: 0; }
+  .topbar .logo-text { display: none; }   /* 로고는 글자 마크만 */
+  .top-center { display: none; }          /* 검색창 대신 돋보기 → 검색 화면 */
+  .top-actions { margin-left: auto; gap: 8px; }
+  .top-icon-btn { display: flex; }
+  .topbar .lang-switch > span { display: none; }   /* 🌐 그림은 빼고 고르기 상자만 */
+  .top-menu { position: fixed; top: calc(var(--topbar-h) + 6px); right: 8px; }
 
-  .side-top {
-    flex: 1;
-    padding: 0;
-  }
-
-  .side-account-mobile { display: flex; align-items: center; gap: 8px; }
+  .sidenav { display: contents; }         /* 칸은 없애고 메뉴만 아래 탭바로 (아래 .side-menu) */
   .side-folders { display: none; }        /* 폴더는 내 덱 화면의 칩으로 */
-  .side-foot { display: none; }           /* 로그아웃은 상단 헤더 오른쪽에 */
+  .side-foot { display: none; }           /* 연속 학습은 홈 화면에 */
 
   .side-menu {
     position: fixed;
@@ -2008,13 +2122,7 @@ button:disabled {
 .google-btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
 
 /* 프로필 팝오버 (아바타 클릭) */
-.avatar-wrap { position: relative; }
 .avatar-btn { border: none; cursor: pointer; }
-.profile-pop {
-  position: absolute; right: 0; top: calc(100% + 10px); z-index: 50;
-  background: #fff; border: 1px solid rgba(0, 0, 0, 0.08); border-radius: 12px;
-  padding: 14px 16px; min-width: 230px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
 .pp-nick { font-weight: 700; margin: 0 0 2px; font-size: 15px; }
 .pp-email { font-size: 13px; color: #667; margin: 0 0 10px; word-break: break-all; }
 .pp-meta { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 12px; color: #889; }
@@ -2459,3 +2567,20 @@ button.mode-btn { cursor: pointer; font-family: inherit; }
   justify-content: flex-end;
   margin-bottom: 8px;
 }
+
+/* 검색 화면 (11/14 — 위쪽 바 검색의 결과: 내 덱 + 공개 덱) */
+.search-page-form {   /* 덱 화면 '새 덱 이름' 줄과 같은 모양 — 테두리는 칸이, 입력은 테두리 없이 */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 24px;
+  padding: 6px 6px 6px 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.search-page-form:focus-within { border-color: var(--a); }
+.search-page-form input { flex: 1; min-width: 0; border: 0; outline: none; background: none; padding: 8px 0; font-size: 15px; color: var(--ink-2); }
+.search-section { margin-bottom: 30px; }
+.search-section h2 { display: flex; align-items: center; gap: 8px; font-size: 17px; margin: 0 0 12px; }
+.search-count { font-size: 12px; font-weight: 600; color: var(--sub); background: #f1f1f5; padding: 1px 9px; border-radius: 99px; }

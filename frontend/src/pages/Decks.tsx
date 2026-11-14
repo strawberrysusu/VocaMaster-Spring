@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import TopNav from '../components/TopNav'
 import { isPlainEnter } from '../lib/keys'
@@ -82,6 +82,29 @@ export default function Decks() {
     setPage(0)
     setSelected(new Set())
   }, [rawFolder])
+
+  // 위쪽 바 '+' 메뉴에서 왔다(?new=deck | folder, 11/14) — 새 덱 이름 칸에 커서를 두거나 새 폴더 이름을 묻는다.
+  // 한 번만 처리하고 주소에서 지운다(뒤로가기·새로고침에 다시 안 열리게). 같은 이동을 두 번 처리하지 않도록
+  // location.key로 막는다 — 개발 모드(StrictMode)는 effect를 두 번 부른다
+  const titleRef = useRef<HTMLInputElement>(null)
+  const location = useLocation()
+  const handledIntent = useRef('')
+  const newIntent = searchParams.get('new')
+  useEffect(() => {
+    if (!newIntent || handledIntent.current === location.key) return
+    handledIntent.current = location.key
+    const rest = new URLSearchParams(searchParams)
+    rest.delete('new')
+    setSearchParams(rest, { replace: true })
+    if (newIntent === 'deck') {
+      titleRef.current?.focus()
+      titleRef.current?.scrollIntoView({ block: 'center' })
+    } else if (newIntent === 'folder') {
+      void createFolder()
+    }
+    // createFolder는 렌더마다 새로 만들어지는 함수라 넣으면 매번 다시 돈다 — 같은 이동은 위 location.key로 한 번만 처리하니 빼도 안전
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newIntent, location.key, searchParams, setSearchParams])
 
   async function createFolder() {
     const name = window.prompt(t('새 폴더 이름 (예: JLPT N1)'))
@@ -278,6 +301,7 @@ export default function Decks() {
 
         <div className="create-row">
           <input
+            ref={titleRef}
             aria-label={t('새 덱 이름')}
             placeholder={t('새 덱 이름을 입력하세요')}
             value={title}

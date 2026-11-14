@@ -588,4 +588,15 @@ export const en: Messages = {
   "지워진 카드 {n}장은 건너뛰었어요": "Deleted cards skipped: {n}",
   "지원하지 않는 요청입니다": "Unsupported request",
   "요청이 너무 큽니다": "Request is too large",
+  // ── 11/14 위쪽 바(검색·+ 만들기·프로필 메뉴)·검색 화면
+  "덱 검색": "Search decks",
+  "덱 검색 (내 덱·공개 덱)": "Search decks (yours and public)",
+  "새로 만들기": "Create",
+  "새 덱": "New deck",
+  "새 폴더": "New folder",
+  "공개 덱": "Public decks",
+  "일치하는 덱이 없어요": "No matching decks",
+  "검색어를 입력하세요": "Enter a search term",
+  "\"{q}\" 검색 결과": "Results for \"{q}\"",
+  "언어는 화면 오른쪽 위 🌐에서 바꿔요": "Change the language from 🌐 at the top right",
 }
