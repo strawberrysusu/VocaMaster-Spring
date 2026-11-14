@@ -1,5 +1,5 @@
 // 번역 사전 검사 (ADR-056) — npm test --prefix frontend
-//  · 일본어·영어 사전의 열쇠가 똑같은지 (tsc도 잡지만 여기서 한 번 더, 숫자로 보이게)
+//  · 일본어·영어·중국어 사전의 열쇠가 똑같은지 (tsc도 잡지만 여기서 한 번 더, 숫자로 보이게)
 //  · 값이 비지 않았는지, {n} 같은 자리가 열쇠와 똑같은지, 번역에 한글이 남지 않았는지
 //  · 코드의 t('…') 열쇠가 모두 사전에 있는지 (src 전체를 훑는다)
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -8,6 +8,7 @@ import { loadTs } from './load-ts.mjs'
 const here = (p) => new URL(p, import.meta.url)
 const { ja } = await loadTs(here('../src/i18n/ja.ts'))
 const { en } = await loadTs(here('../src/i18n/en.ts'))
+const { zh } = await loadTs(here('../src/i18n/zh.ts'))
 
 let failed = 0
 const fail = (msg) => {
@@ -21,8 +22,10 @@ const jaKeys = Object.keys(ja)
 const enKeys = Object.keys(en)
 for (const k of jaKeys) if (!(k in en)) fail(`영어 사전에 없음: ${k}`)
 for (const k of enKeys) if (!(k in ja)) fail(`일본어 사전에 없음: ${k}`)
+for (const k of jaKeys) if (!(k in zh)) fail(`중국어 사전에 없음: ${k}`)
+for (const k of Object.keys(zh)) if (!(k in ja)) fail(`일본어 사전에 없음(중국어에만): ${k}`)
 
-for (const [name, dict] of [['ja', ja], ['en', en]]) {
+for (const [name, dict] of [['ja', ja], ['en', en], ['zh', zh]]) {
   for (const [k, v] of Object.entries(dict)) {
     if (typeof v !== 'string' || v.trim() === '') fail(`${name} 빈 값: ${k}`)
     else {
@@ -58,4 +61,4 @@ if (failed) {
   console.error(`\n${failed}개 실패`)
   process.exit(1)
 }
-console.log(`i18n: 열쇠 ${jaKeys.length}개 (코드에서 쓰는 것 ${used.size}개) — 일본어·영어 모두 통과`)
+console.log(`i18n: 열쇠 ${jaKeys.length}개 (코드에서 쓰는 것 ${used.size}개) — 일본어·영어·중국어 모두 통과`)

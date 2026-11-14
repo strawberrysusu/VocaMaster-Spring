@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { setToken } from '../api/client'
 import LangSwitch from '../components/LangSwitch'
-import { t } from '../i18n'
+import { t, tServer } from '../i18n'
 import { isPlainEnter } from '../lib/keys'
 
 export default function Login() {
@@ -59,8 +59,9 @@ export default function Login() {
       if (!res.ok) {
         // 백엔드가 꺼져 있으면 프록시가 JSON 아닌 에러를 돌려줌 — 주인장용 힌트를 명확히
         setError(
-          data?.message ??
-            t('백엔드 서버가 꺼져 있는 것 같아요 — 바탕화면의 VocaMaster 아이콘을 실행한 뒤 다시 시도하세요'),
+          data?.message
+            ? tServer(data.message) // 서버 문구(로그인 실패 등)를 고른 언어로
+            : t('백엔드 서버가 꺼져 있는 것 같아요 — 바탕화면의 VocaMaster 아이콘을 실행한 뒤 다시 시도하세요'),
         )
         return
       }
