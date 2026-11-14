@@ -164,7 +164,7 @@ class ApiInputBoundaryTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("카드 수정에 전각 공백(　)만 → 400 — 일본어 입력기가 넣는 공백도 빈칸")
+    @DisplayName("카드 수정에 전각 공백(　)만 → 400 — 일본어 입력기가 넣는 공백도 빈칸 (만들 때·가져오기와 같은 규칙)")
     void updateCard_fullWidthSpaceOnly_400() throws Exception {
         mvc.perform(json(patch("/cards/{id}", card.getId()), "{'front':'\u3000\u3000'}"))
                 .andExpect(status().isBadRequest())
@@ -187,5 +187,22 @@ class ApiInputBoundaryTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.message").value("지원하지 않는 요청입니다"));
         mvc.perform(post("/auth/login").contentType(MediaType.TEXT_PLAIN).content("email=a"))
                 .andExpect(status().isUnsupportedMediaType());
+    }
+
+    @Test
+    @DisplayName("만들 때도 같은 빈칸 규칙 — 전각 공백 제목·단어, 한글 채움 문자(ㅤ) 제목은 400 (탐색에 빈 제목 방지)")
+    void create_blankLikeText_400() throws Exception {
+        mvc.perform(json(post("/decks"), "{'title':'\u3000'}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("title: 비워 둘 수 없습니다")));
+        mvc.perform(json(post("/decks/{deckId}/cards", card.getDeck().getId()), "{'front':'\u3000','back':'뜻'}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("front: 비워 둘 수 없습니다")));
+        mvc.perform(json(patch("/decks/{id}", card.getDeck().getId()), "{'title':'\u3164'}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(json(patch("/decks/{id}", card.getDeck().getId()), "{'title':'\u200B'}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(json(post("/decks"), "{'title':'N1 단어'}"))
+                .andExpect(status().isOk());
     }
 }

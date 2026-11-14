@@ -8,8 +8,8 @@ import lombok.Setter;
 
 @Getter @Setter
 public class UpdateCardRequest {
-    // PATCH: 안 보낸 칸(null)은 그대로, 보낸 칸이 비었거나 공백뿐이면 400 — 만들 때의 @NotBlank와 같은 규칙
-    // (Codex 검산 11/14 — 예전엔 빈 단어가 200으로 저장됐다)
+    // PATCH: 안 보낸 칸(null)은 그대로, 보낸 칸이 비었거나 공백·안 보이는 글자뿐이면 400 — 만들 때·가져오기와 같은 규칙
+    // (ValidationPatterns.HAS_TEXT, Codex 검산 11/14 — 예전엔 빈 단어가 200으로 저장됐다)
     @Pattern(regexp = ValidationPatterns.HAS_TEXT, message = "비워 둘 수 없습니다")
     @Size(max = 255)
     private String front;

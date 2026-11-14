@@ -184,4 +184,16 @@ class ImportServiceTest extends AbstractIntegrationTest {
         assertEquals(1, result.getTotalParsed(), "정상 3칸 줄만");
         assertEquals(2, result.getFailedCount(), "첫 칸 빈 줄과 마지막 칸 빈 줄");
     }
+
+    @Test
+    @DisplayName("가져오기 줄의 단어가 전각 공백(　)뿐이면 실패 줄 — 만들 때·수정 때와 같은 빈칸 규칙 (11/14 검토)")
+    void preview_fullWidthSpaceWord_fails() {
+        ImportRequest req = new ImportRequest();
+        req.setText("apple | 사과\n\u3000 | 빈칸 단어");
+
+        PreviewResponse result = importService.preview(req);
+
+        assertEquals(1, result.getTotalParsed());
+        assertEquals(1, result.getFailedCount());
+    }
 }
