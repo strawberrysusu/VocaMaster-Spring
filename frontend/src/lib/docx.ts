@@ -151,6 +151,12 @@ function cell(width: number, content: string, opts: { fill?: string; align?: 'le
   return `<w:tc><w:tcPr>${tcPr}</w:tcPr>${para(content, opts.align ?? 'left')}</w:tc>`
 }
 
+/** 문단 여러 개가 든 칸 (정답지의 뜻 + 설명 줄) */
+function cellParas(width: number, runsPerPara: string[]): string {
+  const tcPr = `<w:tcW w:w="${width}" w:type="dxa"/><w:vAlign w:val="center"/>`
+  return `<w:tc><w:tcPr>${tcPr}</w:tcPr>${runsPerPara.map((r) => para(r)).join('')}</w:tc>`
+}
+
 function row(cells: string, height: number, header = false): string {
   // trPr 자식 순서는 스키마대로: cantSplit → trHeight → tblHeader
   const trPr = `<w:cantSplit/><w:trHeight w:val="${height}"/>` + (header ? '<w:tblHeader/>' : '')
@@ -198,7 +204,11 @@ function answerRow(r: SheetRow, widths: number[], japanese: boolean): string {
   const small: RunStyle = { sizeHalfPt: 19 }
   const no = cell(widths[0], run(String(r.no), { sizeHalfPt: 18, color: '555555' }), { align: 'center' })
   const word = cell(widths[1], run(r.word, { sizeHalfPt: 21, japanese }), { align: 'center' })
-  const meaning = (w: number) => cell(w, run(r.meaning, small))
+  // 설명 줄이 있으면 뜻 아래 작은 회색 글씨로 한 줄 더 (11/14 4단계)
+  const meaning = (w: number) =>
+    r.memo
+      ? cellParas(w, [run(r.meaning, small), run(r.memo, { sizeHalfPt: 15, color: '777777' })])
+      : cell(w, run(r.meaning, small))
   if (!japanese) return row(no + word + meaning(widths[2]), ANSWER_ROW_H)
   const reading = r.needsReading
     ? cell(widths[2], run(r.reading || '—', { sizeHalfPt: 19, japanese: true }))

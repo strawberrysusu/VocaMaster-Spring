@@ -14,6 +14,7 @@ public class DueCardResponse {
     private String front;
     private String back;
     private String reading;     // 읽기(요미가나), 없으면 null (V14)
+    private String memo;        // 설명 줄 — 뜻 아래 작은 글씨로 (11/14 4단계), 없으면 null
     private Boolean starred;    // ⭐ 표시 여부 — 없으면 복습 화면의 별이 항상 꺼진 채로 뜬다 (2026-08-31)
     private int boxLevel;
     private LocalDateTime nextReviewAt;
@@ -24,6 +25,7 @@ public class DueCardResponse {
                 .front(progress.getCard().getFront())
                 .back(progress.getCard().getBack())
                 .reading(progress.getCard().getReading())
+                .memo(progress.getCard().getMemo())
                 .starred(progress.getCard().getStarred())
                 .boxLevel(progress.getBoxLevel())
                 .nextReviewAt(progress.getNextReviewAt())

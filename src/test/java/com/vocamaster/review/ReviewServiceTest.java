@@ -203,7 +203,7 @@ class ReviewServiceTest extends AbstractIntegrationTest {
     @DisplayName("due 조회 — 시간 지난 내 카드만, 오래 기다린 순 (새 카드/미래 카드 제외)")
     void getDueCards_returnsOnlyDueOnes() {
         Card banana = cardRepository.save(Card.builder().front("banana").back("바나나").deck(deck).build());
-        Card kiwi = cardRepository.save(Card.builder().front("kiwi").back("키위").deck(deck).build());
+        Card kiwi = cardRepository.save(Card.builder().front("kiwi").back("키위").memo("뉴질랜드 과일").deck(deck).build());
         cardRepository.save(Card.builder().front("melon").back("멜론").deck(deck).build());   // progress 없음 = 새 카드
 
         saveProgress(user, card, 2, LocalDateTime.now(KST).minusDays(1));      // apple — 어제부터 due
@@ -215,6 +215,8 @@ class ReviewServiceTest extends AbstractIntegrationTest {
         assertEquals(2, due.size(), "새 카드(melon)와 미래 카드(banana)는 제외");
         assertEquals(kiwi.getId(), due.get(0).getCardId(), "가장 오래 기다린 카드부터");
         assertEquals(card.getId(), due.get(1).getCardId());
+        assertEquals("뉴질랜드 과일", due.get(0).getMemo(), "설명 줄도 복습 화면으로 간다");
+        assertNull(due.get(1).getMemo(), "설명 없는 카드는 null");
     }
 
     @Test

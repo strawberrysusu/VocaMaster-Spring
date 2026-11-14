@@ -33,6 +33,7 @@ export default function DeckDetail() {
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
   const [reading, setReading] = useState('')   // 읽기(요미가나) — 선택
+  const [memo, setMemo] = useState('')         // 설명 줄 — 선택 (11/14)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
   // 덱 제목·설명 인라인 수정 (8/28, 동결 예외 — 기존 PATCH /decks/{id} 재사용)
@@ -44,6 +45,7 @@ export default function DeckDetail() {
   const [eFront, setEFront] = useState('')
   const [eReading, setEReading] = useState('')
   const [eBack, setEBack] = useState('')
+  const [eMemo, setEMemo] = useState('')
   const [saving, setSaving] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)   // 📝 종이 시험지 (Word) 설정 창
 
@@ -86,10 +88,11 @@ export default function DeckDetail() {
     if (adding || !front.trim() || !back.trim()) return // 더블클릭 중복 등록 방어
     setAdding(true)
     try {
-      await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify({ front, reading, back }) })
+      await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify({ front, reading, back, memo }) })
       setFront('')
       setReading('')
       setBack('')
+      setMemo('')
       load()
     } catch (e) {
       setError((e as Error).message)
@@ -162,16 +165,17 @@ export default function DeckDetail() {
     setEFront(c.front)
     setEReading(c.reading ?? '')
     setEBack(c.back)
+    setEMemo(c.memo ?? '')
   }
 
   async function saveCard() {
     if (saving || editingCardId === null || !eFront.trim() || !eBack.trim()) return
     setSaving(true)
     try {
-      // reading은 빈 문자열도 그대로 보낸다 — 백엔드가 ""를 "읽기 삭제"로 처리
+      // reading·memo는 빈 문자열도 그대로 보낸다 — 백엔드가 ""를 "읽기·설명 삭제"로 처리
       await api(`/cards/${editingCardId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ front: eFront.trim(), reading: eReading.trim(), back: eBack.trim() }),
+        body: JSON.stringify({ front: eFront.trim(), reading: eReading.trim(), back: eBack.trim(), memo: eMemo.trim() }),
       })
       setEditingCardId(null)
       load()
@@ -316,6 +320,15 @@ export default function DeckDetail() {
             onChange={(e) => setBack(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addCard()}
           />
+          <input
+            aria-label="설명"
+            className="memo-input"
+            placeholder="설명 (선택)"
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addCard()}
+            maxLength={500}
+          />
           <button className="btn-primary" disabled={adding || !front.trim() || !back.trim()} onClick={addCard}>
             {adding ? '추가 중...' : '추가'}
           </button>
@@ -357,6 +370,7 @@ export default function DeckDetail() {
                         <input aria-label="단어" value={eFront} onChange={(e) => setEFront(e.target.value)} maxLength={255} autoFocus />
                         <input aria-label="읽기" className="reading-input" placeholder="읽기 (선택)" value={eReading} onChange={(e) => setEReading(e.target.value)} maxLength={200} />
                         <input aria-label="뜻" value={eBack} onChange={(e) => setEBack(e.target.value)} maxLength={255} onKeyDown={(e) => e.key === 'Enter' && saveCard()} />
+                        <input aria-label="설명" className="memo-input" placeholder="설명 (선택 — 뜻 아래 작은 글씨)" value={eMemo} onChange={(e) => setEMemo(e.target.value)} maxLength={500} onKeyDown={(e) => e.key === 'Enter' && saveCard()} />
                         <div className="row-actions">
                           <button className="btn-primary btn-sm" disabled={saving || !eFront.trim() || !eBack.trim()} onClick={saveCard}>저장</button>
                           <button className="btn-ghost-link" disabled={saving} onClick={() => setEditingCardId(null)}>취소</button>
@@ -366,7 +380,10 @@ export default function DeckDetail() {
                       <div key={c.id} className="word-row owned-card-row">   {/* owned-card-row: 모바일 2줄 배치는 덱 상세 일반 행에만 (전역 .word-row 무변경) */}
                         <span className="word-idx">{number}</span>
                         <span className="word-front"><Ruby front={c.front} reading={c.reading} /> <SpeakButton text={c.reading || c.front} /></span>
-                        <span className="word-back">{c.back}</span>
+                        <span className="word-back">
+                          {c.back}
+                          {c.memo && <span className="word-memo">{c.memo}</span>}
+                        </span>
                         <div className="row-actions">
                           <button className="edit-btn" title="카드 수정" aria-label={`${c.front} 수정`} onClick={() => startCardEdit(c)}>
                             수정
