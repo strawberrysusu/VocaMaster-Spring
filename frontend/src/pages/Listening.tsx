@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { recordRecentStudy } from '../lib/recent'
-import { fetchAllCards, type CardDto } from '../api/cards'
+import { fetchAllCards, setStarred, type CardDto } from '../api/cards'
 import TopNav from '../components/TopNav'
 import { isTtsSupported, speakTimes } from '../lib/tts'
 import { matchesAnswer, normalizeAnswer } from '../lib/answerMatch'
@@ -13,6 +13,8 @@ import { t } from '../i18n'
 //  · 스펠링: 단어(front) 또는 읽기(reading) 어느 쪽을 쳐도 정답
 //  · 뜻: 여러 뜻 중 하나면 정답, 괄호 설명·품사 표시는 안 쳐도 됨 (타이핑 모드와 같은 규칙, ADR-051)
 // v1 = 연습 모드 (기록 저장 없음 — 세션 저장은 백로그)
+// 틀린 단어는 채점하면 자동 ⭐ (11/15 사용자 결정 — 온라인 시험지와 같은 규칙). 듣기는 서버가 아니라 이 화면이 채점하니
+// 별표도 이 화면이 켠다: 값을 지정하는 일괄 별표 API라 두 번 보내도 같다
 
 interface Item {
   card: CardDto
@@ -20,6 +22,18 @@ interface Item {
   meaning: string
   spellingOk?: boolean
   meaningOk?: boolean
+}
+
+/** 틀린 단어 자동 ⭐의 진행 상태 */
+type StarStatus =
+  | { state: 'idle' }
+  | { state: 'saving' }
+  | { state: 'done'; wrong: number; added: number; skipped: number }
+  | { state: 'error' }
+
+/** 틀린 문항 = 스펠링이나 뜻 중 하나라도 틀렸거나 비워 둔 것 */
+function isWrong(it: Item): boolean {
+  return !(it.spellingOk && it.meaningOk)
 }
 
 function meaningMatch(typed: string, back: string): boolean {
@@ -51,6 +65,10 @@ export default function Listening() {
   const [times, setTimes] = useState(3)
   const [gapSec, setGapSec] = useState(1.8)
   const [error, setError] = useState('')
+  const [star, setStar] = useState<StarStatus>({ state: 'idle' })
+  // 시험 회차 — 새 시험을 시작한 뒤에 도착한 지난 회차의 별표 응답은 화면 표시를 건드리지 않는다 (11/15 검토:
+  // 안 가르면 다음 회차에 지난 회차의 '틀린 n개 ⭐ 완료'나 눌러도 아무 일 없는 '별표 다시 시도'가 떴다)
+  const roundRef = useRef(0)
   const stopSpeakRef = useRef<() => void>(() => {})
   const interTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -122,8 +140,11 @@ export default function Listening() {
     const n = Math.max(1, Math.min(count, activePool.length))
     const base = ordered ? [...activePool] : [...activePool].sort(() => Math.random() - 0.5)
     const q = base.slice(0, n).map((card) => ({ card, spelling: '', meaning: '' }))
+    roundRef.current++
     setQueue(q)
     setGraded(false)
+    setStar({ state: 'idle' })
+    setError('')   // 지난 회차의 별표 실패 문구가 새 시험 내내 남아 있었다
     setPhase('sheet')
     playAll(q, 0)
   }
@@ -134,14 +155,35 @@ export default function Listening() {
 
   function grade() {
     stopAll()
-    setQueue((q) =>
-      q.map((it) => ({
-        ...it,
-        spellingOk: spellingMatch(it.spelling, it.card),
-        meaningOk: meaningMatch(it.meaning, it.card.back),
-      })),
-    )
+    const marked = queue.map((it) => ({
+      ...it,
+      spellingOk: spellingMatch(it.spelling, it.card),
+      meaningOk: meaningMatch(it.meaning, it.card.back),
+    }))
+    setQueue(marked)
     setGraded(true)
+    void starWrong(marked.filter(isWrong).map((it) => it.card.id))
+  }
+
+  /** 틀린 카드에 ⭐ — 실패하면 '별표 다시 시도'가 같은 카드를 다시 보낸다 (이미 켜진 것은 서버가 그대로 둔다) */
+  async function starWrong(wrongIds: number[]) {
+    if (wrongIds.length === 0) return
+    const round = roundRef.current
+    setStar({ state: 'saving' })
+    try {
+      const r = await setStarred(deckId!, wrongIds, true)
+      const skipped = new Set(r.skippedIds)   // 시험 도중 지워진 카드
+      const on = new Set(wrongIds.filter((id) => !skipped.has(id)))
+      // 별표는 실제로 켜졌으니 회차가 바뀌었어도 범위('⭐ 별표만')에는 반영한다
+      setPool((p) => p.map((c) => (on.has(c.id) ? { ...c, starred: true } : c)))
+      if (round !== roundRef.current) return   // 그사이 새 시험을 시작했다 — 지난 회차의 결과 표시는 버린다
+      setError('')
+      setStar({ state: 'done', wrong: wrongIds.length, added: r.changedIds.length, skipped: r.skippedIds.length })
+    } catch (e) {
+      if (round !== roundRef.current) return
+      setError((e as Error).message)
+      setStar({ state: 'error' })
+    }
   }
 
   const spellScore = queue.filter((i) => i.spellingOk).length
@@ -228,6 +270,7 @@ export default function Listening() {
                 {t('🔊 시험 시작 (전체 재생)')}
               </button>
             </div>
+            <p className="muted" style={{ fontSize: 12.5 }}>{t('틀린 단어는 자동으로 ⭐ 돼요')}</p>
           </div>
         )}
 
@@ -237,6 +280,24 @@ export default function Listening() {
               {graded ? (
                 <p className="result-line" style={{ margin: 0 }}>
                   {t('스펠링')} <b>{spellScore}/{queue.length}</b> · {t('뜻')} <b>{meanScore}/{queue.length}</b>
+                  {star.state !== 'idle' && (
+                    <span className="otest-star-note" role="status">
+                      {star.state === 'saving' && ' · ' + t('틀린 단어 ⭐ 하는 중...')}
+                      {star.state === 'done' &&
+                        ' · ' +
+                          (star.skipped > 0
+                            ? t('틀린 {wrong}개 ⭐ 완료 (새로 켠 별표 {added}개, 지워진 카드 {skipped}개는 건너뜀)', { wrong: star.wrong, added: star.added, skipped: star.skipped })
+                            : t('틀린 {wrong}개 ⭐ 완료 (새로 켠 별표 {added}개)', { wrong: star.wrong, added: star.added }))}
+                      {star.state === 'error' && (
+                        <>
+                          {' · '}
+                          <button className="btn-ghost-link" onClick={() => void starWrong(queue.filter(isWrong).map((it) => it.card.id))}>
+                            {t('별표 다시 시도')}
+                          </button>
+                        </>
+                      )}
+                    </span>
+                  )}
                 </p>
               ) : (
                 <>

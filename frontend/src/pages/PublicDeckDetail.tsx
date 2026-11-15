@@ -8,7 +8,14 @@ import Ruby from '../components/Ruby'
 import { t } from '../i18n'
 
 // 공개 덱 상세 — 복사 전에 내용을 볼 수 있게 (백로그 ②). UNLISTED 링크 진입점이기도 함.
+// 덱이 바뀌면(위쪽 검색으로 공개 덱 → 공개 덱 이동) 화면을 새로 만든다 — 안 그러면 앞 덱의 '복사됨' 상태·오류·내용이 남아
+// 두 번째 덱을 복사할 수 없었다 (11/15 점검, DeckDetail과 같은 이유)
 export default function PublicDeckDetail() {
+  const { id } = useParams()
+  return <PublicDeckScreen key={id} />
+}
+
+function PublicDeckScreen() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [deck, setDeck] = useState<PublicDeck | null>(null)

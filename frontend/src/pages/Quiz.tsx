@@ -242,6 +242,7 @@ export default function Quiz() {
               {busy ? t('준비 중...') : t('시작')}
             </button>
             <p className="muted" style={{ fontSize: 12.5 }}>{t("덱의 서로 다른 답이 모자라면 선택지가 그만큼만 나와요 (최소 2). '오답만'은 지금까지 틀린 카드, '별표만'은 ★ 표시한 카드예요")}</p>
+            <p className="muted" style={{ fontSize: 12.5 }}>{t('틀린 단어는 자동으로 ⭐ 돼요')}</p>
           </div>
         )}
 
@@ -297,6 +298,12 @@ export default function Quiz() {
             <p className="result-line">
               {t('{n}문제 중', { n: summary.total })} <b>{t('정답 {n}', { n: summary.correct })}</b> · <b>{t('오답 {n}', { n: summary.wrong })}</b> · {t('정답률 {n}%', { n: summary.accuracy })}
             </p>
+            {summary.wrong > 0 && (
+              <p className="muted" style={{ fontSize: 13.5 }}>
+                {t('틀린 단어는 자동으로 ⭐ 했어요')}
+                <Link to={`/study?deckId=${deckId}&starredOnly=1`} className="link" style={{ marginLeft: 8 }}>{t('⭐ 별표만 복습 하러 가기')}</Link>
+              </p>
+            )}
             {summary.wrong > 0 && (
               <div className="word-list" style={{ marginTop: 18, textAlign: 'left' }}>
                 {summary.questions.filter((x) => x.correct === false).map((x) => (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { PageResp, PublicDeck } from '../api/publicDecks'
 import TopNav from '../components/TopNav'
@@ -24,6 +24,9 @@ const MY_PREVIEW = 8   // 내 덱이 많으면(예: 57개) 처음엔 이만큼�
 export default function Search() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  // 이동할 때마다 바뀌는 값 — 같은 검색어로 다시 검색해도(주소가 같아도) 다시 받게 한다.
+  // 예전엔 한 번 실패하면 같은 검색어로는 다시 요청이 안 갔고, 내 덱은 끝까지 '불러오는 중'이었다 (11/15 점검)
+  const { key: visit } = useLocation()
   const q = (params.get('q') ?? '').trim()
   const [input, setInput] = useState(q)
   const [mine, setMine] = useState<MyDeck[] | null>(null)
@@ -43,12 +46,13 @@ export default function Search() {
       .then((d) => { if (alive) setMine(d) })
       .catch((e) => { if (alive) setError((e as Error).message) })
     return () => { alive = false }
-  }, [])
+  }, [visit])   // 검색할 때마다 다시 — 앞서 받은 목록은 그대로 두고 덮어쓴다
 
   useEffect(() => {
     if (!q) return
     let alive = true   // 빠르게 다시 검색하면 늦게 도착한 옛 결과가 새 결과를 덮지 않게
     setPublicDecks(null)
+    setMorePublic(false)   // 지난 검색의 '탐색에서 더 보기'가 불러오는 동안 남지 않게
     setError('')   // 새 검색 — 지난 검색의 오류 문구는 지운다 (Codex 검산 11/14: 실패 뒤 성공해도 오류가 남았다)
     api<PageResp<PublicDeck>>(`/public/decks?${new URLSearchParams({ keyword: q, size: '12', sort: 'popular' })}`)
       .then((p) => {
@@ -58,7 +62,7 @@ export default function Search() {
       })
       .catch((e) => { if (alive) setError((e as Error).message) })
     return () => { alive = false }
-  }, [q])
+  }, [q, visit])
 
   const myHits = useMemo(() => {
     if (!q || !mine) return []

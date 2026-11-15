@@ -167,6 +167,15 @@ public class TypingService {
             session.setEndedAt(LocalDateTime.now());
         }
 
+        // 틀린 단어는 자동 ⭐ (11/15 사용자 결정 — 온라인 시험지와 같은 규칙: 틀린 것을 별표로 모아 '별표만 복습'으로 다시 본다).
+        // 채점과 같은 트랜잭션이라 오답이 저장되면 별표도 반드시 켜진다. 이미 ⭐이면 쓰지 않고, 끄는 건 사용자가 한다.
+        // 낱말카드 복습의 '몰라요'는 켜지 않는다 — 새 덱은 거의 다 '몰라요'라 별표가 전부 켜진다 (그래서 recordAnswer 안이 아니라 여기).
+        // ★ 반드시 recordAnswer '앞'에서: 그 안의 출석 upsert(@Modifying clearAutomatically)가 영속성 컨텍스트를 비워서,
+        //   그 뒤에 카드를 고치면 추적이 끊긴 객체라 저장되지 않는다 (LearningModesProgressTest가 잡음)
+        if (!isCorrect) {
+            question.getCard().star();
+        }
+
         // 오답도 복습과 동일하게 연속 정답을 끊고, 출석은 공통 경로에서 한 번만 센다.
         reviewService.recordAnswer(userId, question.getCard().getId(), isCorrect);
 

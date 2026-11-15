@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import { fetchAllCards, type CardDto, type LearningStatus } from '../api/cards'
@@ -26,7 +26,14 @@ const STATUS_LABEL: Record<LearningStatus, string> = {
 }
 const STATUS_GROUPS: LearningStatus[] = ['UNKNOWN', 'KNOWN']
 
+// 덱이 바뀌면(위쪽 검색으로 덱 → 덱 이동, 뒤로·앞으로) 화면을 새로 만든다 — 같은 Route라 React가 화면을 그대로 쓰는데,
+// 그러면 앞 덱의 '제목 수정' 칸·쓰다 만 카드가 남아 '저장'이 다른 덱을 덮어썼다 (11/15 점검). key가 바뀌면 상태가 전부 새로 시작한다
 export default function DeckDetail() {
+  const { id } = useParams()
+  return <DeckDetailScreen key={id} />
+}
+
+function DeckDetailScreen() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [deck, setDeck] = useState<Deck | null>(null)
@@ -53,6 +60,24 @@ export default function DeckDetail() {
   const [saving, setSaving] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)   // 📝 종이 시험지 (Word) 설정 창
   const studyMenu = useDropdown()   // 낱말카드 → 전체 복습 / 별표만 복습 (11/14)
+  // 메뉴는 버튼 왼쪽 끝에 맞춰 펴는데, 오른쪽에 자리가 모자라면 버튼 오른쪽 끝에 맞춰 왼쪽으로 편다.
+  // 버튼 줄이 오른쪽 정렬이라 창이 좁거나 덱 제목·설명이 길면 메뉴 오른쪽이 화면 밖으로 나갔다 (11/15 점검).
+  // 그리기 전에(useLayoutEffect) 재서 정하므로 한쪽으로 떴다가 옮겨 가는 깜빡임이 없다
+  const studyMenuRef = useRef<HTMLDivElement>(null)
+  const [studyMenuRight, setStudyMenuRight] = useState(false)
+  const studyMenuOpen = studyMenu.open
+  const studyMenuWrap = studyMenu.ref
+  useLayoutEffect(() => {
+    const wrap = studyMenuWrap.current
+    const menu = studyMenuRef.current
+    if (!studyMenuOpen || !wrap || !menu) return
+    const edge = 8   // 화면 끝에서 이만큼은 띄운다
+    const box = wrap.getBoundingClientRect()
+    const width = menu.offsetWidth
+    const overRight = box.left + width - (document.documentElement.clientWidth - edge)   // 왼쪽 맞춤일 때 오른쪽으로 나가는 양
+    const overLeft = edge - (box.right - width)                                          // 오른쪽 맞춤일 때 왼쪽으로 나가는 양
+    setStudyMenuRight(overRight > 0 && overLeft < overRight)
+  }, [studyMenuOpen, studyMenuWrap])
 
   const load = useCallback(() => {
     const requests = loadRequest.current
@@ -92,12 +117,16 @@ export default function DeckDetail() {
   async function addCard() {
     if (adding || !front.trim() || !back.trim()) return // 더블클릭 중복 등록 방어
     setAdding(true)
+    const sent = { front, reading, back, memo }
     try {
-      await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify({ front, reading, back, memo }) })
-      setFront('')
-      setReading('')
-      setBack('')
-      setMemo('')
+      await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify(sent) })
+      // 보낸 값 그대로인 칸만 비운다 — 응답을 기다리는 동안 다음 카드를 치기 시작했으면 그 글자는 남긴다.
+      // 예전엔 응답이 오면 네 칸을 통째로 비워서, 느린 망에서 응답 전에 친 다음 단어가 지워졌다
+      // (닉네임 저장과 같은 종류 — Codex 5차 검산 11/16을 보고 같은 모양을 찾아 고침)
+      setFront((now) => (now === sent.front ? '' : now))
+      setReading((now) => (now === sent.reading ? '' : now))
+      setBack((now) => (now === sent.back ? '' : now))
+      setMemo((now) => (now === sent.memo ? '' : now))
       load()
     } catch (e) {
       setError((e as Error).message)
@@ -278,7 +307,7 @@ export default function DeckDetail() {
                   {ICON.cards} {t('낱말카드')} {ICON.chevronDown}
                 </button>
                 {studyMenu.open && (
-                  <div className="top-menu" role="menu">
+                  <div className={`top-menu${studyMenuRight ? ' menu-right' : ''}`} role="menu" ref={studyMenuRef}>
                     {/* 카드 학습 = 채점 없이 넘겨 보기 (11/14 사용자: '순수하게 카드만 보고 싶을 때도 있다') */}
                     <Link role="menuitem" className="menu-2line" to={`/study?deckId=${id}&mode=browse`}>
                       {ICON.cards}

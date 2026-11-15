@@ -6,7 +6,7 @@ const KEY = 'vm.recentStudy'
 const LEGACY_KEY = 'vm.lastStudyDeckId' // 구버전: 마지막 1개만 저장하던 키
 const MAX = 5
 
-export type StudyMode = 'study' | 'quiz' | 'typing' | 'listening'
+export type StudyMode = 'study' | 'browse' | 'quiz' | 'typing' | 'listening'   // browse = 카드 학습(채점 없이 넘겨 보기, 11/15)
 
 export interface RecentEntry {
   id: number
@@ -31,6 +31,7 @@ export function resumePath(id: number, mode?: StudyMode): string {
   if (mode === 'quiz') return `/quiz/${id}`
   if (mode === 'typing') return `/typing/${id}`
   if (mode === 'listening') return `/listening/${id}`
+  if (mode === 'browse') return `/study?deckId=${id}&mode=browse`   // 카드 학습으로 본 덱은 카드 학습으로 이어진다 (예전엔 채점 복습이 열렸다)
   return `/study?deckId=${id}`
 }
 

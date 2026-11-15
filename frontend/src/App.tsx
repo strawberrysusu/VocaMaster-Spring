@@ -17,7 +17,6 @@ import Listening from './pages/Listening'
 import OnlineTest from './pages/OnlineTest'
 import Stats from './pages/Stats'
 import Settings from './pages/Settings'
-import ComingSoon from './pages/ComingSoon'
 import { getToken } from './api/client'
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -47,7 +46,6 @@ export default function App() {
         {/* 공개 덱 상세는 비로그인 열람 허용 — UNLISTED "링크 받은 사람은 본다"(ADR-030)와 일치.
             좋아요·복사는 눌렀을 때 로그인으로 유도 (화면 안에서 처리) */}
         <Route path="/explore/:id" element={<PublicDeckDetail />} />
-        <Route path="/soon/:name" element={<RequireAuth><ComingSoon /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

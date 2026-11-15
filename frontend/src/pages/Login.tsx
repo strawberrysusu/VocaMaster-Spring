@@ -84,7 +84,7 @@ export default function Login() {
       <h1>VocaMaster</h1>
       {/* 비로그인 방문자용 — 이 서비스가 뭔지 + 정책 문서 도달 경로 (구글 OAuth 운영 요건, 9/1) */}
       <p className="auth-tagline">
-        {t('일본어·영어 단어장을 만들고 플래시카드·퀴즈·타이핑·듣기로 외우는 학습 서비스예요.')}
+        {t('일본어·영어 단어장을 만들고 낱말카드·퀴즈·타이핑·듣기로 외우는 학습 서비스예요.')}
       </p>
       <div className="card auth-card">
         <h2>{mode === 'login' ? t('로그인') : t('회원가입')}</h2>

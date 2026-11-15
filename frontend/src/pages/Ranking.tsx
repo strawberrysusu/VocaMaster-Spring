@@ -30,7 +30,7 @@ export default function Ranking() {
         <div className="page-head">
           <div>
             <h1>{t('학습 랭킹')}</h1>
-            <p className="sub">{t('복습·퀴즈·타이핑·듣기에서 답한 카드 1장 = 1점')}</p>
+            <p className="sub">{t('복습·퀴즈·타이핑에서 답한 카드 1장 = 1점 (듣기·시험지는 점수 없음)')}</p>
           </div>
         </div>
 
@@ -61,7 +61,7 @@ export default function Ranking() {
         )}
 
         <p className="muted" style={{ fontSize: 13, marginTop: 18 }}>
-          {t('닉네임은 설정에서 가릴 수 있어요')} <Link to="/settings" className="link">{t('설정')} →</Link>
+          {t('닉네임은 기본으로 가려져요. 설정에서 공개할 수 있어요')} <Link to="/settings" className="link">{t('설정')} →</Link>
         </p>
       </div>
     </>
@@ -72,8 +72,9 @@ function RankRow({ entry }: { entry: RankEntry }) {
   return (
     <li className={`rank-row${entry.me ? ' me' : ''}`}>
       <span className="rank-no">{rankBadge(entry.rank)}</span>
+      {/* 닉네임만 말줄임 — '나' 표시는 그 밖에 둬서 닉네임이 길어도 잘리지 않는다 (11/15 점검) */}
       <span className="rank-name">
-        {entry.name}
+        <span className="rank-nick">{entry.name}</span>
         {entry.me && <span className="rank-me">{t('나')}</span>}
       </span>
       <span className="rank-points">{t('{n}점', { n: entry.points.toLocaleString() })}</span>

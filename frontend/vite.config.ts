@@ -9,12 +9,18 @@ const apiPrefixes = [
   '/auth', '/decks', '/cards', '/public', '/reviews', '/quiz', '/typing', '/study', '/stats', '/import',
   '/folders', '/rankings', '/users', '/oauth2',
 ]
+// API는 아니지만 백엔드가 받아야 하는 주소 (11/16 Codex 5차 검산 — 이것도 scripts/test-proxy.mjs가 검사한다)
+//  · /login/oauth2 — 구글 로그인에서 돌아오는 콜백(/login/oauth2/code/google). 아래 프록시가 changeOrigin: false라 백엔드는
+//    제 주소를 localhost:5173으로 알고 구글에도 5173의 콜백 주소를 준다 → 여기 없으면 구글에서 돌아오는 순간 404.
+//    (구글 콘솔의 '승인된 리디렉션 URI'에도 http://localhost:5173/login/oauth2/code/google 이 있어야 끝까지 된다)
+//  · /privacy.html — 백엔드가 주는 정적 문서 (로그인·설정·프로필 메뉴의 링크)
+const serverPaths = ['/login/oauth2', '/privacy.html']
 
 export default defineConfig({
   base: '/app/',
   plugins: [react()],
   server: {
-    proxy: Object.fromEntries(apiPrefixes.map((p) => [p, { target: backend, changeOrigin: false }])),
+    proxy: Object.fromEntries([...apiPrefixes, ...serverPaths].map((p) => [p, { target: backend, changeOrigin: false }])),
   },
   build: {
     outDir: '../src/main/resources/static/app',

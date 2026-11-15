@@ -4,14 +4,16 @@
 
 영어 · 일본어 단어를 등록(한 장씩 또는 일괄 붙여넣기)해 **플래시카드 · 퀴즈(4~6지선다) · 타이핑**으로 학습하고,
 **Leitner Box 복습 알고리즘**이 "모르는 단어일수록 자주, 아는 단어일수록 가끔" 다시 보여줍니다.
-발음 듣기(🔊 브라우저 TTS) · 일본어 요미가나 · 공개 단어장 검색/복사/좋아요 · 학습 통계까지 — **React SPA 11화면**으로 매일 실사용 중입니다.
+발음 듣기(🔊 브라우저 TTS) · 일본어 요미가나 · 공개 단어장 검색/복사/좋아요 · 학습 통계까지 — **React SPA 17화면**으로 매일 실사용 중입니다.
 
 ### 🌐 Live: **https://vocamaster-app.duckdns.org/app/**
 
-> Oracle Cloud Tokyo, 1GB 무료 인스턴스 2대(앱/DB 분산) · Docker · nginx + Let's Encrypt HTTPS · 월 서버비 0원
+> AWS Lightsail 서울, 2GB 인스턴스 1대(앱 · MySQL · Redis를 Docker로) · nginx + Let's Encrypt HTTPS — 2026-09-30에 Oracle Cloud Tokyo(무료 1GB 2대)에서 이전
+>
+> 2026-11 추가: 듣기 시험 · 시험지(Word / 온라인, 틀린 단어 자동 ⭐) · 학습 랭킹 · 화면 언어 4개(한 · 일 · 영 · 중) · 화면 회귀 테스트(Playwright)
 
 > **상태:** 🟢 **운영 중** — **Phase 7 배포 완료 (⑤·⑥·⑦)** · **시작:** 2026-05 · **목표 마감:** 2027-01
-> 진행도와 의사결정 기록: [`docs/CHECKLIST.md`](docs/CHECKLIST.md) · [`docs/decisions.md`](docs/decisions.md) (**ADR 46**)
+> 진행도와 의사결정 기록: [`docs/CHECKLIST.md`](docs/CHECKLIST.md) · [`docs/decisions.md`](docs/decisions.md) (**ADR 59**)
 
 ---
 
@@ -22,7 +24,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 단어 발음이 아쉬워 매번 따로 검색하던 불편도 있었는데 — 지금은 카드마다 🔊 버튼 하나로 해결되고,
 직접 만든 발음이 더 좋습니다. **일본어(JLPT)·영어 단어를 매일 외우는 제가 첫 번째 사용자입니다.**
 
-기술적으로는 모든 설계 결정을 **ADR 46건**으로 남겨, "왜 이렇게 만들었나요"에
+기술적으로는 모든 설계 결정을 **ADR 59건**으로 남겨, "왜 이렇게 만들었나요"에
 전부 답할 수 있는 프로젝트를 목표로 합니다.
 
 ---
@@ -51,7 +53,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 | 공개 단어장 | PRIVATE/PUBLIC/UNLISTED · 검색 · **복사(원자적 카운터)** · 좋아요(unique 멱등) · 인기 정렬(like×5+copy×3+study×1) · 존재 숨김 404 |
 | Redis | 인기 랭킹 ZSET 캐시 · 로그인 Rate Limit · 오늘 요약 캐시 — **전부 fail-open** (Redis가 죽어도 DB 경로로 동작) |
 | 이벤트 | `StudyRecordedEvent` 발행 → 캐시 무효화(@Async) · 인기 점수 study 항(원본 귀속 · 하루 1회 · 자기 학습 제외) 구독 |
-| 프론트 | **React 19 + TypeScript SPA 11화면** (홈·덱·학습·퀴즈·타이핑·탐색·공개 상세·통계·설정·가져오기·로그인) · 🔊 브라우저 TTS · 401 자동 토큰 갱신(single-flight) · jar에 번들 |
+| 프론트 | **React 19 + TypeScript SPA 17화면** (홈·덱·학습·퀴즈·타이핑·듣기·시험지·탐색·공개 상세·검색·랭킹·통계·설정·가져오기·로그인) · 화면 언어 4개 · 🔊 브라우저 TTS · 401 자동 토큰 갱신(single-flight) · jar에 번들 |
 | 통계 | 최근 28일 활동 · 연속/최고 연속 · 라이트너 분포 · 덱별 진행률(GROUP BY 집계) |
 | 오류 계약 | 400/401/403/404/**409**(동시성 충돌)/429(Rate Limit) 통일 JSON 응답 |
 
@@ -67,7 +69,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
   (원본 기록은 유실 시 복구 불가). 큐 포화는 CallerRuns로 유실 0 (ADR-039)
 - **존재 숨김(404) 보안 계약** — 남의 비공개 덱은 "없는 덱"과 상태·코드·메시지까지 동일 응답 (열거 공격 차단),
   HTTP 레벨 테스트로 박제 (ADR-030)
-- **테스트 180** — Testcontainers **실제 MySQL 8** + Flyway(V1~V20) 검증, H2 미사용.
+- **서버 테스트 334** — Testcontainers **실제 MySQL 8** + Flyway(V1~V23) 검증, H2 미사용. **화면 회귀 테스트 72**(Playwright, 실패하면 배포하지 않음 — ADR-055).
   트랜잭션 경계·동시성이 관심사인 테스트는 자동 롤백을 끄고 운영과 동일한 커밋 경계로 검증
 - **정직한 감사 문화** — 전수 감사([7월](docs/audit-2026-07.md) · 8월 ADR-040)로 찾은 결함을
   재현 테스트와 함께 수리하고, 남긴 것은 트레이드오프로 문서화
@@ -83,7 +85,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 | 4 | 공개 단어장 검색 · 복사 · 좋아요 · 인기 정렬 | ✅ 2026-08 |
 | 5 | Redis (Rate Limit · 랭킹 캐시 · 요약 캐시 · fail-open) | ✅ 2026-08 |
 | 6 | 비동기 이벤트 (Spring Event · AFTER_COMMIT · @Async) + **React SPA 11화면** | ✅ 2026-08 |
-| 7 | Docker · CI/CD · 배포 · k6 부하 테스트 | ✅ 운영 중 — CI/CD·Oracle 2대 분산·백업·HTTPS·구글 로그인. **k6 실측 검산기: 1차 "p95 3.5× 개선"이 웜/콜드 불공정 비교로 판명 → 재측정으로 스스로 철회** ([performance.md](docs/performance.md)) |
+| 7 | Docker · CI/CD · 배포 · k6 부하 테스트 | ✅ 운영 중 — CI/CD·Oracle 2대 분산(→ 2026-09-30 AWS Lightsail 서울로 이전)·백업·HTTPS·구글 로그인. **k6 실측 검산기: 1차 "p95 3.5× 개선"이 웜/콜드 불공정 비교로 판명 → 재측정으로 스스로 철회** ([performance.md](docs/performance.md)) |
 | 8 | 마감 · 문서/면접 준비 | 예정 |
 
 > Kafka는 검토 후 **도입하지 않기로 결정** — 단일 앱에서 브로커는 과한 도구, Spring Event로 경계를 긋고
@@ -96,8 +98,8 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 **Backend** Java 17 · Spring Boot 3.5 · Spring Security · Spring Data JPA · Validation
 **Frontend** React 19 · TypeScript · Vite (Gradle이 빌드해 jar에 번들 — 별도 배포 없음)
 **Auth** JWT (jjwt) — Access(단기) + Refresh(14일, rotation)
-**Database** MySQL 8 · Flyway (V1~V20) · **Redis 7** (Lettuce — 랭킹·Rate Limit·캐시, fail-open)
-**Test** JUnit 5 · **Testcontainers (MySQL 8 + Redis)** — H2 미사용, 운영과 동일 DB로 검증
+**Database** MySQL 8 · Flyway (V1~V23) · **Redis 7** (Lettuce — 랭킹·Rate Limit·캐시, fail-open)
+**Test** JUnit 5 · **Testcontainers (MySQL 8 + Redis)** — H2 미사용, 운영과 동일 DB로 검증 · **Playwright** (화면 회귀)
 **Docs** springdoc-openapi (Swagger)
 
 ---
@@ -169,7 +171,7 @@ src/main/java/com/vocamaster
 └── config/       # Security / Redis / Async / Swagger
 
 frontend/         # React 19 + TS + Vite — 빌드 산출물은 jar 안 static/app/
-└── src/pages/    # 11화면 (홈·덱·학습·퀴즈·타이핑·탐색·통계·설정·가져오기…)
+└── src/pages/    # 17화면 (홈·덱·학습·퀴즈·타이핑·듣기·시험지·탐색·검색·랭킹·통계·설정·가져오기…)
 ```
 
 ---
@@ -179,7 +181,7 @@ frontend/         # React 19 + TS + Vite — 빌드 산출물은 jar 안 static/
 | 문서 | 내용 |
 |---|---|
 | [`docs/CHECKLIST.md`](docs/CHECKLIST.md) | Phase 0~8 상세 체크리스트 (진행의 단일 원장) |
-| [`docs/decisions.md`](docs/decisions.md) | **ADR 46** — 모든 설계 결정의 대안·근거·트레이드오프 |
+| [`docs/decisions.md`](docs/decisions.md) | **ADR 59** — 모든 설계 결정의 대안·근거·트레이드오프 |
 | [`docs/review-algorithm.md`](docs/review-algorithm.md) | Leitner Box 알고리즘 — 규칙 · 왜 SM-2/FSRS가 아닌가 |
 | [`docs/cache-strategy.md`](docs/cache-strategy.md) | 캐시 전략 — cache-aside · 무효화 타이밍 · fail-open |
 | [`docs/redis-conventions.md`](docs/redis-conventions.md) | Redis 키 규칙 · 직렬화 함정 |
