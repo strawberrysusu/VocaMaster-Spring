@@ -11,7 +11,7 @@ import { t } from '../i18n'
 export default function Explore() {
   const [decks, setDecks] = useState<PublicDeck[] | null>(null)
   // ?q= 로 들어오면(검색 화면의 '탐색에서 더 보기', 11/14) 그 검색어로 시작한다
-  const [params] = useSearchParams()
+  const [params, setSearchParams] = useSearchParams()
   const urlQuery = params.get('q') ?? ''
   const [keyword, setKeyword] = useState(urlQuery)
   const [query, setQuery] = useState(urlQuery)          // 실제 검색에 쓰인 값
@@ -23,6 +23,20 @@ export default function Explore() {
   // '더 보기'(이어 붙이기)가 아니라 페이지 교체 — 쌓이면 과부하가 되돌아온다 (사용자 피드백)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
+
+  // 화면 안의 검색 — 주소(?q=)를 바꾼다. 아래 effect가 주소를 따라 입력·결과·쪽 번호를 맞춘다(주소가 하나의 기준).
+  // 예전엔 주소가 그대로라 덱을 열었다 뒤로 오면 옛 검색어로 돌아갔다 (11/15 점검)
+  function runSearch() {
+    const v = keyword.trim()
+    if (v === urlQuery) {
+      // 주소가 안 바뀌는 경우(같은 검색어) — 입력만 다듬고 첫 쪽으로
+      setKeyword(v)
+      setQuery(v)
+      setPage(0)
+      return
+    }
+    setSearchParams(v ? { q: v } : {})
+  }
 
   // 주소의 검색어가 바뀌면 입력·결과도 따라간다 — 같은 화면이라 처음 값만 쓰면, 메뉴 '탐색'으로 다시 와서
   // 주소에서 검색어가 사라져도 지난 검색이 남았다 (Codex 4차 검산 11/14)
@@ -93,13 +107,10 @@ export default function Explore() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             onKeyDown={(e) => {
-              if (isPlainEnter(e)) {
-                setQuery(keyword)
-                setPage(0)
-              }
+              if (isPlainEnter(e)) runSearch()
             }}
           />
-          <button className="btn-primary" onClick={() => { setQuery(keyword); setPage(0) }}>
+          <button className="btn-primary" onClick={runSearch}>
             {t('검색')}
           </button>
         </div>

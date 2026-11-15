@@ -205,4 +205,18 @@ class ApiInputBoundaryTest extends AbstractIntegrationTest {
         mvc.perform(json(post("/decks"), "{'title':'N1 단어'}"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("닉네임이 전각 공백·안 보이는 글자뿐이면 400 — 가입과 닉네임 수정 모두 (랭킹·공개 덱 작성자 칸이 빈 줄로 보였다)")
+    void blankLikeNickname_400() throws Exception {
+        mvc.perform(json(post("/auth/register"),
+                        "{'email':'blanknick_" + System.nanoTime() + "@test.com','password':'" + PASSWORD + "','nickname':'\u3000'}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("nickname: 비워 둘 수 없습니다")));
+        mvc.perform(json(patch("/users/me"), "{'nickname':'\u3164'}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(json(patch("/users/me"), "{'nickname':'새 닉네임'}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nickname").value("새 닉네임"));
+    }
 }

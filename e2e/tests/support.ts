@@ -101,6 +101,30 @@ export async function deleteCard(request: APIRequestContext, cardId: number): Pr
   if (!res.ok()) throw new Error(`${res.status()} ${res.url()} — ${await res.text()}`)
 }
 
+/** 폴더 만들기 */
+export async function makeFolder(request: APIRequestContext, name: string): Promise<number> {
+  const body = await ok<{ id: number }>(await request.post('/folders', { headers: auth(), data: { name } }))
+  return body.id
+}
+
+/** 덱을 폴더로 옮기기 */
+export async function moveToFolder(request: APIRequestContext, deckId: number, folderId: number): Promise<void> {
+  await ok(await request.patch(`/decks/${deckId}/folder`, { headers: auth(), data: { folderId } }))
+}
+
+/** 덱 설명 바꾸기 */
+export async function setDeckDescription(request: APIRequestContext, deckId: number, description: string): Promise<void> {
+  await ok(await request.patch(`/decks/${deckId}`, { headers: auth(), data: { description } }))
+}
+
+/** 화면 언어 — 이 탭이 다음에 여는 화면부터 그 언어로 (설정의 언어 고르기가 쓰는 것과 같은 저장 칸) */
+export async function useLang(page: Page, lang: 'ko' | 'ja' | 'en' | 'zh'): Promise<void> {
+  await page.addInitScript((l) => {
+    const saved = JSON.parse(localStorage.getItem('vm.settings') ?? '{}')
+    localStorage.setItem('vm.settings', JSON.stringify({ ...saved, lang: l }))
+  }, lang)
+}
+
 /** 가로 스크롤 크기(px) — 0이어야 정상 */
 export function overflowX(page: Page): Promise<number> {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)

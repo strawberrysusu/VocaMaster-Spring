@@ -388,7 +388,7 @@ export default function OnlineTest() {
                   </button>
                 )}
                 <Link to={`/study?deckId=${deckId}&starredOnly=1`} className="answer-yes" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                  {t('⭐ 별표 복습 하러 가기')}
+                  {t('⭐ 별표만 복습 하러 가기')}
                 </Link>
               </>
             ) : (

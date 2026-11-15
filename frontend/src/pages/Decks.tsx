@@ -430,57 +430,59 @@ export default function Decks() {
             <button disabled={safePage === totalPages - 1} onClick={() => setPage(safePage + 1)}>{t('다음 ▶')}</button>
           </div>
         )}
-
-        {pickerOpen && typeof activeFolder === 'number' && (
-          <div className="modal-overlay" onClick={(e) => e.detail < 2 && !busy && setPickerOpen(false)}>
-            <div className="modal-panel" role="dialog" aria-modal="true" aria-label={t('폴더에 덱 담기')} onClick={(e) => e.stopPropagation()}>
-              <div className="modal-head">
-                <h2>{t('📁 {name}에 덱 담기', { name: activeFolderObj?.name ?? t('폴더') })}</h2>
-                <button className="modal-close" aria-label={t('닫기')} disabled={busy} onClick={() => setPickerOpen(false)}>✕</button>
-              </div>
-              {candidates.length === 0 ? (
-                <p className="muted">{t('담을 수 있는 덱이 없어요 — 모든 덱이 이미 이 폴더에 있어요.')}</p>
-              ) : (
-                <>
-                  <div className="picker-tools">
-                    <input
-                      aria-label={t('담을 덱 검색')}
-                      placeholder={t('덱 이름 검색')}
-                      autoFocus
-                      value={pickerQuery}
-                      onChange={(e) => setPickerQuery(e.target.value)}
-                    />
-                    <button className="btn-ghost-link" disabled={busy || shownCandidates.length === 0} onClick={() => setPicked(new Set(shownCandidates.map((d) => d.id)))}>
-                      {t('보이는 것 전체 선택')}
-                    </button>
-                    <button className="btn-ghost-link" disabled={busy || picked.size === 0} onClick={() => setPicked(new Set())}>
-                      {t('해제')}
-                    </button>
-                  </div>
-                  <div className="pick-list">
-                    {shownCandidates.map((d) => (
-                      <label key={d.id} className="pick-row">
-                        <input type="checkbox" checked={picked.has(d.id)} disabled={busy} onChange={() => togglePick(d.id)} />
-                        <span className="pick-title">{d.title}</span>
-                        <span className="pick-where">
-                          {d.folderId === null ? t('📂 미분류') : `📁 ${folders.find((f) => f.id === d.folderId)?.name ?? t('다른 폴더')}`} · {t('{n}장', { n: d.cardCount })}
-                        </span>
-                      </label>
-                    ))}
-                    {shownCandidates.length === 0 && <p className="muted">{t('검색과 일치하는 덱이 없어요.')}</p>}
-                  </div>
-                  <div className="modal-foot">
-                    <span className="muted">{t('다른 폴더의 덱을 담으면 그쪽에서는 빠져요 (덱은 한 폴더에만 소속)')}</span>
-                    <button className="btn-primary" disabled={busy || picked.size === 0} onClick={addPickedToFolder}>
-                      {busy ? t('담는 중…') : t('{n}개 담기', { n: picked.size })}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* 폴더 담기 창 — .shell 밖에 둔다(시험지 창과 같은 자리). .shell 안에 두면 화면 전체가 아니라 그 칸을 기준으로 떠서
+          어두운 막이 위쪽 바·사이드바를 못 덮고, 덱이 많아 칸이 길면 창이 화면 밖에 떴다 (11/15 점검에서 실측) */}
+      {pickerOpen && typeof activeFolder === 'number' && (
+        <div className="modal-overlay" onClick={(e) => e.detail < 2 && !busy && setPickerOpen(false)}>
+          <div className="modal-panel" role="dialog" aria-modal="true" aria-label={t('폴더에 덱 담기')} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{t('📁 {name}에 덱 담기', { name: activeFolderObj?.name ?? t('폴더') })}</h2>
+              <button className="modal-close" aria-label={t('닫기')} disabled={busy} onClick={() => setPickerOpen(false)}>✕</button>
+            </div>
+            {candidates.length === 0 ? (
+              <p className="muted">{t('담을 수 있는 덱이 없어요 — 모든 덱이 이미 이 폴더에 있어요.')}</p>
+            ) : (
+              <>
+                <div className="picker-tools">
+                  <input
+                    aria-label={t('담을 덱 검색')}
+                    placeholder={t('덱 이름 검색')}
+                    autoFocus
+                    value={pickerQuery}
+                    onChange={(e) => setPickerQuery(e.target.value)}
+                  />
+                  <button className="btn-ghost-link" disabled={busy || shownCandidates.length === 0} onClick={() => setPicked(new Set(shownCandidates.map((d) => d.id)))}>
+                    {t('보이는 것 전체 선택')}
+                  </button>
+                  <button className="btn-ghost-link" disabled={busy || picked.size === 0} onClick={() => setPicked(new Set())}>
+                    {t('해제')}
+                  </button>
+                </div>
+                <div className="pick-list">
+                  {shownCandidates.map((d) => (
+                    <label key={d.id} className="pick-row">
+                      <input type="checkbox" checked={picked.has(d.id)} disabled={busy} onChange={() => togglePick(d.id)} />
+                      <span className="pick-title">{d.title}</span>
+                      <span className="pick-where">
+                        {d.folderId === null ? t('📂 미분류') : `📁 ${folders.find((f) => f.id === d.folderId)?.name ?? t('다른 폴더')}`} · {t('{n}장', { n: d.cardCount })}
+                      </span>
+                    </label>
+                  ))}
+                  {shownCandidates.length === 0 && <p className="muted">{t('검색과 일치하는 덱이 없어요.')}</p>}
+                </div>
+                <div className="modal-foot">
+                  <span className="muted">{t('다른 폴더의 덱을 담으면 그쪽에서는 빠져요 (덱은 한 폴더에만 소속)')}</span>
+                  <button className="btn-primary" disabled={busy || picked.size === 0} onClick={addPickedToFolder}>
+                    {busy ? t('담는 중…') : t('{n}개 담기', { n: picked.size })}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   )
 }

@@ -156,6 +156,11 @@ body:has(.topbar) {
   padding-top: var(--topbar-h);   /* 위쪽 바가 고정이라 본문을 그만큼 내린다 */
 }
 
+/* Tab으로 옮겨 간 칸이 고정된 위쪽 바 밑에 숨지 않게 — 브라우저가 포커스 받은 칸을 화면에 맞출 때 이만큼 비워 둔다 (11/15 점검) */
+html:has(.topbar) {
+  scroll-padding-top: calc(var(--topbar-h) + 8px);
+}
+
 .topbar {
   position: fixed;
   top: 0;
@@ -216,14 +221,15 @@ body:has(.topbar) {
   border-radius: 14px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
 }
-.suggest-head { margin: 0; padding: 8px 10px 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.suggest-head { margin: 0; padding: 8px 10px 4px; font-size: 12px; font-weight: 600; color: #6e6f80; }
 .suggest-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
-.suggest-item.active { background: #f1f1f6; }
+.suggest-item:hover,
+.suggest-item.active { background: #f1f1f6; }   /* hover = 마우스(CSS만), active = 화살표 키로 고른 줄 */
 .suggest-item svg { flex-shrink: 0; color: var(--muted); }
 .suggest-text { display: flex; flex-direction: column; min-width: 0; }
 .suggest-title { font-size: 14.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .suggest-title b { color: var(--a); font-weight: 700; }
-.suggest-meta { font-size: 12px; color: var(--muted); }
+.suggest-meta { font-size: 12px; color: #6e6f80; }   /* 12px 작은 글씨 — --muted는 고른 줄 배경 위에서 3:1이라 흐렸다 (11/15 점검) */
 .suggest-all .suggest-title { color: var(--a); font-weight: 600; }
 
 .top-search input {
@@ -372,18 +378,16 @@ body:has(.topbar) {
   font-size: 13px;
   font-weight: 700;
 }
-
-.nav-logout {
-  font-size: 12.5px;
-  color: var(--muted);
-}
-
 /* ── 공통 레이아웃 ── */
 .shell {
   max-width: 1120px;
   margin: 0 auto;
   padding: 40px 36px 100px;
-  animation: fadeUp 0.3s ease both;
+  /* 'both'(끝난 뒤에도 마지막 값을 붙잡아 둠)를 쓰지 않는다 — 붙잡힌 transform(값은 제자리여도 'none'이 아님) 때문에
+     이 칸이 안쪽 position: fixed 요소의 기준이 되어, 폴더 담기 창이 화면이 아니라 이 칸 안에 떴다
+     (어두운 막이 위쪽 바·사이드바를 못 덮고, 덱이 많아 칸이 길면 창이 화면 밖에 뜸 — 11/15 점검에서 실측).
+     끝 값(투명도 1, 이동 없음)이 원래 모습과 같아서 보이는 차이는 없다 */
+  animation: fadeUp 0.3s ease;
 }
 
 /* 사이드바가 있을 때만 본문을 오른쪽으로 — 페이지 컴포넌트 무수정 전환의 핵심.
@@ -433,6 +437,14 @@ body:has(.topbar) {
   color: var(--a);
   font-weight: 500;
 }
+
+/* 글 안의 링크 — 색을 안 주면 브라우저 기본(파랑·보라 밑줄)으로 보였다: 홈 '전체 보기'·'랭킹 보기 →', 랭킹 '설정 →' (11/15 점검) */
+.link {
+  color: var(--a);
+  font-weight: 500;
+  text-decoration: none;
+}
+.link:hover { text-decoration: underline; }
 
 /* ── 히어로 카드 ── */
 .hero {
@@ -691,6 +703,7 @@ body:has(.topbar) {
   margin: 7px 0 0;
   font-size: 13px;
   color: var(--muted-2);
+  overflow-wrap: anywhere;   /* 설명에 띄어쓰기 없는 긴 낱말·주소가 있어도 카드 밖으로 안 나가게 */
 }
 
 /* ── 페이지 헤더 (내 덱 등) ── */
@@ -878,11 +891,15 @@ body:has(.topbar) {
 }
 .mode-buttons svg { flex-shrink: 0; }
 .mode-primary svg:last-child { margin-left: -2px; opacity: 0.85; }   /* ▾ 펼침 표시 */
-.mode-menu-wrap .top-menu { left: 0; right: auto; min-width: 270px; }   /* 낱말카드 버튼 왼쪽 끝에 맞춰 아래로 */
+/* 낱말카드 메뉴 — 버튼 왼쪽 끝에 맞춰 아래로 편다. 오른쪽에 자리가 모자라면(버튼이 오른쪽 정렬이라 창이 좁거나 제목이 길 때)
+   화면이 재 보고 .menu-right를 붙여 버튼 오른쪽 끝에 맞춰 왼쪽으로 편다 (DeckDetail, 11/15 점검).
+   위쪽 바(60)보다 아래라 스크롤하면 그 밑으로 지나가고, 사이드바·폰 아래 탭바(50)보다는 위라 가려지지 않는다 */
+.mode-menu-wrap .top-menu { left: 0; right: auto; min-width: 270px; z-index: 55; }
+.mode-menu-wrap .top-menu.menu-right { left: auto; right: 0; }
 .top-menu .menu-2line { align-items: flex-start; }   /* 이름 + 한 줄 설명 */
 .top-menu .menu-2line svg { margin-top: 2px; }
 .menu-2line > span { display: flex; flex-direction: column; gap: 2px; font-weight: 600; }
-.menu-2line small { font-size: 12px; font-weight: 400; color: var(--muted); white-space: normal; }
+.menu-2line small { font-size: 12px; font-weight: 400; color: #6e6f80; white-space: normal; }   /* 12px 작은 글씨는 --muted(3.4:1)로는 흐리다 → 4.9:1 (11/15 점검) */
 .top-menu .menu-disabled { display: flex; align-items: center; gap: 10px; padding: 9px 10px; font-size: 14px; color: #b4b5c2; cursor: not-allowed; }
 
 .mode-stub {
@@ -1347,18 +1364,27 @@ button:disabled {
     z-index: 50;
     flex-direction: row;
     justify-content: space-around;
+    gap: 0;
     background: #fff;
     border-top: 1px solid var(--border);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
   }
 
+  /* 탭 6개를 같은 너비로 나누고 글자는 한 줄로 — 랭킹 탭이 생긴 뒤(11/14) 글자 너비대로 두면 일본어·영어에서 320~360px 폰에
+     다 안 들어가 글자가 두 줄로 깨지고(ホー/ム), 영어 320px는 '설정' 탭이 화면 밖으로 28px 나갔다 (11/15 점검에서 실측) */
   .side-menu a {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 96px;
     flex-direction: column;
     gap: 3px;
-    padding: 6px 10px;
+    padding: 6px 0;
     font-size: 11px;
     border-radius: 9px;
+    white-space: nowrap;
   }
+
+  html:has(.topbar) { scroll-padding-bottom: 72px; }   /* 아래 탭바 밑에 포커스가 숨지 않게 */
 
   .streak-pill {
     display: none;
@@ -2166,10 +2192,11 @@ button:disabled {
 
 /* 프로필 팝오버 (아바타 클릭) */
 .avatar-btn { border: none; cursor: pointer; }
-.pp-nick { font-weight: 700; margin: 0 0 2px; font-size: 15px; }
+.pp-nick { font-weight: 700; margin: 0 0 2px; font-size: 15px; overflow-wrap: anywhere; }
 .pp-email { font-size: 13px; color: #667; margin: 0 0 10px; word-break: break-all; }
-.pp-meta { display: flex; gap: 8px; align-items: center; margin: 0; font-size: 12px; color: #889; }
-.pp-badge { background: var(--a-soft, #eef); color: var(--a, #55c); padding: 2px 9px; border-radius: 999px; font-weight: 600; }
+/* 배지와 가입일이 한 줄에 안 들어가면(일본어·영어) 가입일을 다음 줄로 — 예전엔 배지 안에서 글자가 두 줄로 깨졌다 (11/15 점검에서 실측) */
+.pp-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin: 0; font-size: 12px; color: #889; }
+.pp-badge { background: var(--a-soft, #eef); color: var(--a, #55c); padding: 2px 9px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
 
 /* 덱 공개 범위 셀렉트 (덱 상세) */
 .vis-select { font-size: 12.5px; padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,.15); background: #fff; color: inherit; cursor: pointer; }
@@ -2410,7 +2437,7 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 60;
+  z-index: 80;   /* 위쪽 바(60)와 그 메뉴(70)보다 위 — 창이 떠 있는 동안 화면 전체를 덮는다 */
   padding: 20px;
 }
 .modal-panel {
@@ -2419,6 +2446,7 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
   padding: 22px 24px;
   width: min(560px, 100%);
   max-height: min(640px, 90vh);
+  overflow-y: auto;   /* 화면이 낮으면(가로로 든 폰) 창 안에서 스크롤 — 예전엔 아래 버튼이 창 밖으로 나갔다 */
   display: flex;
   flex-direction: column;
   box-shadow: 0 24px 60px -24px rgba(26, 27, 38, 0.4);
@@ -2640,8 +2668,10 @@ button.search-more.as-link { border: none; background: none; padding: 0; font: i
 @media (max-width: 768px) {
   .stats-3col { grid-template-columns: minmax(0, 1fr); }
 }
-.rank-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.rank-card-head .link { font-size: 12.5px; white-space: nowrap; }
+/* 제목과 '랭킹 보기 →'가 한 줄에 안 들어가면 링크를 다음 줄로 — 예전엔 일본어 제목이 '今日のラン/キング'로 깨졌다 (창 1101~1197px, 11/15 점검에서 실측) */
+.rank-card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 8px; }
+.rank-card-head .label { white-space: nowrap; }
+.rank-card-head .link { font-size: 12.5px; white-space: nowrap; margin-left: auto; }
 .rank-none { margin: 10px 0 6px; font-size: 13.5px; color: var(--muted); }
 .rank-mini { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; color: var(--sub); }
 .rank-mini li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 6px; align-items: center; }
@@ -2651,7 +2681,14 @@ button.search-more.as-link { border: none; background: none; padding: 0; font: i
 .rank-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 12px 16px; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
 .rank-row.me { border-color: var(--a); background: var(--a-soft); }
 .rank-no { font-size: 18px; font-weight: 700; text-align: center; color: var(--ink-2); }
-.rank-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--ink-2); }
-.rank-me { margin-left: 8px; padding: 1px 8px; border-radius: 99px; background: var(--a); color: #fff; font-size: 11.5px; font-weight: 700; vertical-align: 1px; }
+.rank-name { min-width: 0; display: flex; align-items: center; font-weight: 600; color: var(--ink-2); }
+.rank-nick { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-me { flex-shrink: 0; margin-left: 8px; padding: 1px 8px; border-radius: 99px; background: var(--a); color: #fff; font-size: 11.5px; font-weight: 700; }
 .rank-points { font-weight: 700; color: var(--a); white-space: nowrap; }
 .rank-gap { text-align: center; color: var(--muted); }
+
+/* 설정: 닉네임 바꾸기 (11/15) */
+.nick-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 6px; }
+.nick-row label { font-size: 13.5px; font-weight: 600; color: var(--sub); }
+.nick-row input { flex: 1 1 180px; max-width: 320px; min-width: 0; padding: 10px 13px; border-radius: 11px; border: 1px solid var(--border); background: #fff; font: inherit; font-size: 14.5px; color: var(--ink-2); }
+.nick-row input:focus-visible { outline: 2px solid var(--a); outline-offset: 1px; }

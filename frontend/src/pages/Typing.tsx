@@ -264,7 +264,7 @@ export default function Typing() {
             {summary.wrong > 0 && (
               <p className="muted" style={{ fontSize: 13.5 }}>
                 {t('틀린 단어는 자동으로 ⭐ 했어요')}
-                <Link to={`/study?deckId=${deckId}&starredOnly=1`} className="link" style={{ marginLeft: 8 }}>{t('⭐ 별표 복습 하러 가기')}</Link>
+                <Link to={`/study?deckId=${deckId}&starredOnly=1`} className="link" style={{ marginLeft: 8 }}>{t('⭐ 별표만 복습 하러 가기')}</Link>
               </p>
             )}
             {summary.wrong > 0 && (

@@ -5,6 +5,7 @@ import { api, clearToken, getToken, logout as clientLogout } from '../api/client
 import TopNav from '../components/TopNav'
 import { gap, getLang, t } from '../i18n'
 import { jwtEmail } from '../lib/jwt'
+import { isPlainEnter } from '../lib/keys'
 import { ACCENTS, loadSettings, saveSettings, type AccentKey, type Settings as SettingsT } from '../lib/settings'
 import { isTtsSupported, speak, voicesFor } from '../lib/tts'
 
@@ -25,6 +26,12 @@ export default function Settings() {
   const [rankingMasked, setRankingMasked] = useState<boolean | null>(null)   // 학습 랭킹 닉네임 가리기 (null = 조회 전)
   const [rankSaving, setRankSaving] = useState(false)
   const [rankError, setRankError] = useState('')
+  // 닉네임 바꾸기 (11/15 점검: 서버 API는 있었는데 화면이 없었다 — 공개 덱·랭킹에 보이는 이름이라 직접 고칠 수 있어야 한다)
+  const [savedNickname, setSavedNickname] = useState<string | null>(null)   // 서버에 저장된 값 (null = 조회 전)
+  const [nickname, setNickname] = useState('')
+  const [nickSaving, setNickSaving] = useState(false)
+  const [nickSaved, setNickSaved] = useState(false)
+  const [nickError, setNickError] = useState('')
   const [pwCur, setPwCur] = useState('')
   const [pwNew, setPwNew] = useState('')
   const [pwNew2, setPwNew2] = useState('')
@@ -47,10 +54,12 @@ export default function Settings() {
   // 구글 가입자는 password가 null이라(AuthService) 비밀번호 변경 폼 자체가 의미 없다.
   // TopNav 프로필 팝오버가 쓰는 것과 같은 /users/me의 provider로 가른다
   useEffect(() => {
-    api<{ provider: string; rankingMasked: boolean }>('/users/me')
+    api<{ provider: string; rankingMasked: boolean; nickname: string }>('/users/me')
       .then((me) => {
         setProvider(me.provider)
         setRankingMasked(me.rankingMasked)
+        setSavedNickname(me.nickname)
+        setNickname(me.nickname)
       })
       .catch(() => setProvider('local'))   // 조회 실패로 폼을 감추면 바꿀 길이 없어진다 — 보이는 쪽으로 실패
   }, [])
@@ -71,6 +80,25 @@ export default function Settings() {
       setRankError((e as Error).message)
     } finally {
       setRankSaving(false)
+    }
+  }
+
+  async function saveNickname() {
+    const next = nickname.trim()
+    if (!next || next === savedNickname || nickSaving) return
+    setNickSaving(true)
+    setNickSaved(false)
+    setNickError('')
+    try {
+      const me = await api<{ nickname: string }>('/users/me', { method: 'PATCH', body: JSON.stringify({ nickname: next }) })
+      setSavedNickname(me.nickname)
+      setNickname(me.nickname)
+      setNickSaved(true)
+      window.dispatchEvent(new Event('vm:profile-changed'))   // 위쪽 바 프로필 메뉴가 새 이름을 다시 받게 (TopNav)
+    } catch (e) {
+      setNickError((e as Error).message)
+    } finally {
+      setNickSaving(false)
     }
   }
 
@@ -165,7 +193,7 @@ export default function Settings() {
 
         <section className="stat-card settings-section">
           <h2>{t('언어')}</h2>
-          <p className="muted" style={{ margin: 0 }}>{t('언어는 화면 오른쪽 위 🌐에서 바꿔요')}</p>
+          <p className="muted" style={{ margin: 0 }}>{t('언어는 화면 오른쪽 위에서 바꿔요')}</p>
         </section>
 
         <section className="stat-card settings-section">
@@ -272,11 +300,37 @@ export default function Settings() {
           </label>
           <p className="muted" style={{ fontSize: 12.5, margin: '6px 0 0' }}>{t('기본은 비공개 — 랭킹에 qjw***처럼 앞 몇 글자만 보여요. 체크하면 닉네임이 그대로 보여요')}</p>
           {rankError && <p className="error" role="alert">{rankError}</p>}
+          {/* 이 화면의 다른 설정은 이 브라우저에 저장되지만(맨 위 안내), 이것과 닉네임은 계정에 저장된다 */}
+          <p className="muted" style={{ fontSize: 12.5, margin: '6px 0 0' }}>{t('랭킹·닉네임은 계정에 저장돼요 (다른 기기에서도 같아요)')}</p>
         </section>
 
         <section className="stat-card settings-section">
           <h2>{t('계정')}</h2>
           <p className="muted" style={{ margin: '0 0 12px' }}>{emailFromToken() || t('로그인 정보 없음')}</p>
+          <div className="nick-row">
+            <label htmlFor="nickname-input">{t('닉네임')}</label>
+            <input
+              id="nickname-input"
+              maxLength={30}
+              value={nickname}
+              disabled={savedNickname === null}
+              onChange={(e) => {
+                setNickname(e.target.value)
+                setNickSaved(false)
+              }}
+              onKeyDown={(e) => isPlainEnter(e) && void saveNickname()}
+            />
+            <button
+              className="mode-btn"
+              disabled={nickSaving || !nickname.trim() || nickname.trim() === savedNickname}
+              onClick={() => void saveNickname()}
+            >
+              {nickSaving ? t('저장 중...') : t('저장')}
+            </button>
+          </div>
+          <p className="muted" style={{ fontSize: 12.5, margin: '0 0 12px' }}>{t('공개한 덱과 랭킹(공개로 한 경우)에 보이는 이름이에요')}</p>
+          {nickSaved && <p className="muted" role="status" style={{ margin: '0 0 12px' }}>{t('닉네임을 바꿨어요')}</p>}
+          {nickError && <p className="error" role="alert">{nickError}</p>}
           <button className="mode-btn" onClick={logout}>{t('로그아웃')}</button>
 
           {provider === 'google' && (

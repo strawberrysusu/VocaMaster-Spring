@@ -86,6 +86,19 @@ export default function TopNav({ streak }: { streak?: number }) {
   const activeFolderParam = pathname.startsWith('/decks') ? new URLSearchParams(search).get('folder') : null
 
   // 아바타 → 프로필 메뉴 (처음 열 때만 /users/me 조회 — 못 불러와도 메뉴는 뜬다)
+  // + 메뉴 항목 — 먼저 닫고 간다. 목적지가 지금 화면이면 주소가 안 바뀌어 메뉴가 열린 채 남았다 (11/15 점검)
+  function pickPlus(to: string) {
+    plusMenu.setOpen(false)
+    navigate(to)
+  }
+
+  // 설정에서 닉네임을 바꾸면 프로필 메뉴가 다음에 열릴 때 새 이름을 다시 받는다
+  useEffect(() => {
+    const forget = () => setMe(null)
+    window.addEventListener('vm:profile-changed', forget)
+    return () => window.removeEventListener('vm:profile-changed', forget)
+  }, [])
+
   async function toggleProfile() {
     const next = !profileMenu.open
     profileMenu.setOpen(next)
@@ -141,13 +154,13 @@ export default function TopNav({ streak }: { streak?: number }) {
               {plusMenu.open && (
                 <div className="top-menu" role="menu">
                   {/* 덱·폴더는 내 덱 화면의 칸·창을 그대로 연다 (Decks가 ?new=를 한 번 처리하고 지운다) */}
-                  <button role="menuitem" onClick={() => navigate('/decks?new=deck')}>
+                  <button role="menuitem" onClick={() => pickPlus('/decks?new=deck')}>
                     {ICON.decks} {t('새 덱')}
                   </button>
-                  <button role="menuitem" onClick={() => navigate('/import-files')}>
+                  <button role="menuitem" onClick={() => pickPlus('/import-files')}>
                     {ICON.file} {t('파일로 덱 만들기')}
                   </button>
-                  <button role="menuitem" onClick={() => navigate('/decks?new=folder')}>
+                  <button role="menuitem" onClick={() => pickPlus('/decks?new=folder')}>
                     {ICON.folder} {t('새 폴더')}
                   </button>
                 </div>
@@ -184,10 +197,10 @@ export default function TopNav({ streak }: { streak?: number }) {
                     </div>
                   </div>
                   <div className="top-menu-sep" />
-                  <Link role="menuitem" to="/settings">
+                  <Link role="menuitem" to="/settings" onClick={() => profileMenu.setOpen(false)}>
                     {ICON.settings} {t('설정')}
                   </Link>
-                  <a role="menuitem" href="/privacy.html" target="_blank" rel="noreferrer">
+                  <a role="menuitem" href="/privacy.html" target="_blank" rel="noreferrer" onClick={() => profileMenu.setOpen(false)}>
                     {ICON.shield} {getLang() === 'ko' ? t('개인정보처리방침') : t('개인정보처리방침 (한국어)')}
                   </a>
                   <div className="top-menu-sep" />

@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
 import { fetchAllCards } from '../api/cards'
 import { recordRecentStudy } from '../lib/recent'
+import { splitSubmission } from '../lib/submitChunks'
 import { loadSettings, saveSettings } from '../lib/settings'
 import { isTtsSupported, speak, stopSpeaking } from '../lib/tts'
 import TopNav from '../components/TopNav'
@@ -195,7 +196,7 @@ export default function Study() {
               starred: !!c.starred,
             })),
           )
-          recordRecentStudy(deckId) // 홈 '최근 학습 덱' 재료
+          recordRecentStudy(deckId, browseOnly ? 'browse' : 'study') // 홈 '최근 학습 덱' 재료 — '이어하기'가 같은 모드로 열리게
         })
         .catch((e) => setError(e.message))
     } else {
@@ -204,7 +205,7 @@ export default function Study() {
         .then((cards) => setQueue(cards.map((c) => ({ ...c, starred: !!c.starred }))))
         .catch((e) => setError(e.message))
     }
-  }, [deckId, starredOnly, draftKey])
+  }, [deckId, starredOnly, browseOnly, draftKey])
 
   useEffect(loadQueue, [loadQueue])
 
@@ -321,25 +322,33 @@ export default function Study() {
       frozen = current
     }
 
-    const payload = Object.entries(frozen).map(([cardId, correct]) => ({
-      cardId: Number(cardId),
-      correct,
-    }))
+    // 서버는 한 요청에 답 1000개까지만 받는다 — 넘으면 1000개씩 나눠 차례로 보낸다 (lib/submitChunks.ts, 11/15 점검:
+    // 예전엔 통째로 보내 400이 났고 '다시 보내기'도 계속 400이라 답을 전부 버려야 했다).
+    // 묶음과 묶음 ID는 얼려 둔 답안에서 늘 똑같이 나온다 → 중간에 끊겨 다시 보내면 이미 받은 묶음은
+    // 서버가 '이미 제출됨'으로 답하고 나머지만 새로 반영된다. 1000개 이하면 예전과 똑같은 요청 하나다
+    const chunks = splitSubmission(submissionId, frozen)
 
     setSubmitting(true)
     setError('')
     try {
-      const res = await api<BatchResult>('/reviews/answers/batch', {
-        method: 'POST',
-        body: JSON.stringify({ submissionId, answers: payload }),
-      })
-      // 서버가 받은 뒤에만 초안을 버린다 — 순서가 바뀌면 실패 시 답안이 통째로 날아간다.
+      const sum = { total: 0, known: 0, unknown: 0 }
+      const skipped: number[] = []
+      let allAlreadySubmitted = true
+      for (const chunk of chunks) {
+        const res = await api<BatchResult>('/reviews/answers/batch', { method: 'POST', body: JSON.stringify(chunk) })
+        sum.total += res.total
+        sum.known += res.known
+        sum.unknown += res.unknown
+        if (res.skippedIds) skipped.push(...res.skippedIds)
+        if (!res.alreadySubmitted) allAlreadySubmitted = false   // 묶음 하나라도 이번에 반영됐으면 '반영했어요'
+      }
+      // 서버가 (전부) 받은 뒤에만 초안을 버린다 — 순서가 바뀌면 실패 시 답안이 통째로 날아간다.
       // answers까지 비우는 이유: 남겨두면 아래 자동저장 이펙트가 attempted 변화에 반응해
       // 방금 지운 초안을 그대로 되살린다 (브라우저 스모크에서 실측)
       clearDraft()
       setAttempted(null)
       setAnswers({})
-      setResult(res)
+      setResult({ ...sum, alreadySubmitted: allAlreadySubmitted, skippedIds: skipped })
     } catch (e) {
       // 동결본만 보내므로 정상 흐름에서는 나올 수 없는 판정이다.
       // 나왔다면 초안이 손상됐거나 프론트 버그 — 재시도해봐야 계속 409다
@@ -791,15 +800,19 @@ export default function Study() {
           <div className="result-panel">
             <h2>{browsedOnly ? t('카드 보기 완료') : t('복습 완료 🎉')}</h2>
             <p className="result-line">
-              {browsedOnly
-                ? t('답변 없이 카드 보기를 마쳤어요.')
-                : <>{t('이번 답변 {n}장', { n: result.total })} · <b>{t('알아요 {n}', { n: result.known })}</b> · <b>{t('몰라요 {n}', { n: result.unknown })}</b></>}
+              {browseOnly
+                ? t('{n}장을 다 봤어요', { n: total })
+                : browsedOnly
+                  ? t('답변 없이 카드 보기를 마쳤어요.')
+                  : <>{t('이번 답변 {n}장', { n: result.total })} · <b>{t('알아요 {n}', { n: result.known })}</b> · <b>{t('몰라요 {n}', { n: result.unknown })}</b></>}
             </p>
             {result.skippedIds && result.skippedIds.length > 0 && (
               <p className="muted" style={{ fontSize: 13.5 }}>{t('지워진 카드 {n}장은 건너뛰었어요', { n: result.skippedIds.length })}</p>
             )}
             <p className="muted" style={{ fontSize: 13.5 }}>
-              {browsedOnly
+              {browseOnly
+                ? t('카드 학습은 기록을 남기지 않아요. 복습 일정은 그대로예요.')   // 카드 학습엔 알아요·몰라요 버튼이 없다 — 아래 문구는 맞지 않는다
+                : browsedOnly
                 ? t('알아요·몰라요를 선택하지 않아 학습 상태와 복습 일정은 변경하지 않았어요.')
                 : result.alreadySubmitted
                   ? t('이미 제출된 세션이라 진행도는 다시 움직이지 않았어요.')
@@ -812,9 +825,16 @@ export default function Study() {
               </p>
             )}
             <div className="answer-buttons" style={{ marginTop: 26 }}>
-              <Link to="/" className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                {t('홈으로')}
-              </Link>
+              {/* 답 없이 본 세션(카드 학습 포함)은 보던 덱으로 돌아가는 길을 준다 — 학습 화면엔 위쪽 바·메뉴가 없다 (11/15 점검) */}
+              {browsedOnly && deckId ? (
+                <Link to={backTo} className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>
+                  {t('덱으로')}
+                </Link>
+              ) : (
+                <Link to="/" className="answer-no" style={{ textDecoration: 'none', textAlign: 'center' }}>
+                  {t('홈으로')}
+                </Link>
+              )}
               <button className="answer-yes" onClick={loadQueue}>
                 {t('한 번 더')}
               </button>
