@@ -19,7 +19,7 @@ public class RankingController {
     private final StudyRankingService studyRankingService;
 
     @GetMapping("/study")
-    @Operation(summary = "학습 랭킹 — 답한 카드 1장 = 1점. period=today(오늘, KST) | all(전체 합계), 최대 50명 + 내 순위")
+    @Operation(summary = "학습 랭킹 — 답한 카드 1장 = 1점, 하루 상한(응답의 dailyCap)까지. period=today(오늘, KST) | all(날마다의 합계), 최대 50명 + 내 순위")
     public StudyRankingResponse study(@AuthenticationPrincipal CustomUserDetails me,
                                       @RequestParam(defaultValue = "today") String period,
                                       @RequestParam(defaultValue = "50") int limit) {

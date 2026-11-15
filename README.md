@@ -10,7 +10,7 @@
 
 > AWS Lightsail 서울, 2GB 인스턴스 1대(앱 · MySQL · Redis를 Docker로) · nginx + Let's Encrypt HTTPS — 2026-09-30에 Oracle Cloud Tokyo(무료 1GB 2대)에서 이전
 >
-> 2026-11 추가: 듣기 시험 · 시험지(Word / 온라인, 틀린 단어 자동 ⭐) · 학습 랭킹 · 화면 언어 4개(한 · 일 · 영 · 중) · 화면 회귀 테스트(Playwright)
+> 2026-11 추가: 듣기 시험 · 시험지(Word / 온라인, 틀린 단어 자동 ⭐) · 학습 랭킹(하루 최대 1,000점) · 화면 언어 4개(한 · 일 · 영 · 중) · 화면 회귀 테스트(Playwright)
 
 > **상태:** 🟢 **운영 중** — **Phase 7 배포 완료 (⑤·⑥·⑦)** · **시작:** 2026-05 · **목표 마감:** 2027-01
 > 진행도와 의사결정 기록: [`docs/CHECKLIST.md`](docs/CHECKLIST.md) · [`docs/decisions.md`](docs/decisions.md) (**ADR 59**)
@@ -31,13 +31,23 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 
 ## 📸 화면
 
-| 홈 — 오늘의 복습 · 라이트너 사다리 | 덱 — 요미가나 · 일괄 가져오기 |
+| 홈 — 오늘의 복습 · 라이트너 사다리 · 오늘의 랭킹 | 통계 — 28일 활동 · 덱별 진행률 |
 |---|---|
-| ![홈](docs/images/home.png) | ![덱 상세](docs/images/deck.png) |
+| ![홈](docs/images/home.png) | ![통계](docs/images/stats.png) |
 
-| 퀴즈 — 서버 채점 · 오답만 재시험 | 통계 — 28일 활동 · 덱별 진행률 |
+| 덱 — 요미가나 · 학습 모드 5가지 | 시험지(온라인) — 채점 · 틀린 단어 자동 ⭐ |
 |---|---|
-| ![퀴즈](docs/images/quiz.png) | ![통계](docs/images/stats.png) |
+| ![덱 상세](docs/images/deck.png) | ![온라인 시험지](docs/images/test.png) |
+
+| 퀴즈 — 서버 채점 · 오답만 재시험 | 학습 랭킹 — 하루 최대 1,000점 · 닉네임 기본 비공개 |
+|---|---|
+| ![퀴즈](docs/images/quiz.png) | ![학습 랭킹](docs/images/ranking.png) |
+
+| 폰 화면 — 일본어 | 폰 화면 — 영어 |
+|---|---|
+| <img src="docs/images/phone-ja.png" alt="폰 화면 - 일본어 홈" width="260"> | <img src="docs/images/phone-en.png" alt="폰 화면 - 영어 낱말카드" width="260"> |
+
+> 캡처는 로컬 빌드에 예시 데이터를 넣고 찍었습니다 (2026-11-16) — 운영 데이터가 아닙니다.
 
 ---
 
@@ -69,7 +79,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
   (원본 기록은 유실 시 복구 불가). 큐 포화는 CallerRuns로 유실 0 (ADR-039)
 - **존재 숨김(404) 보안 계약** — 남의 비공개 덱은 "없는 덱"과 상태·코드·메시지까지 동일 응답 (열거 공격 차단),
   HTTP 레벨 테스트로 박제 (ADR-030)
-- **서버 테스트 334** — Testcontainers **실제 MySQL 8** + Flyway(V1~V23) 검증, H2 미사용. **화면 회귀 테스트 72**(Playwright, 실패하면 배포하지 않음 — ADR-055).
+- **서버 테스트 336** — Testcontainers **실제 MySQL 8** + Flyway(V1~V23) 검증, H2 미사용. **화면 회귀 테스트 73**(Playwright, 실패하면 배포하지 않음 — ADR-055).
   트랜잭션 경계·동시성이 관심사인 테스트는 자동 롤백을 끄고 운영과 동일한 커밋 경계로 검증
 - **정직한 감사 문화** — 전수 감사([7월](docs/audit-2026-07.md) · 8월 ADR-040)로 찾은 결함을
   재현 테스트와 함께 수리하고, 남긴 것은 트레이드오프로 문서화
@@ -138,7 +148,7 @@ gradlew.bat bootRun        # Windows
 ### 테스트
 
 ```bash
-gradlew.bat test   # Docker Desktop 실행 상태에서 — 180 tests
+gradlew.bat test   # Docker Desktop 실행 상태에서 — 336 tests
 ```
 
 ### Docker 운영 스택 (배포와 동일 구성 로컬 리허설)

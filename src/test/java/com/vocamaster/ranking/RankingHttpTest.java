@@ -47,7 +47,7 @@ class RankingHttpTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("기본값은 가림 — 아무 설정도 안 한 새 사용자의 진짜 닉네임은 랭킹 응답 어디에도 없다 (화면이 아니라 서버가 가린다)")
+    @DisplayName("기본값은 가림 — 아무 설정도 안 한 새 사용자의 진짜 닉네임은 랭킹 응답 어디에도 없다 (화면이 아니라 서버가 가린다) · 점수는 하루 상한까지")
     void default_isMasked_nicknameNeverLeaves() throws Exception {
         mvc.perform(get("/users/me").header("Authorization", "Bearer " + token))
                 .andExpect(jsonPath("$.rankingMasked").value(true));
@@ -56,6 +56,7 @@ class RankingHttpTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.me.name").value("비밀닉***"))
                 .andExpect(jsonPath("$.me.me").value(true))
+                .andExpect(jsonPath("$.me.points").value(1000))   // 오늘 800만 장을 답한 기록이어도 dailyCap까지만 (11/16)
                 .andExpect(content().string(not(containsString("비밀닉네임123"))));
     }
 
