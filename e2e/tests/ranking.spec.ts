@@ -1,7 +1,7 @@
 import type { APIRequestContext, Page } from '@playwright/test'
-import { test, expect, makeDeck } from './support'
+import { test, expect, makeDeck, myRankPoints } from './support'
 
-// 학습 랭킹 (ADR-059) — 답한 카드 1장 = 1점, 왼쪽 메뉴 '랭킹'·홈 '오늘의 랭킹'.
+// 학습 랭킹 (ADR-059) — 답한 카드 1장 = 1점(하루 상한까지), 왼쪽 메뉴 '랭킹'·홈 '오늘의 랭킹'.
 // 닉네임은 기본으로 가려지고(qjw***), 공개는 설정에서 직접 체크해야 한다 (11/15 사용자 결정)
 
 /** 카드 한 장을 '알아요'로 제출 — 오늘 랭킹에 내 줄이 생긴다 */
@@ -27,7 +27,13 @@ async function setNicknamePublic(page: Page, on: boolean) {
 test('학습 랭킹 — 답하면 오늘 탭에 내 줄이 생기고, 홈 카드에도 내 순위가 보인다', async ({ page, request }) => {
   await studyOneCard(page, request, '랭킹')
 
+  const loaded = page.waitForResponse((r) => r.url().includes('/rankings/study') && r.ok())
   await page.goto('/app/ranking')
+  // 하루 상한 문구의 숫자는 서버가 준 값(dailyCap) 그대로 — 화면에 따로 적어 둔 숫자가 아니다 (11/16)
+  const { dailyCap } = (await (await loaded).json()) as { dailyCap: number }
+  expect(dailyCap).toBeGreaterThan(0)
+  await expect(page.locator('.page-head .sub')).toContainText(`하루 최대 ${dailyCap.toLocaleString('ko-KR')}점`)
+
   const mine = page.locator('.rank-row.me')
   await expect(mine).toBeVisible()
   await expect(mine).toContainText('나')
@@ -35,6 +41,23 @@ test('학습 랭킹 — 답하면 오늘 탭에 내 줄이 생기고, 홈 카드
 
   await page.goto('/app/')
   await expect(page.locator('.rank-card .num')).toContainText('위')
+})
+
+// 듣기·시험지는 화면이 채점하고 서버에 학습 기록을 남기지 않는다 → 랭킹 점수가 없다 (11/16 사용자 결정: 점수를 주지 않는다)
+test('듣기·온라인 시험지를 채점해도 랭킹 점수는 그대로다', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '점수없음', ['apple|사과', 'banana|바나나'])
+  const before = await myRankPoints(request)
+
+  await page.goto(`/app/listening/${deckId}`)
+  await page.getByRole('button', { name: /시험 시작/ }).click()
+  await page.getByRole('button', { name: '채점하기' }).click() // 아무것도 안 쓰고 채점 = 둘 다 틀림
+  await expect(page.getByText(/틀린 2개 ⭐ 완료/)).toBeVisible() // 별표 저장까지 끝난 뒤
+
+  await page.goto(`/app/test/${deckId}?scope=all&count=all&shuffle=0`)
+  await page.getByRole('button', { name: /채점하기/ }).click()
+  await expect(page.locator('.otest-summary')).toContainText('점수 0/2')
+
+  expect(await myRankPoints(request)).toBe(before)
 })
 
 test('닉네임은 기본으로 가려지고, 설정에서 공개를 체크해야 그대로 보인다', async ({ page, request }) => {

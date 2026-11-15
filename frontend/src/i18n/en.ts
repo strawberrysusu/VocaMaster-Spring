@@ -629,6 +629,7 @@ export const en: Messages = {
   "기본은 비공개 — 랭킹에 qjw***처럼 앞 몇 글자만 보여요. 체크하면 닉네임이 그대로 보여요": "Hidden by default — rankings show only the first few letters, like qjw***. Check this to show your full nickname",
   "닉네임은 기본으로 가려져요. 설정에서 공개할 수 있어요": "Nicknames are hidden by default. You can show yours in Settings",
   "복습·퀴즈·타이핑에서 답한 카드 1장 = 1점 (듣기·시험지는 점수 없음)": "Each card you answer in review, quiz or typing = 1 point (listening and test sheets don't count)",
+  "하루 최대 {n}점": "up to {n} pts a day",
   "틀린 단어는 자동으로 ⭐ 돼요": "Wrong words are starred automatically",
   "틀린 단어는 자동으로 ⭐ 했어요": "Wrong words were starred automatically",
   // ── 11/15 점검: 닉네임 바꾸기·설정 안내

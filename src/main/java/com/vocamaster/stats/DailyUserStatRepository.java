@@ -12,30 +12,36 @@ import java.util.Optional;
 
 public interface DailyUserStatRepository extends JpaRepository<DailyUserStat, Long> {
 
-    // ── 학습 랭킹 (ADR-059) — 점수 = study_count(답한 카드 수). 탈퇴한 계정은 빠진다. 같은 점수면 먼저 가입한 사람이 위(정렬만, 순위는 같음)
+    // ── 학습 랭킹 (ADR-059) — 점수 = 그날 답한 카드 수(study_count)를 하루 상한(:cap)에서 자른 값. 탈퇴한 계정은 빠진다.
+    //    자르는 건 읽을 때뿐이다: 표에는 답한 수가 그대로 남아 통계 화면의 학습량은 깎이지 않고, 상한을 바꿔도 옮길 데이터가 없다 (11/16, ADR-059 보완 2)
+    //    같은 점수면 먼저 가입한 사람이 위(정렬만, 순위는 같음) — 상한에 닿은 사람끼리도 '더 많이 답한 순'으로 세우지 않는다
     // 행 모양: [userId, nickname, rankingMasked, points]
 
     /** 그날의 랭킹 — 그날 줄만 점수 순 */
-    @Query("select u.id, u.nickname, u.rankingMasked, s.studyCount from DailyUserStat s join s.user u " +
+    @Query("select u.id, u.nickname, u.rankingMasked, least(s.studyCount, :cap) from DailyUserStat s join s.user u " +
            "where s.statDate = :day and u.deletedAt is null and s.studyCount > 0 " +
-           "order by s.studyCount desc, u.id asc")
-    List<Object[]> rankDay(@Param("day") LocalDate day, Pageable page);
+           "order by least(s.studyCount, :cap) desc, u.id asc")
+    List<Object[]> rankDay(@Param("day") LocalDate day, @Param("cap") int cap, Pageable page);
 
-    /** 전체 랭킹 — 지금까지의 합계 순 */
-    @Query("select u.id, u.nickname, u.rankingMasked, sum(s.studyCount) from DailyUserStat s join s.user u " +
-           "where u.deletedAt is null group by u.id, u.nickname, u.rankingMasked having sum(s.studyCount) > 0 " +
-           "order by sum(s.studyCount) desc, u.id asc")
-    List<Object[]> rankTotal(Pageable page);
+    /** 전체 랭킹 — 날마다 상한에서 자른 점수의 합계 순 (합계를 한 번 자르는 게 아니다) */
+    @Query("select u.id, u.nickname, u.rankingMasked, sum(least(s.studyCount, :cap)) from DailyUserStat s join s.user u " +
+           "where u.deletedAt is null group by u.id, u.nickname, u.rankingMasked having sum(least(s.studyCount, :cap)) > 0 " +
+           "order by sum(least(s.studyCount, :cap)) desc, u.id asc")
+    List<Object[]> rankTotal(@Param("cap") int cap, Pageable page);
 
     /** 내 순위 = 나보다 점수가 높은 사람 수 + 1 (그날) */
     @Query("select count(s) from DailyUserStat s join s.user u " +
-           "where s.statDate = :day and u.deletedAt is null and s.studyCount > :points")
-    long countDayAbove(@Param("day") LocalDate day, @Param("points") long points);
+           "where s.statDate = :day and u.deletedAt is null and least(s.studyCount, :cap) > :points")
+    long countDayAbove(@Param("day") LocalDate day, @Param("points") long points, @Param("cap") int cap);
 
     /** 내 순위 = 나보다 합계가 높은 사람 수 + 1 (전체) — 그룹 수를 세는 JPQL이 없어 합계 목록의 길이로 센다 */
-    @Query("select sum(s.studyCount) from DailyUserStat s join s.user u " +
-           "where u.deletedAt is null group by u.id having sum(s.studyCount) > :points")
-    List<Long> totalsAbove(@Param("points") long points);
+    @Query("select sum(least(s.studyCount, :cap)) from DailyUserStat s join s.user u " +
+           "where u.deletedAt is null group by u.id having sum(least(s.studyCount, :cap)) > :points")
+    List<Long> totalsAbove(@Param("points") long points, @Param("cap") int cap);
+
+    /** 내 전체 점수 — 날마다 상한에서 자른 합계. 통계 화면의 누적 학습 수(아래 aggregate)와 다르다: 그쪽은 자르지 않는다 */
+    @Query("select coalesce(sum(least(s.studyCount, :cap)), 0) from DailyUserStat s where s.user.id = :userId")
+    long cappedTotal(@Param("userId") Long userId, @Param("cap") int cap);
 
     Optional<DailyUserStat> findByUserIdAndStatDate(Long userId, LocalDate statDate);
 

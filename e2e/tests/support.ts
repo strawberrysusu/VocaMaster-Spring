@@ -117,6 +117,12 @@ export async function setDeckDescription(request: APIRequestContext, deckId: num
   await ok(await request.patch(`/decks/${deckId}`, { headers: auth(), data: { description } }))
 }
 
+/** 내 랭킹 점수(전체 합계) — 아직 점수가 없으면 0 */
+export async function myRankPoints(request: APIRequestContext): Promise<number> {
+  const body = await ok<{ me: { points: number } | null }>(await request.get('/rankings/study?period=all', { headers: auth() }))
+  return body.me?.points ?? 0
+}
+
 /** 화면 언어 — 이 탭이 다음에 여는 화면부터 그 언어로 (설정의 언어 고르기가 쓰는 것과 같은 저장 칸) */
 export async function useLang(page: Page, lang: 'ko' | 'ja' | 'en' | 'zh'): Promise<void> {
   await page.addInitScript((l) => {

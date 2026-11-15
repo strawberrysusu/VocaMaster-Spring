@@ -9,6 +9,8 @@ import { t } from '../i18n'
 export default function Ranking() {
   const [period, setPeriod] = useState<RankPeriod>('today')
   const [data, setData] = useState<StudyRanking | null>(null)
+  // 하루 상한 — 서버가 준 값을 그대로 쓴다(화면에 숫자를 따로 적어 두면 서버와 어긋날 수 있다). 탭을 바꿔도 지우지 않아 문구가 깜빡이지 않는다 (11/16)
+  const [cap, setCap] = useState<number | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -16,7 +18,7 @@ export default function Ranking() {
     setData(null)
     setError('')
     fetchStudyRanking(period)
-      .then((d) => { if (alive) setData(d) })
+      .then((d) => { if (alive) { setData(d); setCap(d.dailyCap) } })
       .catch((e) => { if (alive) setError((e as Error).message) })
     return () => { alive = false }
   }, [period])
@@ -30,7 +32,10 @@ export default function Ranking() {
         <div className="page-head">
           <div>
             <h1>{t('학습 랭킹')}</h1>
-            <p className="sub">{t('복습·퀴즈·타이핑에서 답한 카드 1장 = 1점 (듣기·시험지는 점수 없음)')}</p>
+            <p className="sub">
+              {t('복습·퀴즈·타이핑에서 답한 카드 1장 = 1점 (듣기·시험지는 점수 없음)')}
+              {cap !== null && <> · {t('하루 최대 {n}점', { n: cap.toLocaleString() })}</>}
+            </p>
           </div>
         </div>
 
