@@ -3,6 +3,7 @@ package com.vocamaster.auth;
 import com.vocamaster.auth.dto.LoginRequest;
 import com.vocamaster.auth.dto.RegisterRequest;
 import com.vocamaster.auth.dto.TokenPair;
+import com.vocamaster.common.ValidationPatterns;
 import com.vocamaster.common.exception.BadRequestException;
 import com.vocamaster.common.exception.UnauthorizedException;
 import com.vocamaster.user.User;
@@ -101,10 +102,16 @@ public class AuthService {
     public TokenPair loginWithGoogle(String email, String name, String userAgent, String ip) {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            String nickname = (name == null || name.isBlank()) ? "구글사용자" : name;
+            String nickname = name == null ? "" : name;
             // 20칸에서 자르되 이모지·확장 한자(서로게이트 쌍)를 반으로 가르지 않는다 — 반쪽은 DB에 '?'로 저장된다 (11/14 검토)
             if (nickname.length() > 20) {
                 nickname = nickname.substring(0, Character.isHighSurrogate(nickname.charAt(19)) ? 19 : 20);
+            }
+            // 보이는 글자가 없으면 기본 이름 — 가입·닉네임 수정(@Pattern HAS_TEXT)과 같은 규칙.
+            // isBlank()는 한글 채움 문자(U+3164)·폭 0 문자를 빈칸으로 안 봐서, 그런 구글 이름이면 랭킹·공개 덱 작성자 칸이 빈 줄로 보였다 (11/15 검토).
+            // 자른 뒤에 본다 — 앞 20칸이 전부 안 보이는 글자일 수도 있다
+            if (!ValidationPatterns.hasText(nickname)) {
+                nickname = "구글사용자";
             }
             user = userRepository.save(User.builder()
                     .email(email).password(null).nickname(nickname).provider("google").build());

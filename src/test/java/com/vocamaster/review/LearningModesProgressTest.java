@@ -303,7 +303,22 @@ class LearningModesProgressTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("낱말카드 복습의 '몰라요'는 자동 ⭐ 하지 않는다 — 새 덱은 거의 다 '몰라요'라 별표가 전부 켜진다")
     void reviewUnknownDoesNotStar() {
-        reviewAnswer(false);
+        reviewAnswer(false);   // 일괄 제출 (지금 화면이 쓰는 길)
+        assertFalse(starred());
+
+        // 한 장씩 답하는 길 — 퀴즈·타이핑이 같이 쓰는 ReviewService.recordAnswer.
+        // 별표 켜기를 누가 이 안으로 옮기면 낱말카드 '몰라요'까지 켜진다 (11/15 검토: 위 일괄 제출만 봐서는 못 잡는다)
+        reviewService.recordAnswer(userId, cardId, false);
+        assertFalse(starred());
+
+        // 옛 학습 세션 길 (POST /study/{sessionId}/record)
+        StartStudyRequest start = new StartStudyRequest();
+        start.setDirection("front_to_back");
+        Long sessionId = studyService.startSession(deckId, userId, start).getSessionId();
+        RecordStudyRequest answer = new RecordStudyRequest();
+        answer.setCardId(cardId);
+        answer.setKnown(false);
+        studyService.recordAnswer(sessionId, userId, answer);
         assertFalse(starred());
     }
 

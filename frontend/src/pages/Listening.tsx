@@ -66,6 +66,9 @@ export default function Listening() {
   const [gapSec, setGapSec] = useState(1.8)
   const [error, setError] = useState('')
   const [star, setStar] = useState<StarStatus>({ state: 'idle' })
+  // 시험 회차 — 새 시험을 시작한 뒤에 도착한 지난 회차의 별표 응답은 화면 표시를 건드리지 않는다 (11/15 검토:
+  // 안 가르면 다음 회차에 지난 회차의 '틀린 n개 ⭐ 완료'나 눌러도 아무 일 없는 '별표 다시 시도'가 떴다)
+  const roundRef = useRef(0)
   const stopSpeakRef = useRef<() => void>(() => {})
   const interTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -137,9 +140,11 @@ export default function Listening() {
     const n = Math.max(1, Math.min(count, activePool.length))
     const base = ordered ? [...activePool] : [...activePool].sort(() => Math.random() - 0.5)
     const q = base.slice(0, n).map((card) => ({ card, spelling: '', meaning: '' }))
+    roundRef.current++
     setQueue(q)
     setGraded(false)
     setStar({ state: 'idle' })
+    setError('')   // 지난 회차의 별표 실패 문구가 새 시험 내내 남아 있었다
     setPhase('sheet')
     playAll(q, 0)
   }
@@ -163,15 +168,19 @@ export default function Listening() {
   /** 틀린 카드에 ⭐ — 실패하면 '별표 다시 시도'가 같은 카드를 다시 보낸다 (이미 켜진 것은 서버가 그대로 둔다) */
   async function starWrong(wrongIds: number[]) {
     if (wrongIds.length === 0) return
+    const round = roundRef.current
     setStar({ state: 'saving' })
     try {
       const r = await setStarred(deckId!, wrongIds, true)
       const skipped = new Set(r.skippedIds)   // 시험 도중 지워진 카드
       const on = new Set(wrongIds.filter((id) => !skipped.has(id)))
-      setPool((p) => p.map((c) => (on.has(c.id) ? { ...c, starred: true } : c)))   // 시작 화면의 '⭐ 별표만' 범위에 바로 반영
+      // 별표는 실제로 켜졌으니 회차가 바뀌었어도 범위('⭐ 별표만')에는 반영한다
+      setPool((p) => p.map((c) => (on.has(c.id) ? { ...c, starred: true } : c)))
+      if (round !== roundRef.current) return   // 그사이 새 시험을 시작했다 — 지난 회차의 결과 표시는 버린다
       setError('')
       setStar({ state: 'done', wrong: wrongIds.length, added: r.changedIds.length, skipped: r.skippedIds.length })
     } catch (e) {
+      if (round !== roundRef.current) return
       setError((e as Error).message)
       setStar({ state: 'error' })
     }

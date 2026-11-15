@@ -95,4 +95,20 @@ class GoogleLoginTest extends AbstractIntegrationTest {
         String nickname = userRepository.findByEmail(email).orElseThrow().getNickname();
         assertEquals("a".repeat(19), nickname, "반쪽 이모지 없이 19칸");
     }
+
+    @Test
+    @DisplayName("구글 이름이 보이지 않는 글자뿐이면 기본 닉네임 — 랭킹·공개 덱 작성자 칸이 빈 줄로 보였다 (가입·수정과 같은 규칙)")
+    void invisibleGoogleName_getsDefaultNickname() {
+        // 한글 채움 문자(U+3164), 폭 0 공백(U+200B), 전각 공백(U+3000) — String.isBlank()는 앞의 둘을 빈칸으로 보지 않는다
+        for (String name : new String[]{"\u3164", "\u200B\u200B", "\u3000", "   ", "", null}) {
+            String email = "goo_blank_" + System.nanoTime() + "@gmail.com";
+            authService.loginWithGoogle(email, name, "test-ua", "127.0.0.1");
+            assertEquals("구글사용자", userRepository.findByEmail(email).orElseThrow().getNickname());
+        }
+
+        // 보이는 글자가 21번째 칸부터면 잘린 뒤에는 남는 글자가 없다 → 이것도 기본 닉네임
+        String email = "goo_blank_" + System.nanoTime() + "@gmail.com";
+        authService.loginWithGoogle(email, "\u3164".repeat(20) + "이름", "test-ua", "127.0.0.1");
+        assertEquals("구글사용자", userRepository.findByEmail(email).orElseThrow().getNickname());
+    }
 }

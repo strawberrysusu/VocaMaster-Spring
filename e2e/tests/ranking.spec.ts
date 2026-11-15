@@ -64,6 +64,13 @@ test('설정에서 닉네임을 바꾸면 위쪽 프로필 메뉴에 바로 보�
   const before = await input.inputValue()
   const next = `e2e-${Date.now() % 100000}`
 
+  // 먼저 프로필 메뉴를 한 번 열어 지금 이름을 받아 두게 한다 — 메뉴는 받은 프로필을 기억해 두므로,
+  // 이름을 바꾼 뒤 그 기억을 버리지 않으면(vm:profile-changed) 옛 이름이 그대로 보인다 (11/15 검토: 안 열고 바꾸면 이 테스트가 그 길을 안 지난다)
+  await page.getByRole('button', { name: '내 프로필' }).click()
+  await expect(page.getByRole('menu')).toContainText(before)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+
   await input.fill(next)
   await page.getByRole('button', { name: '저장', exact: true }).click()
   await expect(page.getByText('닉네임을 바꿨어요')).toBeVisible()
