@@ -117,3 +117,32 @@ test('카드 학습 — 알아요·몰라요 없이 넘겨 보고, 서버에 아
   await expect(page.getByRole('heading', { name: '카드 보기 완료' })).toBeVisible()
   expect(sent, '카드 학습은 복습 기록 API를 부르지 않는다').toEqual([])
 })
+
+// 11/16: 닉네임 저장과 같은 종류 — 카드 추가 응답이 오면 네 칸을 통째로 비워서, 느린 망에서 응답 전에 친 다음 단어가 지워졌다
+test('덱 화면: 카드 추가 응답을 기다리는 동안 친 다음 단어는 지워지지 않는다', async ({ page, request }) => {
+  const deckId = await makeEmptyDeck(request, '연속추가')
+  await page.goto(`/app/decks/${deckId}`)
+  const isAdd = (method: string, url: string) => method === 'POST' && new URL(url).pathname === `/decks/${deckId}/cards`
+
+  let release: () => void = () => {}
+  const held = new Promise<void>((resolve) => (release = resolve))
+  await page.route(`**/decks/${deckId}/cards`, async (route) => {
+    if (isAdd(route.request().method(), route.request().url())) await held // 추가 요청의 응답을 붙잡아 둔다
+    await route.continue()
+  })
+
+  const add = page.locator('.create-row')
+  await add.getByLabel('단어').fill('会議')
+  await add.getByLabel('뜻').fill('회의')
+  await add.getByLabel('뜻').press('Enter')
+  await expect(add.getByRole('button', { name: '추가 중...' })).toBeVisible()
+  await add.getByLabel('단어').fill('感謝') // 응답이 오기 전에 다음 카드의 단어를 친다
+  const added = page.waitForResponse((r) => isAdd(r.request().method(), r.url()))
+  release()
+  await added
+
+  await expect(add.getByRole('button', { name: '추가', exact: true })).toBeVisible() // 추가가 끝났다
+  await expect(add.getByLabel('단어')).toHaveValue('感謝') // 예전엔 여기서 비워졌다
+  await expect(add.getByLabel('뜻')).toHaveValue('') // 보낸 값 그대로였던 칸은 비운다
+  expect((await listCards(request, deckId)).map((c) => c.front)).toEqual(['会議']) // 첫 카드는 저장됐다
+})

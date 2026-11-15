@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, clearToken, getToken, logout as clientLogout } from '../api/client'
@@ -32,6 +32,7 @@ export default function Settings() {
   const [nickSaving, setNickSaving] = useState(false)
   const [nickSaved, setNickSaved] = useState(false)
   const [nickError, setNickError] = useState('')
+  const nickInputRef = useRef<HTMLInputElement>(null)   // 저장 응답이 왔을 때 칸에 '지금' 든 글자를 보려고
   const [pwCur, setPwCur] = useState('')
   const [pwNew, setPwNew] = useState('')
   const [pwNew2, setPwNew2] = useState('')
@@ -92,8 +93,14 @@ export default function Settings() {
     try {
       const me = await api<{ nickname: string }>('/users/me', { method: 'PATCH', body: JSON.stringify({ nickname: next }) })
       setSavedNickname(me.nickname)
-      setNickname(me.nickname)
-      setNickSaved(true)
+      // 응답을 기다리는 동안 칸을 더 고쳤으면 그 글자를 덮어쓰지 않는다 — 예전엔 'A 저장 → 기다리는 동안 B 입력 → A 응답 도착'이면
+      // 칸이 A로 되돌아가 B가 사라졌다 (Codex 5차 검산 11/16). 그때는 '바꿨어요'도 띄우지 않는다: 칸에 보이는 B는 아직 저장 전이고,
+      // 저장된 값과 달라졌으니 '저장' 버튼이 다시 켜진다
+      const typedNow = nickInputRef.current?.value ?? next
+      if (typedNow.trim() === next) {
+        setNickname(me.nickname)
+        setNickSaved(true)
+      }
       window.dispatchEvent(new Event('vm:profile-changed'))   // 위쪽 바 프로필 메뉴가 새 이름을 다시 받게 (TopNav)
     } catch (e) {
       setNickError((e as Error).message)
@@ -310,6 +317,7 @@ export default function Settings() {
           <div className="nick-row">
             <label htmlFor="nickname-input">{t('닉네임')}</label>
             <input
+              ref={nickInputRef}
               id="nickname-input"
               maxLength={30}
               value={nickname}

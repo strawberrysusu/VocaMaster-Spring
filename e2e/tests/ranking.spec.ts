@@ -82,3 +82,38 @@ test('설정에서 닉네임을 바꾸면 위쪽 프로필 메뉴에 바로 보�
   await page.getByRole('button', { name: '저장', exact: true }).click()
   await expect(page.getByText('닉네임을 바꿨어요')).toBeVisible()
 })
+
+// Codex 5차 검산(11/16): 'A 저장 → 응답을 기다리는 동안 B 입력 → A 응답 도착'이면 칸이 A로 되돌아가 B가 사라졌다
+test('닉네임 저장 응답을 기다리는 동안 더 친 글자는 응답이 와도 지워지지 않는다', async ({ page }) => {
+  await page.goto('/app/settings')
+  const input = page.getByLabel('닉네임', { exact: true })
+  await expect(input).toBeEnabled()
+  const before = await input.inputValue()
+  const first = `e2e-a${Date.now() % 100000}`
+  const second = `${first}-b`
+
+  // 첫 저장(PATCH)의 응답만 붙잡아 둔다 — 풀어 준 뒤의 저장은 바로 지나간다
+  let release: () => void = () => {}
+  const held = new Promise<void>((resolve) => (release = resolve))
+  await page.route('**/users/me', async (route) => {
+    if (route.request().method() === 'PATCH') await held
+    await route.continue()
+  })
+  const save = page.getByRole('button', { name: '저장', exact: true })
+
+  await input.fill(first)
+  await save.click()
+  await expect(page.getByRole('button', { name: '저장 중...' })).toBeVisible()
+  await input.fill(second) // 응답이 오기 전에 더 고친다
+  const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && r.url().endsWith('/users/me'))
+  release()
+  await saved
+
+  await expect(save).toBeEnabled() // 칸의 글자(second)가 저장된 값(first)과 다르니 다시 저장할 수 있다
+  await expect(input).toHaveValue(second)
+  await expect(page.getByText('닉네임을 바꿨어요')).toHaveCount(0) // 칸에 보이는 글자는 아직 저장 전
+
+  await input.fill(before) // 되돌린다
+  await save.click()
+  await expect(page.getByText('닉네임을 바꿨어요')).toBeVisible()
+})

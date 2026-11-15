@@ -117,12 +117,16 @@ function DeckDetailScreen() {
   async function addCard() {
     if (adding || !front.trim() || !back.trim()) return // 더블클릭 중복 등록 방어
     setAdding(true)
+    const sent = { front, reading, back, memo }
     try {
-      await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify({ front, reading, back, memo }) })
-      setFront('')
-      setReading('')
-      setBack('')
-      setMemo('')
+      await api(`/decks/${id}/cards`, { method: 'POST', body: JSON.stringify(sent) })
+      // 보낸 값 그대로인 칸만 비운다 — 응답을 기다리는 동안 다음 카드를 치기 시작했으면 그 글자는 남긴다.
+      // 예전엔 응답이 오면 네 칸을 통째로 비워서, 느린 망에서 응답 전에 친 다음 단어가 지워졌다
+      // (닉네임 저장과 같은 종류 — Codex 5차 검산 11/16을 보고 같은 모양을 찾아 고침)
+      setFront((now) => (now === sent.front ? '' : now))
+      setReading((now) => (now === sent.reading ? '' : now))
+      setBack((now) => (now === sent.back ? '' : now))
+      setMemo((now) => (now === sent.memo ? '' : now))
       load()
     } catch (e) {
       setError((e as Error).message)

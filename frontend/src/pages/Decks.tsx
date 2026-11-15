@@ -234,9 +234,10 @@ export default function Decks() {
   async function create() {
     if (creating || !title.trim()) return // 더블클릭/엔터 연타 중복 생성 방어
     setCreating(true)
+    const sent = title
     try {
-      await api('/decks', { method: 'POST', body: JSON.stringify({ title }) })
-      setTitle('')
+      await api('/decks', { method: 'POST', body: JSON.stringify({ title: sent }) })
+      setTitle((now) => (now === sent ? '' : now))   // 응답을 기다리는 동안 다음 이름을 치기 시작했으면 남긴다 (카드 추가 줄과 같은 규칙, 11/16)
       load()
     } catch (e) {
       setError((e as Error).message)
