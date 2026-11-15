@@ -629,9 +629,12 @@ export const en: Messages = {
   "오늘 답하면 순위에 올라요": "Answer a card today to get ranked",
   "아직 오늘 학습한 사람이 없어요": "No one has studied today yet",
   "아직 학습 기록이 없어요": "No study records yet",
-  "복습·퀴즈·타이핑·듣기에서 답한 카드 1장 = 1점": "Each card you answer in review, quiz, typing or listening = 1 point",
-  "닉네임은 설정에서 가릴 수 있어요": "You can hide your nickname in Settings",
-  "랭킹에서 닉네임 가리기": "Hide my nickname in rankings",
-  "켜면 랭킹에 qjw***처럼 앞 몇 글자만 보여요": "When on, rankings show only the first few letters, like qjw***",
   "기간은 today 또는 all이어야 합니다": "Period must be today or all",
+  // ── 11/15 랭킹 닉네임 기본 비공개·퀴즈·타이핑·듣기 오답 자동 ⭐
+  "랭킹에 닉네임 공개": "Show my nickname in rankings",
+  "기본은 비공개 — 랭킹에 qjw***처럼 앞 몇 글자만 보여요. 체크하면 닉네임이 그대로 보여요": "Hidden by default — rankings show only the first few letters, like qjw***. Check this to show your full nickname",
+  "닉네임은 기본으로 가려져요. 설정에서 공개할 수 있어요": "Nicknames are hidden by default. You can show yours in Settings",
+  "복습·퀴즈·타이핑에서 답한 카드 1장 = 1점 (듣기·시험지는 점수 없음)": "Each card you answer in review, quiz or typing = 1 point (listening and test sheets don't count)",
+  "틀린 단어는 자동으로 ⭐ 돼요": "Wrong words are starred automatically",
+  "틀린 단어는 자동으로 ⭐ 했어요": "Wrong words were starred automatically",
 }

@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** 학습 랭킹 API — 가린 닉네임은 응답 어디에도 진짜 값이 실리지 않는다, 가리기 설정 API (ADR-059) */
+/** 학습 랭킹 API — 닉네임은 기본으로 가려지고(응답 어디에도 진짜 값이 없다), 공개는 설정 API로 직접 켠다 (ADR-059, 11/15 기본값 변경) */
 @AutoConfigureMockMvc
 class RankingHttpTest extends AbstractIntegrationTest {
 
@@ -47,11 +47,9 @@ class RankingHttpTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("닉네임 가리기를 켜면 랭킹 응답 어디에도 진짜 닉네임이 없다 — 화면이 아니라 서버가 가린다")
-    void masked_nicknameNeverLeaves() throws Exception {
-        mvc.perform(patch("/users/me/ranking").header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"masked\":true}"))
-                .andExpect(status().isOk())
+    @DisplayName("기본값은 가림 — 아무 설정도 안 한 새 사용자의 진짜 닉네임은 랭킹 응답 어디에도 없다 (화면이 아니라 서버가 가린다)")
+    void default_isMasked_nicknameNeverLeaves() throws Exception {
+        mvc.perform(get("/users/me").header("Authorization", "Bearer " + token))
                 .andExpect(jsonPath("$.rankingMasked").value(true));
 
         mvc.perform(get("/rankings/study").param("period", "today").header("Authorization", "Bearer " + token))
@@ -62,11 +60,22 @@ class RankingHttpTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("가리기를 끄면 닉네임 그대로, 기간이 틀리면 400, 로그인 안 하면 401")
-    void plainAndErrors() throws Exception {
+    @DisplayName("공개로 바꾸면 닉네임 그대로, 다시 가리면 가려진다 · 기간이 틀리면 400 · 로그인 안 하면 401")
+    void publicOnlyWhenChosen_andErrors() throws Exception {
+        mvc.perform(patch("/users/me/ranking").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"masked\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.rankingMasked").value(false));
         mvc.perform(get("/rankings/study").param("period", "all").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.me.name").value("비밀닉네임123"));
+
+        mvc.perform(patch("/users/me/ranking").header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"masked\":true}"))
+                .andExpect(jsonPath("$.rankingMasked").value(true));
+        mvc.perform(get("/rankings/study").param("period", "all").header("Authorization", "Bearer " + token))
+                .andExpect(jsonPath("$.me.name").value("비밀닉***"));
+
         mvc.perform(get("/rankings/study").param("period", "week").header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/rankings/study"))

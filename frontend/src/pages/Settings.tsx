@@ -55,7 +55,8 @@ export default function Settings() {
       .catch(() => setProvider('local'))   // 조회 실패로 폼을 감추면 바꿀 길이 없어진다 — 보이는 쪽으로 실패
   }, [])
 
-  // 학습 랭킹에서 닉네임 가리기 (ADR-059) — 서버에 저장한다. 랭킹 응답을 서버가 가려서 보내니 이 브라우저 설정이 아니다
+  // 학습 랭킹의 닉네임 (ADR-059) — 기본은 가림(qjw***), 공개는 여기서 직접 체크 (11/15 사용자 결정).
+  // 서버에 저장한다: 랭킹 응답을 서버가 가려서 보내니 이 브라우저 설정이 아니다. 서버 값은 '가림(masked)'이라 체크 = 가림 끔
   // 누르면 바로 바꿔 보이고(서버 응답을 기다리면 그동안 '안 눌린 것'처럼 보인다), 실패하면 되돌린다
   async function toggleRankingMask(masked: boolean) {
     const before = rankingMasked
@@ -263,13 +264,13 @@ export default function Settings() {
           <label className="toggle-row">
             <input
               type="checkbox"
-              checked={rankingMasked === true}
+              checked={rankingMasked === false}
               disabled={rankingMasked === null || rankSaving}
-              onChange={(e) => void toggleRankingMask(e.target.checked)}
+              onChange={(e) => void toggleRankingMask(!e.target.checked)}
             />
-            {t('랭킹에서 닉네임 가리기')}
+            {t('랭킹에 닉네임 공개')}
           </label>
-          <p className="muted" style={{ fontSize: 12.5, margin: '6px 0 0' }}>{t('켜면 랭킹에 qjw***처럼 앞 몇 글자만 보여요')}</p>
+          <p className="muted" style={{ fontSize: 12.5, margin: '6px 0 0' }}>{t('기본은 비공개 — 랭킹에 qjw***처럼 앞 몇 글자만 보여요. 체크하면 닉네임이 그대로 보여요')}</p>
           {rankError && <p className="error" role="alert">{rankError}</p>}
         </section>
 

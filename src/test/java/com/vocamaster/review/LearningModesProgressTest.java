@@ -284,4 +284,31 @@ class LearningModesProgressTest extends AbstractIntegrationTest {
         em.flush();
         em.clear();
     }
+
+    // ── 자동 ⭐ (11/15 사용자 결정): 퀴즈·타이핑에서 틀린 단어는 채점과 함께 별표. 낱말카드 복습의 '몰라요'는 그대로
+
+    @ParameterizedTest(name = "{0}: 오답이면 그 카드에 자동 ⭐, 정답은 별표를 건드리지 않는다")
+    @EnumSource(Mode.class)
+    void wrongAnswerStarsTheCard(Mode mode) {
+        answer(mode, true);
+        assertFalse(starred(), "정답은 별표를 켜지 않는다");
+
+        answer(mode, false);
+        assertTrue(starred(), "오답 → 자동 ⭐");
+
+        answer(mode, true);
+        assertTrue(starred(), "다시 맞혀도 별표는 그대로 — 끄는 건 사용자가 한다");
+    }
+
+    @Test
+    @DisplayName("낱말카드 복습의 '몰라요'는 자동 ⭐ 하지 않는다 — 새 덱은 거의 다 '몰라요'라 별표가 전부 켜진다")
+    void reviewUnknownDoesNotStar() {
+        reviewAnswer(false);
+        assertFalse(starred());
+    }
+
+    private boolean starred() {
+        flushAndClear();
+        return Boolean.TRUE.equals(cardRepository.findById(cardId).orElseThrow().getStarred());
+    }
 }

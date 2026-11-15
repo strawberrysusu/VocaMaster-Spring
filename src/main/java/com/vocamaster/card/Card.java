@@ -57,4 +57,14 @@ public class Card {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    /**
+     * 별표를 켠다 — 이미 켜져 있으면 아무것도 안 바꾸고 false. 옛 데이터의 null은 '꺼짐'으로 본다.
+     * 퀴즈·타이핑이 틀린 단어를 자동 ⭐ 할 때 쓴다 (11/15). @DynamicUpdate라 starred 칸만 UPDATE 된다
+     */
+    public boolean star() {
+        if (Boolean.TRUE.equals(starred)) return false;
+        starred = true;
+        return true;
+    }
 }
