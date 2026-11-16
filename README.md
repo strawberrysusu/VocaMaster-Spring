@@ -13,7 +13,7 @@
 > 2026-11 추가: 듣기 시험 · 시험지(Word / 온라인, 틀린 단어 자동 ⭐) · 학습 랭킹(하루 최대 1,000점) · 화면 언어 4개(한 · 일 · 영 · 중) · 화면 회귀 테스트(Playwright)
 
 > **상태:** 🟢 **운영 중** — **Phase 7 배포 완료 (⑤·⑥·⑦)** · **시작:** 2026-05 · **목표 마감:** 2027-01
-> 진행도와 의사결정 기록: [`docs/CHECKLIST.md`](docs/CHECKLIST.md) · [`docs/decisions.md`](docs/decisions.md) (**ADR 59**)
+> 진행도와 의사결정 기록: [`docs/CHECKLIST.md`](docs/CHECKLIST.md) · [`docs/decisions.md`](docs/decisions.md) (**ADR 60**)
 
 ---
 
@@ -24,7 +24,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 단어 발음이 아쉬워 매번 따로 검색하던 불편도 있었는데 — 지금은 카드마다 🔊 버튼 하나로 해결되고,
 직접 만든 발음이 더 좋습니다. **일본어(JLPT)·영어 단어를 매일 외우는 제가 첫 번째 사용자입니다.**
 
-기술적으로는 모든 설계 결정을 **ADR 59건**으로 남겨, "왜 이렇게 만들었나요"에
+기술적으로는 모든 설계 결정을 **ADR 60건**으로 남겨, "왜 이렇게 만들었나요"에
 전부 답할 수 있는 프로젝트를 목표로 합니다.
 
 ---
@@ -72,6 +72,9 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
 - **동시성 테스트가 실제 결함 3종을 잡음 (교착 2 + 레이스 1)** — ① 복사 API의 FK S락 → X락 승급 교착(잠금 획득 순서로 수리, ADR-031)
   ② 좋아요 더블탭 unique 레이스(DB 제약이 최종 수문장, ADR-032) ③ 출석부 "0행 매치 UPDATE → INSERT"의 **InnoDB 갭 락 교착**
   (upsert 한 방으로 수리, ADR-038). 답 제출은 세션 행 `PESSIMISTIC_WRITE`로 직렬화
+- **연결 풀 교착 수리** — 커밋 직후에 도는 리스너(`REQUIRES_NEW`)가 원래 연결을 쥔 채 하나를 더 요구해, 풀 크기(10)만큼의
+  동시 요청에 서비스 전체가 30초 멈췄다(외부 검토가 재현). 커밋하면 연결을 바로 반납하도록 바꾸고, 풀을 3개로 줄여
+  그 순간을 매번 만드는 테스트와 실제 jar에 답 30개를 한꺼번에 보내는 화면 테스트로 고정 (ADR-061)
 - **캐시는 순서만, 판단은 DB** — 인기 랭킹 ZSET에는 id/순서만 캐싱하고 내용·공개 여부는 DB가 재검증
   (비공개 노출 구조적 차단). 무효화는 **커밋 확정 후**(`afterCommit`/`@TransactionalEventListener`) —
   커밋 전 빈틈에 낡은 값이 재캐싱되는 레이스 차단 (ADR-035~037)
@@ -79,7 +82,7 @@ Quizlet을 쓰다가 4지선다 퀴즈가 유료로 바뀌고, 광고와 이용 
   (원본 기록은 유실 시 복구 불가). 큐 포화는 CallerRuns로 유실 0 (ADR-039)
 - **존재 숨김(404) 보안 계약** — 남의 비공개 덱은 "없는 덱"과 상태·코드·메시지까지 동일 응답 (열거 공격 차단),
   HTTP 레벨 테스트로 박제 (ADR-030)
-- **서버 테스트 336** — Testcontainers **실제 MySQL 8** + Flyway(V1~V23) 검증, H2 미사용. **화면 회귀 테스트 73**(Playwright, 실패하면 배포하지 않음 — ADR-055).
+- **서버 테스트 337** — Testcontainers **실제 MySQL 8** + Flyway(V1~V23) 검증, H2 미사용. **화면 회귀 테스트 74**(Playwright, 실패하면 배포하지 않음 — ADR-055).
   트랜잭션 경계·동시성이 관심사인 테스트는 자동 롤백을 끄고 운영과 동일한 커밋 경계로 검증
 - **정직한 감사 문화** — 전수 감사([7월](docs/audit-2026-07.md) · 8월 ADR-040)로 찾은 결함을
   재현 테스트와 함께 수리하고, 남긴 것은 트레이드오프로 문서화
@@ -148,7 +151,7 @@ gradlew.bat bootRun        # Windows
 ### 테스트
 
 ```bash
-gradlew.bat test   # Docker Desktop 실행 상태에서 — 336 tests
+gradlew.bat test   # Docker Desktop 실행 상태에서 — 337 tests
 ```
 
 ### Docker 운영 스택 (배포와 동일 구성 로컬 리허설)
@@ -191,7 +194,7 @@ frontend/         # React 19 + TS + Vite — 빌드 산출물은 jar 안 static/
 | 문서 | 내용 |
 |---|---|
 | [`docs/CHECKLIST.md`](docs/CHECKLIST.md) | Phase 0~8 상세 체크리스트 (진행의 단일 원장) |
-| [`docs/decisions.md`](docs/decisions.md) | **ADR 59** — 모든 설계 결정의 대안·근거·트레이드오프 |
+| [`docs/decisions.md`](docs/decisions.md) | **ADR 60** — 모든 설계 결정의 대안·근거·트레이드오프 |
 | [`docs/review-algorithm.md`](docs/review-algorithm.md) | Leitner Box 알고리즘 — 규칙 · 왜 SM-2/FSRS가 아닌가 |
 | [`docs/cache-strategy.md`](docs/cache-strategy.md) | 캐시 전략 — cache-aside · 무효화 타이밍 · fail-open |
 | [`docs/redis-conventions.md`](docs/redis-conventions.md) | Redis 키 규칙 · 직렬화 함정 |

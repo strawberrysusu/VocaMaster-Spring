@@ -9,6 +9,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        connection:
+          handling_mode: DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION   # main과 짝 맞춤 — 커밋하면 연결을 바로 반납 (ADR-061, ConnectionPoolDeadlockTest)
 
   flyway:
     enabled: true

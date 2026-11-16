@@ -117,6 +117,16 @@ export async function setDeckDescription(request: APIRequestContext, deckId: num
   await ok(await request.patch(`/decks/${deckId}`, { headers: auth(), data: { description } }))
 }
 
+/** 낱말카드 답을 한꺼번에(동시에) 보내고 응답 코드를 돌려준다 — 한 장씩 차례로 보내는 것이 아니다 */
+export async function answerCards(request: APIRequestContext, cardIds: number[], correct = true): Promise<number[]> {
+  const responses = await Promise.all(
+    cardIds.map((id) =>
+      request.post(`/reviews/cards/${id}/answer`, { headers: auth(), data: { correct }, timeout: 45_000 }),
+    ),
+  )
+  return responses.map((r) => r.status())
+}
+
 /** 내 랭킹 점수(전체 합계) — 아직 점수가 없으면 0 */
 export async function myRankPoints(request: APIRequestContext): Promise<number> {
   const body = await ok<{ me: { points: number } | null }>(await request.get('/rankings/study?period=all', { headers: auth() }))

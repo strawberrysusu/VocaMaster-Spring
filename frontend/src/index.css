@@ -2091,6 +2091,9 @@ button:disabled {
 
 .voice-select {
   flex: 1;
+  /* 파이어폭스의 선택 상자는 가장 긴 항목보다 좁아지지 않는다 — 음성 이름이 길면(Microsoft … - English (United States))
+     375px 폰 화면에서 오른쪽으로 22px 밀려나 화면 전체가 가로로 움직였다 (11/16 Codex 7차 검산) */
+  min-width: 0;
   max-width: 420px;
   padding: 9px 12px;
   border-radius: 10px;
