@@ -20,6 +20,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * 실행 시점/트랜잭션:
  *  - AFTER_COMMIT: 학습 트랜잭션이 확정된 뒤에만. 롤백이면 안 불림
  *  - REQUIRES_NEW: AFTER_COMMIT 시점엔 원래 트랜잭션이 끝나 있어 DB 쓰기엔 새 트랜잭션이 필요 (ADR-037 예고 함정)
+ *  - 연결 (11/16, ADR-061): 새 트랜잭션은 풀에서 연결을 새로 받는다. 요청 스레드가 원래 연결을 쥔 채로 여기 오면
+ *    '쥐고 기다리기'가 되어, 풀 크기만큼의 요청이 동시에 오면 모두가 남의 연결만 기다린다(30초 정지 — Codex 7차 검산이 재현).
+ *    그래서 application.yml에서 커밋 즉시 연결을 반납하게 했다(hibernate.connection.handling_mode). 그 설정을 빼거나,
+ *    트랜잭션 '안'에서 REQUIRES_NEW를 여는 코드를 새로 넣으면 같은 문제가 돌아온다 — ConnectionPoolDeadlockTest가 지킨다
  *  - 잠금 순서: 대상 덱 X 잠금(FOR UPDATE) → 출석부 INSERT → study_count UPDATE.
  *    INSERT 먼저 하면 FK 검사 S 잠금 뒤 X 승급 = 복사 API에서 실제로 겪은 데드락 재현 (ADR-031)
  *  - Redis ZSET +1은 이 새 트랜잭션의 커밋 후(rankingService.onStudied → afterCommit). 롤백 시 Redis만 +1 남는 일 없음

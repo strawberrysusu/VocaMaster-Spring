@@ -6,6 +6,17 @@ spring:
   # 서비스 계층이 트랜잭션 안에서 필요한 걸 다 조회하는 설계라 뷰의 lazy 로딩 의존이 없음
   jpa:
     open-in-view: false
+    # 트랜잭션이 끝나면 DB 연결을 바로 풀에 돌려준다 (11/16 Codex 7차 검산, ADR-061).
+    # 스프링의 기본값(DELAYED_ACQUISITION_AND_HOLD)은 커밋 뒤에도 EntityManager를 닫을 때까지 연결을 쥐고 있다.
+    # 그래서 커밋 직후에 도는 리스너(DeckStudyRankingListener — AFTER_COMMIT + REQUIRES_NEW)가 연결을 하나 더 요구했고,
+    # 풀 크기(기본 10)만큼의 학습 요청이 동시에 그 자리에 오면 모두가 남의 연결만 기다려 30초 동안 앱 전체가 멈췄다.
+    # 이 값이면 한 스레드가 연결을 두 개 쥐는 구간이 없다. 테스트 쪽 application.yml에도 같은 값이 있어야 한다(파일이 따로다).
+    # 잃는 것: 스프링이 연결에 직접 거는 설정(트랜잭션별 격리 수준, 읽기 전용 표시)을 쓸 수 없다 — 이 코드에는 격리 수준 지정이 없고,
+    # 읽기 전용 트랜잭션은 Hibernate가 자동 flush를 끄는 것으로 그대로 동작한다.
+    properties:
+      hibernate:
+        connection:
+          handling_mode: DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION
 
   # JWT 전용 인증이라 스프링의 자동 생성 기본 계정(generated password 로그)은 노이즈만 됨
   autoconfigure:
