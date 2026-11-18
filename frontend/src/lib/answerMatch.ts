@@ -7,7 +7,12 @@
 //  2) 설명·표기 기호를 걷어낸 조각 — 괄호 설명 삭제, 영어 품사 표시(n. v. a. ad. …)와 ①②는 구분자,
 //     , ， ; ； / ／ ・ 로 나눔
 // 비교 전에: 폭 없는 글자 삭제 → 물결표(~ ～ 〜) 삭제 → 연속 공백 하나로 → 앞뒤 공백 제거 → 대소문자 무시.
-// 단어 중간 띄어쓰기는 그대로 본다("app le" ≠ "apple"). 쉼표로 묶인 답 전체를 통째로 친 것은 후보가 아니다.
+//
+// 2026-11-18 (ADR-062, 사용자 결정 — "띄어쓰기, 뜻을 앞뒤 섞어 적어도 맞게"):
+//  · 한글·가나·한자가 든 후보는 띄어쓰기를 빼고도 비교한다("피할수없는" = "피할 수 없는").
+//    영어처럼 로마자뿐인 후보는 띄어쓰기도 철자라 그대로 본다("app le" ≠ "apple").
+//  · 입력에 뜻을 여러 개 적었으면(, ， ; ； / ／ ・ 로 나눔) 조각이 전부 후보일 때 정답 — 순서는 상관없다
+//    ("끈기,고집" ← "n. 고집, 끈기"). 후보에 없는 뜻이 하나라도 섞이면 오답("사과, 포도" ← "사과, 능금").
 // 정규식에 뒤보기(lookbehind)를 쓰지 않는다 — 오래된 iOS Safari에서 파일 전체가 깨진다.
 //
 // 공백은 SPACE 한 곳에 적은 글자만이다 — trim()·\s를 쓰지 않는다. Java의 trim()은 U+0020 이하만,
@@ -31,6 +36,11 @@ const SPACES = new RegExp(SPACE + '+', 'g')
 // 맨 앞·맨 뒤의 공백 하나 (연속 공백은 이미 하나로 줄어 있다). trim() 대신 — 지우는 글자가 서버와 같도록
 // (JS의 $는 m 플래그가 없으면 문자열 맨 끝에서만 맞는다 — Java는 같은 뜻으로 \z를 쓴다)
 const EDGE_SPACE = /^ | $/g
+// 한글(자모·호환 자모·음절)·가나(히라가나·가타카나·반각 가타카나)·한자 — 이 글자가 든 후보만 띄어쓰기를 빼고 비교한다 (ADR-062).
+// 서버 AnswerMatcher.CJK와 똑같이 유지
+const CJK = /[\u1100-\u11FF\u3040-\u30FF\u3130-\u318F\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7A3\uFF66-\uFF9F]/
+// 정규화한 뒤에는 보통 공백(U+0020)만 남는다
+const PLAIN_SPACES = / /g
 
 export function normalizeAnswer(s: string): string {
   return s
@@ -71,11 +81,27 @@ export function answerCandidates(answer: string | null | undefined): Set<string>
   return out
 }
 
-/** 입력이 정답 칸들 중 어느 하나의 후보와 같으면 true. 빈 입력·공백만은 항상 오답. */
+/** 조각 하나가 후보와 같은가 — 그대로, 또는 (한글·가나·한자가 든 후보에 한해) 띄어쓰기를 뺀 모양으로 */
+function hits(piece: string, candidates: Set<string>, spaceless: Set<string>): boolean {
+  return candidates.has(piece) || spaceless.has(piece.replace(PLAIN_SPACES, ''))
+}
+
+/**
+ * 입력이 정답 칸들의 후보와 맞으면 true. 빈 입력·공백만은 항상 오답.
+ *  · 입력 전체가 후보 하나와 같거나
+ *  · 입력을 구분자로 나눈 조각이 전부 후보일 때 (뜻을 여러 개, 순서를 바꿔 적은 답 — ADR-062)
+ */
 export function matchesAnswer(typed: string | null | undefined, ...answers: Array<string | null | undefined>): boolean {
-  const t = normalizeAnswer(typed ?? '')
+  const raw = (typed ?? '').replace(ZERO_WIDTH, '')
+  const t = normalizeAnswer(raw)
   if (!t) return false
-  return answers.some((a) => answerCandidates(a).has(t))
+  const candidates = new Set<string>()
+  for (const a of answers) for (const c of answerCandidates(a)) candidates.add(c)
+  const spaceless = new Set<string>()
+  for (const c of candidates) if (CJK.test(c)) spaceless.add(c.replace(PLAIN_SPACES, ''))
+  if (hits(t, candidates, spaceless)) return true
+  const pieces = raw.split(SEPARATORS).map(normalizeAnswer).filter((p) => p !== '')
+  return pieces.length > 0 && pieces.every((p) => hits(p, candidates, spaceless))
 }
 
 /** 가타카나 → 히라가나 (읽기 채점용 — カンシャ로 써도 かんしゃ와 같게 본다) */

@@ -1,6 +1,7 @@
 package com.vocamaster.common;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -22,7 +23,14 @@ import java.util.regex.Pattern;
  *   </li>
  * </ol>
  * 비교 전에 입력과 후보 모두: 폭 없는 글자 삭제 → 물결표({@code ~ ～ 〜}) 삭제 → 연속 공백을 하나로 → 앞뒤 공백 제거 → 대소문자 무시.
- * 단어 중간 띄어쓰기는 그대로 본다({@code "app le" ≠ "apple"}). 쉼표로 묶인 답 전체를 통째로 친 것은 후보가 아니다.
+ *
+ * <p><b>2026-11-18 (ADR-062, 사용자 결정 — "띄어쓰기, 뜻을 앞뒤 섞어 적어도 맞게")</b>
+ * <ul>
+ *   <li>한글·가나·한자가 든 후보는 띄어쓰기를 빼고도 비교한다({@code "피할수없는" = "피할 수 없는"}).
+ *       영어처럼 로마자뿐인 후보는 띄어쓰기도 철자라 그대로 본다({@code "app le" ≠ "apple"}).</li>
+ *   <li>입력에 뜻을 여러 개 적었으면({@code , ， ; ； / ／ ・} 로 나눔) 조각이 전부 후보일 때 정답 — 순서는 상관없다
+ *       ({@code "끈기,고집" ← "n. 고집, 끈기"}). 후보에 없는 뜻이 하나라도 섞이면 오답({@code "사과, 포도" ← "사과, 능금"}).</li>
+ * </ul>
  *
  * <p>공백은 {@link #SPACE} 한 곳에 적은 글자만이다 — {@code trim()}·{@code \s}를 쓰지 않는다.
  * Java의 trim()은 U+0020 이하만, JS의 trim()은 유니코드 공백까지 지워서 앞뒤에 얇은 공백(U+2009) 같은 게 붙으면
@@ -57,20 +65,59 @@ public final class AnswerMatcher {
     private static final Pattern SPACES = Pattern.compile(SPACE + "+");
     /** 맨 앞·맨 뒤의 공백 하나 (연속 공백은 이미 하나로 줄어 있다). trim() 대신 — 지우는 글자가 JS와 같도록 */
     private static final Pattern EDGE_SPACE = Pattern.compile("^ | \\z");
+    /**
+     * 한글(자모·호환 자모·음절)·가나(히라가나·가타카나·반각 가타카나)·한자 —
+     * 이 글자가 든 후보만 띄어쓰기를 빼고 비교한다 (ADR-062). 프론트 answerMatch.ts의 CJK와 똑같이 유지
+     */
+    private static final Pattern CJK = Pattern.compile(
+            "[\\u1100-\\u11FF\\u3040-\\u30FF\\u3130-\\u318F\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uAC00-\\uD7A3\\uFF66-\\uFF9F]");
 
     private AnswerMatcher() {
     }
 
-    /** 입력이 정답 칸의 후보 중 하나와 같으면 true. 빈 입력·공백만은 항상 오답. */
+    /**
+     * 입력이 정답 칸의 후보와 맞으면 true. 빈 입력·공백만은 항상 오답.
+     * <ul>
+     *   <li>입력 전체가 후보 하나와 같거나</li>
+     *   <li>입력을 구분자로 나눈 조각이 전부 후보일 때 (뜻을 여러 개, 순서를 바꿔 적은 답 — ADR-062)</li>
+     * </ul>
+     */
     public static boolean matches(String typed, String answer) {
         if (typed == null || answer == null) {
             return false;
         }
-        String t = normalize(typed);
+        String raw = ZERO_WIDTH.matcher(typed).replaceAll("");
+        String t = normalize(raw);
         if (t.isEmpty()) {
             return false;
         }
-        return candidates(answer).contains(t);
+        Set<String> candidates = candidates(answer);
+        Set<String> spaceless = new HashSet<>();
+        for (String c : candidates) {
+            if (CJK.matcher(c).find()) {
+                spaceless.add(c.replace(" ", ""));   // 정규화한 뒤에는 보통 공백(U+0020)만 남는다
+            }
+        }
+        if (hits(t, candidates, spaceless)) {
+            return true;
+        }
+        boolean any = false;
+        for (String piece : SEPARATORS.split(raw)) {
+            String p = normalize(piece);
+            if (p.isEmpty()) {
+                continue;
+            }
+            if (!hits(p, candidates, spaceless)) {
+                return false;
+            }
+            any = true;
+        }
+        return any;
+    }
+
+    /** 조각 하나가 후보와 같은가 — 그대로, 또는 (한글·가나·한자가 든 후보에 한해) 띄어쓰기를 뺀 모양으로 */
+    private static boolean hits(String piece, Set<String> candidates, Set<String> spaceless) {
+        return candidates.contains(piece) || spaceless.contains(piece.replace(" ", ""));
     }
 
     /** 정답 칸에서 뽑은 후보 (정규화된 값, 중복 없음, 처음 나온 순서) */
