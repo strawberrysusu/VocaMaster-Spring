@@ -10,7 +10,11 @@
   - HTTP/2를 쓴다. 보안 헤더 nosniff·X-Frame-Options·HSTS는 앱이 붙이고, nginx는 Referrer-Policy만 붙인다.
   - 앱이 믿는 전달 헤더는 nginx가 정한다. `X-Forwarded-For`는 실제 접속 주소 하나, `X-Forwarded-Proto`는 `$scheme`이다.
   - 클라이언트가 보낸 `Forwarded`·`X-Forwarded-Host/Port/Prefix/Ssl`은 nginx가 지운다. 앞에 CDN·로드밸런서를 두면 이 규칙을 다시 정해야 한다.
-  - 2026-11-09 변경 전 원본은 서버 `/home/ubuntu/nginx-backup/vocamaster.20261109.orig`에 있다(ADR-046 정정).
+  - 모르는 이름으로 온 요청은 앱까지 보내지 않는다(2026-11-09). 443번 기본 서버는 `ssl_reject_handshake on`이라 SNI가 없거나(IP로 직접 접속) 다른 이름이면 TLS 연결부터 거절하고, 도메인으로 연결한 뒤 Host만 바꾼 요청은 `return 444`로 응답 없이 끊는다.
+  - 80번은 앱으로 전달하지 않는다. 도메인은 HTTPS로 301, 다른 이름과 IP 직접 접속은 444다.
+  - 443번 기본 서버의 `include /etc/letsencrypt/options-ssl-nginx.conf`는 지우지 않는다. TLS 세션 캐시는 SNI로 서버를 고른 뒤에도 그 포트 기본 서버의 설정을 쓰므로, 이 줄을 빼면 TLS 1.2 세션 재사용이 깨진다(6번 접속 중 재사용 5번 → 0번, 2026-11-09 실측).
+  - certbot(nginx 플러그인, HTTP-01)은 갱신 확인 때 도메인 80번 블록 맨 앞에 임시 규칙을 넣어 301·444보다 먼저 응답한다. 2026-11-09 `certbot renew --dry-run` 성공.
+  - 변경 전 설정은 서버 `/home/ubuntu/nginx-backup/`에 있다. `vocamaster.20261109.orig`는 첫 변경 전(ADR-046 정정 전), `vocamaster.20261109.v2`는 Host 거절 직전이다. 되돌릴 때는 백업을 `/etc/nginx/sites-available/vocamaster`로 `cp -p`하고 `sudo nginx -t`가 통과하면 reload한다.
 - 앱·MySQL·Redis는 같은 서버의 Docker 네트워크에서 연결한다.
 - MySQL과 Redis는 인터넷에 포트를 공개하지 않는다.
 - 앱 768MiB, MySQL 640MiB, Redis 128MiB 제한. JVM 최대 힙은 448MiB다.
@@ -52,6 +56,13 @@ sudo systemctl is-active docker nginx certbot.timer vocamaster-backup.timer
 sudo nginx -t
 ```
 
+서버 안에서 HTTPS를 확인할 때는 도메인 이름을 붙여 보낸다.
+2026-11-09부터 `https://127.0.0.1`처럼 이름 없이 보내면 TLS 단계에서 거절되는 게 정상이다.
+
+```bash
+curl -sI --resolve vocamaster-app.duckdns.org:443:127.0.0.1 https://vocamaster-app.duckdns.org/app/
+```
+
 HTTPS 주소는 기존 `https://vocamaster-app.duckdns.org/app/` 그대로다.
 DuckDNS는 도메인을 만든 **GitHub 로그인 계정**으로 관리한다.
 Google 로그인으로 새로 만든 DuckDNS 계정에는 기존 도메인이 없다.
@@ -70,6 +81,8 @@ PC 다운로드는 매일 자동 실행하도록 등록되어 있지 않다. 최
 
 원본 Oracle DB·서버는 삭제하지 않았고 원본 Spring 앱은 중지했다.
 DNS 전환 중 오래된 IP를 사용하는 요청도 nginx가 TLS를 검증하며 AWS로 전달한다.
+2026-11-09 Host 거절 뒤에도 이 경로는 200이다(새 앱의 자산 캐시 헤더로 AWS 응답임을 확인).
+다만 이 경로의 응답에는 Oracle nginx가 `X-Frame-Options: SAMEORIGIN`을 하나 더 붙이고, 앱이 받는 `X-Forwarded-For`는 Oracle 서버 주소가 된다.
 AWS에서 새 데이터가 저장된 뒤에는 오래된 Oracle 앱을 바로 켜면 데이터가 갈라진다.
 복구할 때는 최신 AWS snapshot을 기준으로 먼저 데이터와 설정을 복원하고 주소를 연결한다.
 
@@ -82,4 +95,5 @@ Redis 값·만료시각과 전송 파일 해시도 비교했으며 스테이징 
 검증 증거는 비밀 데이터를 포함할 수 있어 PC의 비공개 복구 폴더에 보관한다.
 
 인증서 자동 갱신 모의 실행도 성공했다. Google 로그인 완료와 지속 부하 용량은 이 검증으로 확인하지 않았다.
-새 이미지의 실제 GitHub 배포·자동 롤백은 아직 실행하지 않았다.
+새 이미지의 실제 GitHub 배포·자동 롤백은 이전 검증 때 실행하지 않았다.
+그 뒤 2026-09-30 수동 배포와 2026-11-09 PR #19 자동 배포가 성공했다. 자동 롤백은 아직 실제로 실행된 적이 없다.
