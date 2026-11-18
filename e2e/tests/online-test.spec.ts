@@ -55,6 +55,7 @@ test('채점: 띄어쓰기·뜻 순서가 달라도 정답, 카드에 없는 뜻
   await grade(page)
 
   await expect(summary(page)).toContainText('점수 2/3')
+  await expect(summary(page)).toContainText('⭐ 완료') // 별표 저장이 끝난 뒤에 서버 값을 본다
   await expect(row(page, 'unavoidable').getByRole('button', { name: '맞음으로' })).toHaveCount(0)
   await expect(row(page, 'tenacity').getByRole('button', { name: '맞음으로' })).toHaveCount(0)
   await expect(row(page, 'odd').getByRole('button', { name: '맞음으로' })).toBeVisible()
