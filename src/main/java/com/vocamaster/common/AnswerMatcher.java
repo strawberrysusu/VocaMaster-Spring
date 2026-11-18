@@ -1,8 +1,10 @@
 package com.vocamaster.common;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -26,8 +28,9 @@ import java.util.regex.Pattern;
  *
  * <p><b>2026-11-18 (ADR-062, 사용자 결정 — "띄어쓰기, 뜻을 앞뒤 섞어 적어도 맞게")</b>
  * <ul>
- *   <li>한글·가나·한자가 든 후보는 띄어쓰기를 빼고도 비교한다({@code "피할수없는" = "피할 수 없는"}).
- *       영어처럼 로마자뿐인 후보는 띄어쓰기도 철자라 그대로 본다({@code "app le" ≠ "apple"}).</li>
+ *   <li>한글·가나·한자가 든 <b>낱개 뜻</b>은 띄어쓰기를 빼고도 비교한다({@code "피할수없는" = "피할 수 없는"}).
+ *       영어처럼 로마자뿐인 뜻은 띄어쓰기도 철자라 그대로 본다({@code "app le" ≠ "apple"}) — 구분자로 묶인 답
+ *       {@code "ice cream/아이스크림"}에서도 영어 쪽은 그대로다({@code "icecream/아이스크림"}은 오답, Codex 8차 검산 P2).</li>
  *   <li>입력에 뜻을 여러 개 적었으면({@code , ， ; ； / ／ ・} 로 나눔) 조각이 전부 후보일 때 정답 — 순서는 상관없다
  *       ({@code "끈기,고집" ← "n. 고집, 끈기"}). 후보에 없는 뜻이 하나라도 섞이면 오답({@code "사과, 포도" ← "사과, 능금"}).</li>
  * </ul>
@@ -67,10 +70,12 @@ public final class AnswerMatcher {
     private static final Pattern EDGE_SPACE = Pattern.compile("^ | \\z");
     /**
      * 한글(자모·호환 자모·음절)·가나(히라가나·가타카나·반각 가타카나)·한자 —
-     * 이 글자가 든 후보만 띄어쓰기를 빼고 비교한다 (ADR-062). 프론트 answerMatch.ts의 CJK와 똑같이 유지
+     * 이 글자가 든 낱개 뜻만 띄어쓰기를 빼고 비교한다 (ADR-062). 프론트 answerMatch.ts의 CJK와 똑같이 유지.
+     * 한자 범위는 화면의 시험지 생성기(testSheet.ts KANJI)와 같다: 々〆, 확장 A, 통합, 호환 F900–FAFF, BMP 밖 20000–3FFFF —
+     * 호환 한자·확장 한자만으로 된 답도 띄어쓰기를 무시한다 (Codex 8차 검산 P3, 11/18)
      */
     private static final Pattern CJK = Pattern.compile(
-            "[\\u1100-\\u11FF\\u3040-\\u30FF\\u3130-\\u318F\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uAC00-\\uD7A3\\uFF66-\\uFF9F]");
+            "[\\u1100-\\u11FF\\u3005\\u3006\\u3040-\\u30FF\\u3130-\\u318F\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uAC00-\\uD7A3\\uF900-\\uFAFF\\uFF66-\\uFF9F\\x{20000}-\\x{3FFFF}]");
 
     private AnswerMatcher() {
     }
@@ -92,8 +97,10 @@ public final class AnswerMatcher {
             return false;
         }
         Set<String> candidates = candidates(answer);
+        // 띄어쓰기를 빼고 비교하는 것은 낱개 뜻뿐이다. "ice cream/아이스크림"처럼 구분자로 묶인 예전 후보를 통째로 쓰면
+        // 한글이 섞여 있다는 이유로 영어 쪽 띄어쓰기까지 무시돼 "icecream/아이스크림"이 정답이 됐다 (Codex 8차 검산 P2, 11/18)
         Set<String> spaceless = new HashSet<>();
-        for (String c : candidates) {
+        for (String c : cleanPieces(ZERO_WIDTH.matcher(answer).replaceAll(""))) {
             if (CJK.matcher(c).find()) {
                 spaceless.add(c.replace(" ", ""));   // 정규화한 뒤에는 보통 공백(U+0020)만 남는다
             }
@@ -132,11 +139,24 @@ public final class AnswerMatcher {
         for (String piece : a.split(",")) {                             // 1) 예전 규칙
             add(out, piece);
         }
-        String cleaned = stripParentheses(a);                           // 2) 설명·표기 기호 걷어내기
+        out.addAll(cleanPieces(a));                                     // 2) 설명·표기 기호 걷어내기
+        return out;
+    }
+
+    /**
+     * 정답 칸을 '낱개 뜻'으로 나눈 조각 (정규화된 값, 빈 조각 제외, 나온 순서) —
+     * 괄호 설명·품사 표시·①②를 걷어내고 모든 구분자로 나눈다. 폭 없는 글자를 먼저 지운 문자열을 받는다.
+     */
+    static List<String> cleanPieces(String a) {
+        String cleaned = stripParentheses(a);
         cleaned = PART_OF_SPEECH.matcher(cleaned).replaceAll("$1,");
         cleaned = CIRCLED_NUMBER.matcher(cleaned).replaceAll(",");
+        List<String> out = new ArrayList<>();
         for (String piece : SEPARATORS.split(cleaned)) {
-            add(out, piece);
+            String n = normalize(piece);
+            if (!n.isEmpty()) {
+                out.add(n);
+            }
         }
         return out;
     }

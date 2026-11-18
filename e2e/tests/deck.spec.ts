@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { test, expect, makeDeck, makeEmptyDeck, addCard, listCards, toggleStar } from './support'
+import { test, expect, makeDeck, makeEmptyDeck, addCard, listCards, toggleStar, isStarred } from './support'
 
 // 덱 화면·학습 카드의 설명 줄(ADR-054)과 Word 시험지(ADR-052)
 
@@ -145,4 +145,48 @@ test('덱 화면: 카드 추가 응답을 기다리는 동안 친 다음 단어�
   await expect(add.getByLabel('단어')).toHaveValue('感謝') // 예전엔 여기서 비워졌다
   await expect(add.getByLabel('뜻')).toHaveValue('') // 보낸 값 그대로였던 칸은 비운다
   expect((await listCards(request, deckId)).map((c) => c.front)).toEqual(['会議']) // 첫 카드는 저장됐다
+})
+
+// 11/18: 별표를 누르면 목록 전체를 다시 불러, 그동안 목록이 '불러오는 중' 문구로 바뀌며 스크롤이 맨 위로 돌아갔다
+// (별표 74개를 끄다가 확인 · Codex 8차 검산도 125장 덱의 110번째 카드에서 재현) → 그 카드 한 줄만 바꾼다
+test('긴 덱에서 별표를 켜고 꺼도 스크롤 위치가 그대로다', async ({ page, request }) => {
+  const lines = Array.from({ length: 60 }, (_, i) => `word${i + 1}|뜻${i + 1}`)
+  const deckId = await makeDeck(request, '별표스크롤', lines)
+  await page.goto(`/app/decks/${deckId}`)
+  await expect(page.getByText('카드 60장 · 별표 0장')).toBeVisible()
+
+  const lastRow = page.locator('.row-actions').last()
+  await lastRow.scrollIntoViewIfNeeded()
+  const word = ((await lastRow.locator('.edit-btn').getAttribute('aria-label')) ?? '').replace(/ 수정$/, '')
+  const star = lastRow.locator('.star-btn')
+  const scrollY = () => page.evaluate(() => Math.round(window.scrollY))
+  const starTop = async () => Math.round((await star.boundingBox())!.y)
+  // 화면이 자리 잡은 뒤의 위치를 기준으로 삼는다 — 글꼴이 늦게 바뀌면 문서 높이가 조금 줄어 스크롤도 따라 움직인다
+  // (처음엔 바로 쟀다가 별표와 상관없이 44px 달라져 실패했다)
+  await page.evaluate(() => document.fonts.ready)
+  let before = -1
+  await expect
+    .poll(async () => {
+      const y = await scrollY()
+      const settled = y === before
+      before = y
+      return settled
+    }, { intervals: [250] })
+    .toBe(true)
+  expect(before).toBeGreaterThan(500) // 맨 아래 카드까지 내려와 있다
+  const topBefore = await starTop()
+
+  await star.click()
+  await expect(star).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText('카드 60장 · 별표 1장')).toBeVisible() // 별표 수도 다시 부르지 않고 맞게 바뀐다
+  expect(Math.abs((await scrollY()) - before)).toBeLessThanOrEqual(1)
+  expect(Math.abs((await starTop()) - topBefore)).toBeLessThanOrEqual(1) // 누른 단추가 화면에서 제자리다
+  expect(await isStarred(request, deckId, word)).toBe(true)
+
+  await star.click()
+  await expect(star).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByText('카드 60장 · 별표 0장')).toBeVisible()
+  expect(Math.abs((await scrollY()) - before)).toBeLessThanOrEqual(1)
+  expect(Math.abs((await starTop()) - topBefore)).toBeLessThanOrEqual(1)
+  expect(await isStarred(request, deckId, word)).toBe(false)
 })

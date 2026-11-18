@@ -11,7 +11,9 @@ import { t } from '../i18n'
 // 온라인 시험지 (3단계, 11/14) — 종이 시험지와 같은 문항을 화면에서 풀고 한 번에 채점.
 //  · 읽기(한자가 있는 단어만): 자동 채점, 가타카나로 써도 정답, 읽기가 두 가지면 하나만
 //  · 뜻: 타이핑 모드와 같은 규칙(ADR-051·062 — 띄어쓰기가 달라도, 뜻을 순서 바꿔 여러 개 적어도 정답) + 비슷하게 쓴 답은 '맞음으로'
-//  · 채점하면 틀리거나 비워 둔 단어는 자동 ⭐ (사용자 결정). '맞음으로'를 누르면 이 시험이 켠 ⭐만 끈다
+//  · 채점하면 틀리거나 비워 둔 단어는 ⭐를 켜고, 맞힌 단어는 ⭐를 끈다 — 예전부터 켜져 있던 ⭐도 끈다
+//    (ADR-063, 11/18 사용자 결정 "시험으로 맞춰야만 정답으로 인정". 그 전에는 이 시험이 켠 ⭐만 껐다 — ADR-053).
+//    '맞음으로'도 ⭐를 끄고, '다시 오답으로'는 다시 켠다
 //  · 복습 일정(라이트너)은 건드리지 않는다. 답은 새로고침해도 남는다(sessionStorage, 채점하면 지움)
 
 interface Answer {
@@ -77,8 +79,8 @@ export default function OnlineTest() {
   const [results, setResults] = useState<RowResult[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  // 별표: 이 시험이 켰거나 켜려고 보낸 카드 — '맞음으로'는 이 카드의 ⭐만 끈다.
-  // 시험을 열 때 이미 ⭐였던 카드(starredAtLoad)는 넣지 않으니 '맞음으로'를 눌러도 그대로 남는다.
+  // 별표: 이 시험이 켰거나 켜려고 보낸 카드 — '새로 켠 별표 N개'를 세는 재료.
+  // 시험을 열 때 이미 ⭐였던 카드(starredAtLoad)는 넣지 않는다 (그 카드의 ⭐를 다시 켜도 '새로 켠' 것이 아니다).
   // 요청을 보내기 '전에' 넣는다: 서버엔 저장됐는데 응답만 끊기면, 다시 시도의 changedIds가 비어
   // 이 시험이 켠 ⭐인지 알 길이 없어진다 (Codex 검산 11/14). 실제로 안 켜졌다면 끄기 요청은 아무것도 안 바꾼다(멱등)
   const [addedStars, setAddedStars] = useState<Set<number>>(new Set())
@@ -86,6 +88,8 @@ export default function OnlineTest() {
   // 이 시험의 별표 요청이 성공해 서버에 ⭐가 켜진 것이 확인된 카드 — '새로 켠 별표 N개'는 addedStars 중 이것만 센다.
   // addedStars는 응답이 끊겨도 '맞음으로'가 끌 수 있게 요청 '전에' 넣어서, 실패한 요청의 카드도 들어 있다 (최종 검토 11/14)
   const [confirmedOn, setConfirmedOn] = useState<Set<number>>(new Set())
+  // 이 시험이 끈 ⭐ — 맞힌 단어·'맞음으로' 한 단어 가운데 서버가 실제로 껐다고 답한 카드 (ADR-063). 풀이마다 새로 센다
+  const [clearedStars, setClearedStars] = useState<Set<number>>(new Set())
   const [starState, setStarState] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
   // 서버가 건너뛴 카드 수 — 시험 도중 지워진 카드 (11/14 검토: 예전엔 한 장만 지워져도 별표가 전부 실패했다)
   const [skippedCount, setSkippedCount] = useState(0)
@@ -121,6 +125,7 @@ export default function OnlineTest() {
         attemptRef.current += 1
         setAddedStars(added)
         setConfirmedOn(new Set(added)) // 이어 푸는 시험은 앞 풀이의 ⭐ 저장이 성공했을 때만 시작된다 (실패하면 다시 풀기를 막음)
+        setClearedStars(new Set())
         setStarState('idle')
         setSkippedCount(0)
         if (!built) built = buildSheet(cards, { scope, count, shuffle })
@@ -167,32 +172,51 @@ export default function OnlineTest() {
     next?.focus()
   }
 
-  async function starWrong(res: RowResult[]) {
+  // 채점 결과대로 별표를 맞춘다 — 틀리거나 비운 단어는 켜고, 맞힌 단어는 끈다 (ADR-063).
+  // 둘 다 값 지정 요청이라 '별표 다시 시도'로 처음부터 다시 보내도 결과가 같다
+  async function syncStars(res: RowResult[]) {
     const attempt = attemptRef.current
     const wrongIds = rows.filter((_, i) => !rowOk(res[i])).map((r) => r.cardId)
-    if (wrongIds.length === 0) {
+    const okIds = rows.filter((_, i) => rowOk(res[i])).map((r) => r.cardId)
+    if (wrongIds.length === 0 && okIds.length === 0) {
       setStarState('done')
       return
     }
     setAddedStars((prev) => withIds(prev, wrongIds.filter((id) => !starredAtLoad.current.has(id))))
     setStarState('saving')
+    let step: 'on' | 'off' = 'on'
     try {
-      // 500장씩 나눠 보낸다 (api/cards.ts) — '전체' 시험은 오답이 500개를 넘을 수 있다
-      const r = await setStarred(deckId!, wrongIds, true)
-      // 시험을 연 뒤 다른 곳에서 꺼진 ⭐를 다시 켠 경우까지 — changedIds는 서버가 실제로 바꾼 카드
-      // 지워진 카드는 서버가 건너뛰었다 — '이 시험이 켠 ⭐'에서도 뺀다
-      setAddedStars((prev) => mergeStarResult(prev, r))
-      const skipped = new Set(r.skippedIds)
-      setConfirmedOn((prev) => withIds(prev, wrongIds.filter((id) => !skipped.has(id))))
+      let skippedOn = 0
+      if (wrongIds.length > 0) {
+        // 500장씩 나눠 보낸다 (api/cards.ts) — '전체' 시험은 오답이 500개를 넘을 수 있다
+        const r = await setStarred(deckId!, wrongIds, true)
+        // 시험을 연 뒤 다른 곳에서 꺼진 ⭐를 다시 켠 경우까지 — changedIds는 서버가 실제로 바꾼 카드
+        // 지워진 카드는 서버가 건너뛰었다 — '이 시험이 켠 ⭐'에서도 뺀다
+        setAddedStars((prev) => mergeStarResult(prev, r))
+        const skipped = new Set(r.skippedIds)
+        setConfirmedOn((prev) => withIds(prev, wrongIds.filter((id) => !skipped.has(id))))
+        skippedOn = r.skippedIds.length
+      }
+      step = 'off'
+      if (okIds.length > 0) {
+        // 맞힌 단어의 ⭐는 끈다 — 시험 전부터 켜져 있던 것도, 이 시험의 앞 풀이가 켠 것도 (다시 풀기에서 맞힌 단어)
+        const r = await setStarred(deckId!, okIds, false)
+        const ok = new Set(okIds)
+        setAddedStars((prev) => new Set([...prev].filter((id) => !ok.has(id))))
+        setConfirmedOn((prev) => new Set([...prev].filter((id) => !ok.has(id))))
+        // 실제로 꺼진 카드만 '끈 별표'로 센다 (이미 꺼져 있던 카드·지워진 카드는 changedIds에 없다)
+        if (attemptRef.current === attempt) setClearedStars((prev) => withIds(prev, r.changedIds))
+      }
       if (attemptRef.current === attempt) {
-        setSkippedCount(r.skippedIds.length)
+        setSkippedCount(skippedOn)
         setStarState('done')
         setError('') // '별표 다시 시도'로 성공했으면 앞서 뜬 오류 문구도 지운다
       }
     } catch (e) {
       if (attemptRef.current !== attempt) return
       setStarState('error')
-      setError(t('틀린 단어 별표를 못 했어요 — {msg}', { msg: (e as Error).message }))
+      const msg = (e as Error).message
+      setError(step === 'on' ? t('틀린 단어 별표를 못 했어요 — {msg}', { msg }) : t('맞힌 단어의 별표를 끄지 못했어요 — {msg}', { msg }))
     }
   }
 
@@ -209,30 +233,33 @@ export default function OnlineTest() {
     } catch {
       /* 무시 */
     }
-    void starWrong(res)
+    void syncStars(res)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // '맞음으로' ↔ '다시 오답으로' — 이 시험이 켠 ⭐만 끄고, 되돌리면 다시 켠다
+  // '맞음으로' ↔ '다시 오답으로' — 맞음으로는 ⭐를 끄고(시험 전부터 켜져 있던 것도, ADR-063), 되돌리면 다시 켠다
   async function toggleOverride(i: number) {
     if (!results) return
     const attempt = attemptRef.current
     const cardId = rows[i].cardId
     const turningOn = !results[i].override
+    const wasCleared = clearedStars.has(cardId)
     setBusyCards((prev) => withIds(prev, [cardId]))
     setError('')
     try {
       if (turningOn) {
-        if (addedStars.has(cardId)) {
-          await setStarred(deckId!, [cardId], false)
-          setAddedStars((prev) => withoutId(prev, cardId))
-          setConfirmedOn((prev) => withoutId(prev, cardId))
-        }
+        const r = await setStarred(deckId!, [cardId], false)
+        setAddedStars((prev) => withoutId(prev, cardId))
+        setConfirmedOn((prev) => withoutId(prev, cardId))
+        if (attemptRef.current === attempt && r.changedIds.includes(cardId)) setClearedStars((prev) => withIds(prev, [cardId]))
       } else {
         if (!starredAtLoad.current.has(cardId)) setAddedStars((prev) => withIds(prev, [cardId]))
         const r = await setStarred(deckId!, [cardId], true)
-        setAddedStars((prev) => mergeStarResult(prev, r)) // 지워진 카드면 서버가 건너뛰니 세지 않는다
+        // 지워진 카드면 서버가 건너뛰니 세지 않는다. 이 시험이 껐던 '원래 ⭐'를 되돌린 것도 새로 켠 별표가 아니다
+        const restored = wasCleared && starredAtLoad.current.has(cardId)
+        setAddedStars((prev) => (restored ? withoutId(mergeStarResult(prev, r), cardId) : mergeStarResult(prev, r)))
         if (!r.skippedIds.includes(cardId)) setConfirmedOn((prev) => withIds(prev, [cardId]))
+        if (attemptRef.current === attempt) setClearedStars((prev) => withoutId(prev, cardId))
       }
       // 그사이 문항이 바뀌었으면(다른 덱 등) i번은 다른 단어다 — 결과 표시는 건드리지 않는다
       if (attemptRef.current !== attempt) return
@@ -258,6 +285,7 @@ export default function OnlineTest() {
     setResults(null)
     setStarState('idle')
     setSkippedCount(0)
+    setClearedStars(new Set()) // '끈 별표'는 풀이마다 새로 센다
     window.scrollTo({ top: 0 })
   }
 
@@ -277,7 +305,7 @@ export default function OnlineTest() {
           <div>
             <h1>{t('📝 온라인 시험')}{title ? ` — ${title}` : ''}</h1>
             <p className="sub">
-              {scopeLabel} · {t('{n}문항', { n: rows.length })} · {t('틀리거나 비워 둔 단어는 채점하면 자동으로 ⭐ 돼요 (복습 일정은 그대로)')}
+              {scopeLabel} · {t('{n}문항', { n: rows.length })} · {t('채점하면 틀리거나 비워 둔 단어는 ⭐가 켜지고, 맞힌 단어는 ⭐가 꺼져요 (복습 일정은 그대로)')}
             </p>
           </div>
         </div>
@@ -290,25 +318,26 @@ export default function OnlineTest() {
           <div className="otest-summary" role="status">
             <p className="result-line" style={{ margin: 0 }}>
               {t('점수')} <b>{score}/{rows.length}</b>
-              {wrongCount > 0 && (
-                <span className="otest-star-note">
-                  {starState === 'saving' && ' · ' + t('틀린 단어 ⭐ 하는 중...')}
-                  {starState === 'done' &&
-                    ' · ' +
-                      (skippedCount > 0
-                        ? t('틀린 {wrong}개 ⭐ 완료 (새로 켠 별표 {added}개, 지워진 카드 {skipped}개는 건너뜀)', starDoneVars)
-                        : t('틀린 {wrong}개 ⭐ 완료 (새로 켠 별표 {added}개)', starDoneVars))}
-                  {starState === 'error' && (
-                    <>
-                      {' · '}
-                      {/* '맞음으로' 요청 중에는 막는다 — 그 단어가 아직 오답으로 보여 방금 맞음으로 한 단어에 ⭐가 다시 켜졌다 (최종 검토 11/14) */}
-                      <button className="btn-ghost-link" disabled={busyCards.size > 0} onClick={() => void starWrong(results)}>
-                        {t('별표 다시 시도')}
-                      </button>
-                    </>
-                  )}
-                </span>
-              )}
+              {/* 전부 맞혀도 보인다 — 맞힌 단어의 ⭐를 끄는 요청이 있고, 실패하면 '별표 다시 시도'가 필요하다 (ADR-063) */}
+              <span className="otest-star-note">
+                {starState === 'saving' && ' · ' + t('⭐ 정리하는 중...')}
+                {starState === 'done' &&
+                  wrongCount > 0 &&
+                  ' · ' +
+                    (skippedCount > 0
+                      ? t('틀린 {wrong}개 ⭐ 완료 (새로 켠 별표 {added}개, 지워진 카드 {skipped}개는 건너뜀)', starDoneVars)
+                      : t('틀린 {wrong}개 ⭐ 완료 (새로 켠 별표 {added}개)', starDoneVars))}
+                {starState === 'done' && clearedStars.size > 0 && ' · ' + t('맞힌 단어의 ⭐ {n}개 해제', { n: clearedStars.size })}
+                {starState === 'error' && (
+                  <>
+                    {' · '}
+                    {/* '맞음으로' 요청 중에는 막는다 — 그 단어가 아직 오답으로 보여 방금 맞음으로 한 단어에 ⭐가 다시 켜졌다 (최종 검토 11/14) */}
+                    <button className="btn-ghost-link" disabled={busyCards.size > 0} onClick={() => void syncStars(results)}>
+                      {t('별표 다시 시도')}
+                    </button>
+                  </>
+                )}
+              </span>
             </p>
           </div>
         )}
