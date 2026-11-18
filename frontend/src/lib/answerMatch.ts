@@ -14,6 +14,9 @@
 //    "ice cream/아이스크림"에서도 영어 쪽은 그대로다("icecream/아이스크림"은 오답, Codex 8차 검산 P2).
 //  · 입력에 뜻을 여러 개 적었으면(, ， ; ； / ／ ・ 로 나눔) 조각이 전부 후보일 때 정답 — 순서는 상관없다
 //    ("끈기,고집" ← "n. 고집, 끈기"). 후보에 없는 뜻이 하나라도 섞이면 오답("사과, 포도" ← "사과, 능금").
+//  · 입력에 적은 괄호 설명·품사 표시·①②도 정답 칸처럼 걷어내고 본다 (같은 날 보완 2, Codex 9차 검산) —
+//    "피할수없는 (불가피한)" ← "피할 수 없는 (불가피한)", "a. 피할수없는" ← "a. 피할 수 없는".
+//    위 두 규칙으로 안 맞을 때만 쓰는 마지막 단계라, 전에 정답이던 입력이 오답으로 바뀌는 일은 없다.
 // 정규식에 뒤보기(lookbehind)를 쓰지 않는다 — 오래된 iOS Safari에서 파일 전체가 깨진다.
 //
 // 공백은 SPACE 한 곳에 적은 글자만이다 — trim()·\s를 쓰지 않는다. Java의 trim()은 U+0020 이하만,
@@ -102,6 +105,7 @@ function hits(piece: string, candidates: Set<string>, spaceless: Set<string>): b
  * 입력이 정답 칸들의 후보와 맞으면 true. 빈 입력·공백만은 항상 오답.
  *  · 입력 전체가 후보 하나와 같거나
  *  · 입력을 구분자로 나눈 조각이 전부 후보일 때 (뜻을 여러 개, 순서를 바꿔 적은 답 — ADR-062)
+ *  · 입력에서 괄호 설명·품사 표시·①②를 걷어낸 조각이 전부 후보일 때 (ADR-062 보완 2)
  */
 export function matchesAnswer(typed: string | null | undefined, ...answers: Array<string | null | undefined>): boolean {
   const raw = (typed ?? '').replace(ZERO_WIDTH, '')
@@ -117,8 +121,11 @@ export function matchesAnswer(typed: string | null | undefined, ...answers: Arra
     for (const c of cleanPieces(answer.replace(ZERO_WIDTH, ''))) if (CJK.test(c)) spaceless.add(c.replace(PLAIN_SPACES, ''))
   }
   if (hits(t, candidates, spaceless)) return true
-  const pieces = raw.split(SEPARATORS).map(normalizeAnswer).filter((p) => p !== '')
-  return pieces.length > 0 && pieces.every((p) => hits(p, candidates, spaceless))
+  const allHit = (pieces: string[]) => pieces.length > 0 && pieces.every((p) => hits(p, candidates, spaceless))
+  if (allHit(raw.split(SEPARATORS).map(normalizeAnswer).filter((p) => p !== ''))) return true
+  // 입력도 정답 칸과 같은 방법으로 걷어내고 본다 — 카드에 적힌 대로 괄호 설명·품사 표시까지 따라 적은 답
+  // ("피할수없는 (불가피한)", "a. 피할수없는"). 괄호 안에만 적은 입력은 조각이 하나도 안 남아 오답이다
+  return allHit(cleanPieces(raw))
 }
 
 /** 가타카나 → 히라가나 (읽기 채점용 — カンシャ로 써도 かんしゃ와 같게 본다) */

@@ -95,6 +95,17 @@ export async function toggleStar(request: APIRequestContext, cardId: number): Pr
   await ok(await request.patch(`/cards/${cardId}/star`, { headers: auth() }))
 }
 
+/** 별표 일괄 설정 — 서버가 한 번에 500장까지 받으니 나눠 보낸다 */
+export async function setStars(request: APIRequestContext, deckId: number, cardIds: number[], starred: boolean): Promise<void> {
+  for (let start = 0; start < cardIds.length; start += 500)
+    await ok(
+      await request.patch(`/decks/${deckId}/cards/star`, {
+        headers: auth(),
+        data: { cardIds: cardIds.slice(start, start + 500), starred },
+      }),
+    )
+}
+
 /** 카드 지우기 — 다른 탭·기기에서 지운 것처럼 (응답 본문이 없어 상태만 본다) */
 export async function deleteCard(request: APIRequestContext, cardId: number): Promise<void> {
   const res = await request.delete(`/cards/${cardId}`, { headers: auth() })
