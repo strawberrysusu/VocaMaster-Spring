@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
-import { fetchAllCards, type CardDto, type LearningStatus } from '../api/cards'
+import { fetchAllCards, toggleCardStar, type CardDto, type LearningStatus } from '../api/cards'
 import TopNav from '../components/TopNav'
 import SpeakButton from '../components/SpeakButton'
 import Ruby from '../components/Ruby'
@@ -41,6 +41,7 @@ function DeckDetailScreen() {
   const [cardsLoading, setCardsLoading] = useState(true)
   const [cardsLoaded, setCardsLoaded] = useState(false)
   const loadRequest = useRef({ version: 0 })
+  const starPending = useRef(new Set<number>())   // 별표 요청이 진행 중인 카드 — 응답 전에 또 누른 것은 보내지 않는다 (toggleStar)
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
   const [reading, setReading] = useState('')   // 읽기(요미가나) — 선택
@@ -140,12 +141,24 @@ function DeckDetailScreen() {
 
   // 별표는 그 카드 한 줄만 바꾼다. 예전에는 목록 전체를 다시 불렀는데(load()), 그동안 목록이 '불러오는 중' 문구로 바뀌어
   // 긴 덱에서 스크롤이 맨 위로 돌아갔다 (11/18 별표 74개를 끄다가 확인 · Codex 8차 검산: 125장 중 110번째 카드에서 재현)
+  //
+  // 목록을 다시 부르지 않게 되면서 생긴 틈 세 가지를 막는다 (Codex 9차 검산 11/18):
+  //  · 응답이 오기 전에 같은 별표를 또 누르면 보내지 않는다 — 누를 때마다 값이 뒤집히는 요청이라 둘이 겹치면 서버는
+  //    '켜기 → 끄기'로 끝나는데, 첫 응답(켜짐)이 늦게 도착하면 화면만 켜진 채 남았다
+  //  · 목록을 다시 읽을 때(카드 추가 등)는 진행 중인 별표 요청이 끝난 뒤에 읽는다 — toggleCardStar가 요청을 적어 두고
+  //    fetchAllCards가 기다린다 (api/cards.ts). 먼저 읽으면 별표가 바뀌기 전 목록이 화면을 덮었다
+  //  · 다시 눌러 성공하면 앞서 뜬 오류 문구를 지운다 — 예전에는 목록을 다시 부르면서(load) 지워졌다
   async function toggleStar(cardId: number) {
+    if (starPending.current.has(cardId)) return
+    starPending.current.add(cardId)
     try {
-      const updated = await api<CardDto>(`/cards/${cardId}/star`, { method: 'PATCH' })
+      const updated = await toggleCardStar(id!, cardId)
       setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, starred: updated.starred } : c)))
+      setError('')
     } catch (e) {
       setError((e as Error).message)
+    } finally {
+      starPending.current.delete(cardId)
     }
   }
 

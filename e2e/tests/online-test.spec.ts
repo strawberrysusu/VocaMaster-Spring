@@ -1,5 +1,5 @@
-import type { Page } from '@playwright/test'
-import { test, expect, makeDeck, listCards, isStarred, toggleStar, overflowX, LONG, makeEmptyDeck, addCard, deleteCard } from './support'
+import type { APIRequestContext, Page } from '@playwright/test'
+import { test, expect, makeDeck, listCards, isStarred, toggleStar, setStars, overflowX, LONG, makeEmptyDeck, addCard, deleteCard } from './support'
 
 // 온라인 시험지(ADR-053 → ADR-063): 채점하면 틀리거나 비운 단어는 자동 ⭐, 맞힌 단어와 '맞음으로'는 ⭐를 끈다(예전부터 켜져 있던 것도)
 
@@ -281,5 +281,118 @@ test.describe('회귀 — 온라인 시험 별표 (Codex 검산 11/14)', () => {
     await row(page, '会議').getByRole('button', { name: '맞음으로' }).click()
     await expect(row(page, '会議').getByRole('button', { name: '다시 오답으로' })).toBeVisible()
     expect(await isStarred(request, deckId, '会議')).toBe(false)
+  })
+})
+
+// ── 회귀: Codex 9차 검산(11/18)이 찾은 것 — 네 개 모두 고치기 전 코드에서 실패하는 것을 먼저 확인했다
+test.describe('회귀 — 별표 저장 중 화면 이동·해제 개수 (Codex 9차 검산 11/18)', () => {
+  // 시험 전부터 ⭐인 apple은 맞히고(꺼져야 한다), banana는 비운다(켜져야 한다). 별표 요청은 release()까지 붙잡아 둔다
+  async function gradeWithStarsHeld(page: Page, request: APIRequestContext, label: string) {
+    const deckId = await makeDeck(request, label, ['apple|사과', 'banana|바나나'])
+    const apple = (await listCards(request, deckId)).find((c) => c.front === 'apple')!
+    await toggleStar(request, apple.id)
+    await open(page, deckId)
+    await row(page, 'apple').getByLabel(/뜻$/).fill('사과')
+
+    let release = () => {}
+    const held = new Promise<void>((resolve) => (release = resolve))
+    await page.route(STAR_API, async (route) => {
+      await held
+      await route.continue()
+    })
+    await grade(page)
+    await expect(summary(page)).toContainText('⭐ 정리하는 중')
+    return { deckId, release }
+  }
+
+  // 고치기 전: 저장 중에도 눌려서 복습 화면이 저장 전 별표로 열렸다 — 방금 맞힌 apple이 나오고 틀린 banana는 빠졌다.
+  // 복습 화면은 들어올 때 목록을 한 번만 읽으니, 저장이 끝나도 새로 고치기 전에는 그대로였다
+  test('별표 저장이 끝나기 전에는 "별표만 복습"이 막혀 있고, 끝난 뒤의 복습 목록은 채점 결과와 같다', async ({ page, request }) => {
+    const { deckId, release } = await gradeWithStarsHeld(page, request, '저장중복습')
+    const review = page.locator('.answer-buttons').getByText('⭐ 별표만 복습 하러 가기')
+    await expect(review).toBeDisabled({ timeout: 2_000 })
+    await expect(review).toHaveAttribute('title', '별표 저장이 끝나면 누를 수 있어요')
+
+    release()
+    await expect(summary(page)).toContainText('맞힌 단어의 ⭐ 1개 해제')
+    await expect(review).toBeEnabled()
+    await review.click()
+    await expect(page).toHaveURL(new RegExp(`/app/study\\?deckId=${deckId}&starredOnly=1$`))
+    await expect(page.locator('.study-word')).toHaveText('banana') // 틀린 단어만 나온다
+    await expect(page.getByText(/^1 \/ 1 · /)).toBeVisible()
+  })
+
+  // 고치기 전: 저장 중에 덱 화면으로 나가면 덱 화면이 저장 전 별표를 읽어, 새로 고칠 때까지 옛 별표가 보였다.
+  // 이제 카드 목록 읽기는 그 덱의 별표 쓰기가 끝난 뒤에 출발한다 (api/cards.ts — trackStarWrite)
+  test('별표 저장 중에 덱 화면으로 나가도 덱 화면은 저장이 끝난 뒤의 별표를 보여 준다', async ({ page, request }) => {
+    const { deckId, release } = await gradeWithStarsHeld(page, request, '저장중덱이동')
+    await page.getByRole('link', { name: '← 덱으로' }).click()
+    await expect(page).toHaveURL(new RegExp(`/app/decks/${deckId}$`))
+    await expect(page.getByText('카드 불러오는 중...')).toBeVisible() // 별표 저장이 끝날 때까지 목록을 읽지 않는다
+
+    release()
+    await expect(page.getByText('카드 2장 · 별표 1장')).toBeVisible()
+    const starOf = (word: string) => page.locator('.owned-card-row', { hasText: word }).locator('.star-btn')
+    await expect(starOf('banana')).toHaveAttribute('aria-pressed', 'true')
+    await expect(starOf('apple')).toHaveAttribute('aria-pressed', 'false')
+    expect(await isStarred(request, deckId, 'banana')).toBe(true)
+    expect(await isStarred(request, deckId, 'apple')).toBe(false)
+  })
+
+  // 고치기 전: 끄기 요청이 서버에는 반영됐는데 응답만 끊기면, 다시 시도의 응답은 "바뀐 카드 없음"이라 해제 문구가 아예 안 나왔다
+  test('별표 끄기 응답이 끊겨도(서버엔 저장됨) 다시 시도 뒤 해제 개수가 맞다', async ({ page, request, errors }) => {
+    const deckId = await makeDeck(request, '해제응답유실', ['apple|사과'])
+    const apple = (await listCards(request, deckId)).find((c) => c.front === 'apple')!
+    await toggleStar(request, apple.id) // 시험 전부터 ⭐
+    await open(page, deckId)
+    await row(page, 'apple').getByLabel(/뜻$/).fill('사과')
+    // 끄기 요청: 서버까지는 보내고(꺼짐), 브라우저에는 네트워크 오류로 돌려준다
+    await page.route(STAR_API, async (route) => {
+      await route.fetch()
+      await route.abort('failed')
+    }, { times: 1 })
+    await grade(page)
+    await expect(page.getByRole('button', { name: '별표 다시 시도' })).toBeVisible()
+    expect(await isStarred(request, deckId, 'apple')).toBe(false) // 서버에서는 이미 꺼졌다
+    errors.length = 0 // 일부러 끊은 요청의 콘솔 오류는 빼고 본다
+
+    await page.getByRole('button', { name: '별표 다시 시도' }).click()
+    await expect(summary(page)).toContainText('맞힌 단어의 ⭐ 1개 해제')
+    await expect(page.getByRole('alert')).toHaveCount(0)
+  })
+
+  // 고치기 전: 500장씩 나눠 끄다가 마지막 묶음만 실패하면, 앞 묶음이 끈 500개를 세지 못해 다시 시도 뒤 '1개 해제'로 나왔다
+  test('별표 501개를 끄다 마지막 묶음이 끊겨도 다시 시도 뒤 501개 해제로 나온다', async ({ page, request, errors }) => {
+    test.setTimeout(120_000)
+    const lines = Array.from({ length: 501 }, (_, i) => `word${i + 1}|뜻${i + 1}`)
+    const deckId = await makeDeck(request, '해제501', lines)
+    const ids = (await listCards(request, deckId)).map((c) => c.id)
+    await setStars(request, deckId, ids, true) // 전부 시험 전부터 ⭐
+    await open(page, deckId)
+    await expect(page.locator('.otest-row')).toHaveCount(501)
+    // 501칸을 한꺼번에 채운다 (word7 → 뜻7) — 한 칸씩 치면 너무 오래 걸린다
+    await page.evaluate(() => {
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+      for (const r of Array.from(document.querySelectorAll('.otest-row'))) {
+        const word = r.querySelector('.otest-word')!.textContent ?? ''
+        const input = r.querySelector<HTMLInputElement>('input.otest-input')!
+        setValue.call(input, word.replace('word', '뜻'))
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    })
+    let calls = 0
+    await page.route(STAR_API, async (route) => {
+      if (++calls === 2) await route.abort('failed') // 두 번째 묶음(마지막 1장)만 끊는다 — 서버까지 안 감
+      else await route.continue()
+    })
+    await grade(page)
+    await expect(summary(page)).toContainText('점수 501/501')
+    await expect(page.getByRole('button', { name: '별표 다시 시도' })).toBeVisible({ timeout: 30_000 })
+    expect((await listCards(request, deckId)).filter((c) => c.starred).length).toBe(1) // 앞 묶음 500개는 이미 꺼졌다
+    errors.length = 0
+
+    await page.getByRole('button', { name: '별표 다시 시도' }).click()
+    await expect(summary(page)).toContainText('맞힌 단어의 ⭐ 501개 해제', { timeout: 30_000 })
+    expect((await listCards(request, deckId)).filter((c) => c.starred).length).toBe(0)
   })
 })

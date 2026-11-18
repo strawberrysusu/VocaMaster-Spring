@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/client'
-import { fetchAllCards, setStarred, type CardDto } from '../api/cards'
+import { fetchAllCards, setStarred, trackStarWrite, type CardDto, type SetStarredResult } from '../api/cards'
 import TopNav from '../components/TopNav'
 import { buildSheet, type SheetRow, type SheetScope } from '../lib/testSheet'
 import { matchesAnswer, matchesReading } from '../lib/answerMatch'
@@ -90,6 +90,11 @@ export default function OnlineTest() {
   const [confirmedOn, setConfirmedOn] = useState<Set<number>>(new Set())
   // 이 시험이 끈 ⭐ — 맞힌 단어·'맞음으로' 한 단어 가운데 서버가 실제로 껐다고 답한 카드 (ADR-063). 풀이마다 새로 센다
   const [clearedStars, setClearedStars] = useState<Set<number>>(new Set())
+  // 끄기 요청이 실패한 적 있는 카드 (끄기 전에 ⭐였던 것만). 실패로 보인 요청도 서버에는 반영됐을 수 있다 —
+  // 500장씩 나눠 보내다 뒤 묶음만 실패했거나(앞 묶음은 이미 꺼짐), 응답만 끊겼거나. 그러면 다시 보낸 요청의
+  // changedIds에는 그 카드가 없다("바뀐 것 없음"). 그래서 다시 시도가 성공하면 이 카드들도 '끈 별표'로 센다
+  // (Codex 9차 검산 11/18: 501개를 껐는데 '1개 해제', 응답이 끊긴 뒤에는 해제 문구가 아예 없었다)
+  const offUnsure = useRef<Set<number>>(new Set())
   const [starState, setStarState] = useState<'idle' | 'saving' | 'done' | 'error'>('idle')
   // 서버가 건너뛴 카드 수 — 시험 도중 지워진 카드 (11/14 검토: 예전엔 한 장만 지워져도 별표가 전부 실패했다)
   const [skippedCount, setSkippedCount] = useState(0)
@@ -126,6 +131,7 @@ export default function OnlineTest() {
         setAddedStars(added)
         setConfirmedOn(new Set(added)) // 이어 푸는 시험은 앞 풀이의 ⭐ 저장이 성공했을 때만 시작된다 (실패하면 다시 풀기를 막음)
         setClearedStars(new Set())
+        offUnsure.current = new Set()
         setStarState('idle')
         setSkippedCount(0)
         if (!built) built = buildSheet(cards, { scope, count, shuffle })
@@ -163,6 +169,9 @@ export default function OnlineTest() {
     setAnswers((prev) => prev.map((a, j) => (j === i ? { ...a, [field]: value } : a)))
   }
 
+  // 지금 ⭐인 것으로 아는 카드 — 시험을 열 때 ⭐였거나, 이 시험이 켠 것이 서버에서 확인된 카드
+  const knownStarred = (id: number) => starredAtLoad.current.has(id) || confirmedOn.has(id)
+
   // Enter = 다음 칸 (입력기 변환을 확정하는 Enter는 건드리지 않는다 — lib/keys.ts)
   function onEnter(e: KeyboardEvent<HTMLInputElement>) {
     if (!isPlainEnter(e)) return
@@ -173,8 +182,12 @@ export default function OnlineTest() {
   }
 
   // 채점 결과대로 별표를 맞춘다 — 틀리거나 비운 단어는 켜고, 맞힌 단어는 끈다 (ADR-063).
-  // 둘 다 값 지정 요청이라 '별표 다시 시도'로 처음부터 다시 보내도 결과가 같다
-  async function syncStars(res: RowResult[]) {
+  // 둘 다 값 지정 요청이라 '별표 다시 시도'로 처음부터 다시 보내도 결과가 같다.
+  // 켜기 → 끄기 두 요청을 한 작업으로 적어 둔다(trackStarWrite) — 이 작업이 끝나기 전에 복습·덱 화면이 카드 목록을
+  // 읽으면 저장 전 별표가 그 화면에 남는다 (Codex 9차 검산 11/18). 요청마다 따로 적으면 두 요청 사이에 끼어들 수 있다
+  const syncStars = (res: RowResult[]) => trackStarWrite(deckId!, runStarSync(res))
+
+  async function runStarSync(res: RowResult[]) {
     const attempt = attemptRef.current
     const wrongIds = rows.filter((_, i) => !rowOk(res[i])).map((r) => r.cardId)
     const okIds = rows.filter((_, i) => rowOk(res[i])).map((r) => r.cardId)
@@ -200,12 +213,25 @@ export default function OnlineTest() {
       step = 'off'
       if (okIds.length > 0) {
         // 맞힌 단어의 ⭐는 끈다 — 시험 전부터 켜져 있던 것도, 이 시험의 앞 풀이가 켠 것도 (다시 풀기에서 맞힌 단어)
-        const r = await setStarred(deckId!, okIds, false)
+        const wasOn = okIds.filter(knownStarred) // 끄기 전에 ⭐였던 카드
+        let r: SetStarredResult
+        try {
+          r = await setStarred(deckId!, okIds, false)
+        } catch (e) {
+          if (attemptRef.current === attempt) for (const id of wasOn) offUnsure.current.add(id) // 실패로 보여도 꺼졌을 수 있다
+          throw e
+        }
         const ok = new Set(okIds)
         setAddedStars((prev) => new Set([...prev].filter((id) => !ok.has(id))))
         setConfirmedOn((prev) => new Set([...prev].filter((id) => !ok.has(id))))
-        // 실제로 꺼진 카드만 '끈 별표'로 센다 (이미 꺼져 있던 카드·지워진 카드는 changedIds에 없다)
-        if (attemptRef.current === attempt) setClearedStars((prev) => withIds(prev, r.changedIds))
+        if (attemptRef.current === attempt) {
+          // 실제로 꺼진 카드만 '끈 별표'로 센다 (이미 꺼져 있던 카드·지워진 카드는 changedIds에 없다).
+          // 앞서 끄기에 실패한 적 있는 카드는 그때 이미 꺼졌을 수 있어 changedIds에 없어도 센다 (offUnsure)
+          const skipped = new Set(r.skippedIds)
+          const earlier = wasOn.filter((id) => offUnsure.current.has(id) && !skipped.has(id))
+          setClearedStars((prev) => withIds(prev, [...r.changedIds, ...earlier]))
+          for (const id of okIds) offUnsure.current.delete(id)
+        }
       }
       if (attemptRef.current === attempt) {
         setSkippedCount(skippedOn)
@@ -248,10 +274,22 @@ export default function OnlineTest() {
     setError('')
     try {
       if (turningOn) {
-        const r = await setStarred(deckId!, [cardId], false)
+        const wasOn = knownStarred(cardId) // 끄기 전에 ⭐였던 카드인가
+        let r: SetStarredResult
+        try {
+          r = await setStarred(deckId!, [cardId], false)
+        } catch (e) {
+          if (wasOn && attemptRef.current === attempt) offUnsure.current.add(cardId) // 실패로 보여도 꺼졌을 수 있다
+          throw e
+        }
         setAddedStars((prev) => withoutId(prev, cardId))
         setConfirmedOn((prev) => withoutId(prev, cardId))
-        if (attemptRef.current === attempt && r.changedIds.includes(cardId)) setClearedStars((prev) => withIds(prev, [cardId]))
+        if (attemptRef.current === attempt) {
+          // 앞서 끄기에 실패한 적 있으면 그때 이미 꺼졌을 수 있다 — changedIds에 없어도 센다 (지워진 카드는 빼고)
+          const earlier = offUnsure.current.has(cardId) && !r.skippedIds.includes(cardId)
+          if (r.changedIds.includes(cardId) || earlier) setClearedStars((prev) => withIds(prev, [cardId]))
+          offUnsure.current.delete(cardId)
+        }
       } else {
         if (!starredAtLoad.current.has(cardId)) setAddedStars((prev) => withIds(prev, [cardId]))
         const r = await setStarred(deckId!, [cardId], true)
@@ -259,7 +297,10 @@ export default function OnlineTest() {
         const restored = wasCleared && starredAtLoad.current.has(cardId)
         setAddedStars((prev) => (restored ? withoutId(mergeStarResult(prev, r), cardId) : mergeStarResult(prev, r)))
         if (!r.skippedIds.includes(cardId)) setConfirmedOn((prev) => withIds(prev, [cardId]))
-        if (attemptRef.current === attempt) setClearedStars((prev) => withoutId(prev, cardId))
+        if (attemptRef.current === attempt) {
+          setClearedStars((prev) => withoutId(prev, cardId))
+          offUnsure.current.delete(cardId)
+        }
       }
       // 그사이 문항이 바뀌었으면(다른 덱 등) i번은 다른 단어다 — 결과 표시는 건드리지 않는다
       if (attemptRef.current !== attempt) return
@@ -286,6 +327,7 @@ export default function OnlineTest() {
     setStarState('idle')
     setSkippedCount(0)
     setClearedStars(new Set()) // '끈 별표'는 풀이마다 새로 센다
+    offUnsure.current = new Set()
     window.scrollTo({ top: 0 })
   }
 
@@ -416,9 +458,21 @@ export default function OnlineTest() {
                     {t('틀린 {n}개만 다시 풀기', { n: wrongCount })}
                   </button>
                 )}
-                <Link to={`/study?deckId=${deckId}&starredOnly=1`} className="answer-yes" style={{ textDecoration: 'none', textAlign: 'center' }}>
-                  {t('⭐ 별표만 복습 하러 가기')}
-                </Link>
+                {starBusy ? (
+                  // 별표 저장이 끝나기 전·실패한 채로는 복습으로 가지 못한다 — 복습 화면은 들어갈 때의 별표로 목록을 만들어서,
+                  // 저장 중에 가면 방금 맞힌 단어가 나오고 틀린 단어는 빠졌다 (Codex 9차 검산 11/18)
+                  <button
+                    className="answer-yes"
+                    disabled
+                    title={starState === 'error' ? t('별표를 먼저 다시 시도해 주세요') : t('별표 저장이 끝나면 누를 수 있어요')}
+                  >
+                    {t('⭐ 별표만 복습 하러 가기')}
+                  </button>
+                ) : (
+                  <Link to={`/study?deckId=${deckId}&starredOnly=1`} className="answer-yes" style={{ textDecoration: 'none', textAlign: 'center' }}>
+                    {t('⭐ 별표만 복습 하러 가기')}
+                  </Link>
+                )}
               </>
             ) : (
               <button className="answer-yes" onClick={grade}>

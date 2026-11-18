@@ -385,7 +385,6 @@ export const en: Messages = {
   "별표를 바꾸지 못했어요 — {msg}": "Couldn't change the star — {msg}",
   "📝 온라인 시험": "📝 Online test",
   "{n}문항": "{n} questions",
-  "틀리거나 비워 둔 단어는 채점하면 자동으로 ⭐ 돼요 (복습 일정은 그대로)": "Words you get wrong or leave blank get a ⭐ automatically when you grade (review schedule stays the same)",
   "문제 만드는 중...": "Creating questions...",
   "문항이 없어요 — 덱으로 돌아가 범위를 바꿔 보세요.": "No questions — go back to the deck and try a different range.",
   "점수": "Score",

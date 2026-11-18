@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { MouseEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
-import { fetchAllCards } from '../api/cards'
+import { fetchAllCards, toggleCardStar } from '../api/cards'
 import { recordRecentStudy } from '../lib/recent'
 import { splitSubmission } from '../lib/submitChunks'
 import { loadSettings, saveSettings } from '../lib/settings'
@@ -385,7 +385,8 @@ export default function Study() {
     setStarring(true)
     patch(next) // 낙관적 반영 — 실패하면 되돌린다
     try {
-      const res = await api<{ starred: boolean }>(`/cards/${card.cardId}/star`, { method: 'PATCH' })
+      // 덱에서 온 학습이면 그 덱의 목록 읽기가 이 요청이 끝난 뒤에 출발하게 적어 둔다 (누르자마자 덱 화면으로 나가는 경우)
+      const res = await toggleCardStar(deckId, card.cardId)
       patch(!!res.starred) // 서버 확정값으로 정렬
     } catch (e) {
       patch(!next)

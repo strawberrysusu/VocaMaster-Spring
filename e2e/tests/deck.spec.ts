@@ -190,3 +190,104 @@ test('긴 덱에서 별표를 켜고 꺼도 스크롤 위치가 그대로다', a
   expect(Math.abs((await starTop()) - topBefore)).toBeLessThanOrEqual(1)
   expect(await isStarred(request, deckId, word)).toBe(false)
 })
+
+// ── 회귀: Codex 9차 검산(11/18) — 별표를 그 카드 한 줄만 바꾸게 한 뒤(#44) 생긴 틈 세 가지.
+//    세 개 모두 고치기 전 코드에서 실패하는 것을 먼저 확인했다
+test.describe('회귀 — 덱 화면 별표와 응답 순서 (Codex 9차 검산 11/18)', () => {
+  const CARD_STAR_API = '**/cards/*/star' // 카드 한 장의 별표 토글 (일괄 API /decks/N/cards/star 와는 다른 주소)
+
+  // 고치기 전: 두 번 누르면 요청이 둘 나가 서버는 켜기 → 끄기로 끝나는데, 첫 응답(켜짐)이 늦게 오면 화면만 켜진 채 남았다
+  // ('별표만 복습 (1장)'까지 눌리게 됨). 이제 응답이 오기 전에 또 누른 것은 보내지 않는다
+  test('같은 별표를 응답이 오기 전에 또 눌러도 화면과 서버의 별표가 같다', async ({ page, request }) => {
+    const deckId = await makeDeck(request, '별표연타', ['apple|사과'])
+    await page.goto(`/app/decks/${deckId}`)
+    await expect(page.getByText('카드 1장 · 별표 0장')).toBeVisible()
+
+    // 첫 요청: 서버에는 바로 보내고(저장됨) 응답만 늦게 돌려준다. 둘째 요청이 나간다면 그 응답은 바로 돌려준다
+    let release = () => {}
+    const held = new Promise<void>((resolve) => (release = resolve))
+    let delivered = () => {}
+    const firstDelivered = new Promise<void>((resolve) => (delivered = resolve))
+    let calls = 0
+    await page.route(CARD_STAR_API, async (route) => {
+      const n = ++calls
+      const response = await route.fetch()
+      if (n === 1) await held
+      await route.fulfill({ response })
+      if (n === 1) delivered()
+    })
+    const star = page.locator('.star-btn')
+    await star.click()
+    await star.click() // 응답이 오기 전에 한 번 더
+    await page.waitForTimeout(500) // 둘째 요청이 나갔다면 그 응답이 먼저 화면에 닿을 시간
+    release()
+    await firstDelivered
+    await page.waitForTimeout(300) // 늦게 온 첫 응답까지 화면에 반영될 시간
+
+    const server = await isStarred(request, deckId, 'apple')
+    expect(await star.getAttribute('aria-pressed'), '화면의 별표 = 서버의 별표').toBe(String(server))
+    await expect(page.getByText(`카드 1장 · 별표 ${server ? 1 : 0}장`)).toBeVisible()
+    expect(calls, '응답 전에 또 누른 것은 보내지 않는다').toBe(1)
+    expect(server).toBe(true) // 한 번 누른 것으로 친다
+  })
+
+  // 고치기 전: 별표 요청이 서버에 닿기 전에 목록을 다시 읽으면(카드 추가 등), 별표가 바뀌기 전 목록이 별표 응답보다
+  // 늦게 화면에 닿아 서버는 ⭐인데 화면은 꺼져 보였다. 이제 목록 읽기는 진행 중인 별표 요청이 끝난 뒤에 출발한다
+  test('별표를 누른 직후 카드를 추가해도(목록을 다시 읽어도) 화면의 별표가 서버와 같다', async ({ page, request }) => {
+    const deckId = await makeDeck(request, '별표겹침', ['apple|사과'])
+    await page.goto(`/app/decks/${deckId}`)
+    await expect(page.getByText('카드 1장 · 별표 0장')).toBeVisible()
+
+    // 별표 요청은 release()까지 서버에 보내지 않는다 (느린 망)
+    let release = () => {}
+    const held = new Promise<void>((resolve) => (release = resolve))
+    let starDone = () => {}
+    const starDelivered = new Promise<void>((resolve) => (starDone = resolve))
+    await page.route(CARD_STAR_API, async (route) => {
+      await held
+      const response = await route.fetch()
+      await route.fulfill({ response })
+      starDone()
+    })
+    // 카드 목록 조회: 요청이 오면 그 순간 서버에서 읽어 두고, 별표 응답이 화면에 간 뒤에야 돌려준다
+    await page.route(`**/decks/${deckId}/cards?*`, async (route) => {
+      const response = await route.fetch()
+      await starDelivered
+      await route.fulfill({ response })
+    })
+
+    await page.locator('.star-btn').click() // 별표 요청 출발 (붙잡혀 있음)
+    const add = page.locator('.create-row')
+    await add.getByLabel('단어').fill('banana')
+    await add.getByLabel('뜻').fill('바나나')
+    const added = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === `/decks/${deckId}/cards`)
+    await add.getByLabel('뜻').press('Enter')
+    await added
+    await page.waitForTimeout(500) // 고치기 전이라면 이 사이에 목록 조회가 나가 '별표 전' 목록을 읽는다
+    release()
+
+    await expect(page.getByText('카드 2장 · 별표 1장')).toBeVisible()
+    const starOf = (word: string) => page.locator('.owned-card-row', { hasText: word }).locator('.star-btn')
+    await expect(starOf('apple')).toHaveAttribute('aria-pressed', 'true')
+    expect(await isStarred(request, deckId, 'apple')).toBe(true)
+  })
+
+  // 고치기 전: 별표 요청이 실패해 뜬 오류 문구가, 다시 눌러 성공한 뒤에도 남았다 (#44 전에는 목록을 다시 부르면서 지워졌다)
+  test('별표 요청이 실패한 뒤 다시 눌러 성공하면 오류 문구가 사라진다', async ({ page, request, errors }) => {
+    const deckId = await makeDeck(request, '별표재시도', ['apple|사과'])
+    await page.goto(`/app/decks/${deckId}`)
+    await expect(page.getByText('카드 1장 · 별표 0장')).toBeVisible()
+    await page.route(CARD_STAR_API, (route) => route.abort('failed'), { times: 1 }) // 서버까지 안 감
+
+    const star = page.locator('.star-btn')
+    await star.click()
+    await expect(page.getByRole('alert')).toBeVisible()
+    await expect(star).toHaveAttribute('aria-pressed', 'false')
+    errors.length = 0 // 일부러 끊은 요청의 콘솔 오류는 빼고 본다
+
+    await star.click()
+    await expect(star).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('alert')).toHaveCount(0)
+    expect(await isStarred(request, deckId, 'apple')).toBe(true)
+  })
+})

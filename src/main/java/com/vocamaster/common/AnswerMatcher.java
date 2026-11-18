@@ -33,6 +33,9 @@ import java.util.regex.Pattern;
  *       {@code "ice cream/아이스크림"}에서도 영어 쪽은 그대로다({@code "icecream/아이스크림"}은 오답, Codex 8차 검산 P2).</li>
  *   <li>입력에 뜻을 여러 개 적었으면({@code , ， ; ； / ／ ・} 로 나눔) 조각이 전부 후보일 때 정답 — 순서는 상관없다
  *       ({@code "끈기,고집" ← "n. 고집, 끈기"}). 후보에 없는 뜻이 하나라도 섞이면 오답({@code "사과, 포도" ← "사과, 능금"}).</li>
+ *   <li>입력에 적은 괄호 설명·품사 표시·①②도 정답 칸처럼 걷어내고 본다 (같은 날 보완 2, Codex 9차 검산) —
+ *       {@code "피할수없는 (불가피한)" ← "피할 수 없는 (불가피한)"}, {@code "a. 피할수없는" ← "a. 피할 수 없는"}.
+ *       위 두 규칙으로 안 맞을 때만 쓰는 마지막 단계라, 전에 정답이던 입력이 오답으로 바뀌는 일은 없다.</li>
  * </ul>
  *
  * <p>공백은 {@link #SPACE} 한 곳에 적은 글자만이다 — {@code trim()}·{@code \s}를 쓰지 않는다.
@@ -85,6 +88,7 @@ public final class AnswerMatcher {
      * <ul>
      *   <li>입력 전체가 후보 하나와 같거나</li>
      *   <li>입력을 구분자로 나눈 조각이 전부 후보일 때 (뜻을 여러 개, 순서를 바꿔 적은 답 — ADR-062)</li>
+     *   <li>입력에서 괄호 설명·품사 표시·①②를 걷어낸 조각이 전부 후보일 때 (ADR-062 보완 2)</li>
      * </ul>
      */
     public static boolean matches(String typed, String answer) {
@@ -108,18 +112,32 @@ public final class AnswerMatcher {
         if (hits(t, candidates, spaceless)) {
             return true;
         }
-        boolean any = false;
+        List<String> pieces = new ArrayList<>();
         for (String piece : SEPARATORS.split(raw)) {
             String p = normalize(piece);
-            if (p.isEmpty()) {
-                continue;
+            if (!p.isEmpty()) {
+                pieces.add(p);
             }
+        }
+        if (allHit(pieces, candidates, spaceless)) {
+            return true;
+        }
+        // 입력도 정답 칸과 같은 방법으로 걷어내고 본다 — 카드에 적힌 대로 괄호 설명·품사 표시까지 따라 적은 답
+        // ("피할수없는 (불가피한)", "a. 피할수없는"). 괄호 안에만 적은 입력은 조각이 하나도 안 남아 오답이다
+        return allHit(cleanPieces(raw), candidates, spaceless);
+    }
+
+    /** 조각이 하나 이상 있고 전부 후보와 맞는가 */
+    private static boolean allHit(List<String> pieces, Set<String> candidates, Set<String> spaceless) {
+        if (pieces.isEmpty()) {
+            return false;
+        }
+        for (String p : pieces) {
             if (!hits(p, candidates, spaceless)) {
                 return false;
             }
-            any = true;
         }
-        return any;
+        return true;
     }
 
     /** 조각 하나가 후보와 같은가 — 그대로, 또는 (한글·가나·한자가 든 후보에 한해) 띄어쓰기를 뺀 모양으로 */
