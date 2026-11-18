@@ -38,7 +38,7 @@ const SPACES = new RegExp(SPACE + '+', 'g')
 const EDGE_SPACE = /^ | $/g
 // 한글(자모·호환 자모·음절)·가나(히라가나·가타카나·반각 가타카나)·한자 — 이 글자가 든 후보만 띄어쓰기를 빼고 비교한다 (ADR-062).
 // 서버 AnswerMatcher.CJK와 똑같이 유지
-const CJK = /[ᄀ-ᇿ぀-ヿ㄰-㆏㐀-䶿一-鿿가-힣ｦ-ﾟ]/
+const CJK = /[\u1100-\u11FF\u3040-\u30FF\u3130-\u318F\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7A3\uFF66-\uFF9F]/
 // 정규화한 뒤에는 보통 공백(U+0020)만 남는다
 const PLAIN_SPACES = / /g
 
