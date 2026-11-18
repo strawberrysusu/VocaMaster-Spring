@@ -108,6 +108,9 @@ function DeckDetailScreen() {
     return () => { requests.version++ }
   }, [load])
 
+  // 별표 수는 화면의 카드 목록에서 센다 — 별표를 눌러도 덱을 다시 부르지 않으니 서버가 준 deck.starredCount는 낡는다
+  const starredCount = cardsLoaded ? cards.filter((c) => c.starred).length : deck?.starredCount ?? 0
+
   const cardGroups = STATUS_GROUPS.map((status) => ({
     status,
     cards: cards.map((card, index) => ({ card, number: index + 1 }))
@@ -135,10 +138,12 @@ function DeckDetailScreen() {
     }
   }
 
+  // 별표는 그 카드 한 줄만 바꾼다. 예전에는 목록 전체를 다시 불렀는데(load()), 그동안 목록이 '불러오는 중' 문구로 바뀌어
+  // 긴 덱에서 스크롤이 맨 위로 돌아갔다 (11/18 별표 74개를 끄다가 확인 · Codex 8차 검산: 125장 중 110번째 카드에서 재현)
   async function toggleStar(cardId: number) {
     try {
-      await api(`/cards/${cardId}/star`, { method: 'PATCH' })
-      load()
+      const updated = await api<CardDto>(`/cards/${cardId}/star`, { method: 'PATCH' })
+      setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, starred: updated.starred } : c)))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -277,7 +282,7 @@ function DeckDetailScreen() {
             )}
             {!editingDeck && deck?.description && <p className="deck-desc">{deck.description}</p>}
             <p className="sub" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              {cardsLoaded ? t('카드 {n}장 · 별표 {starred}장', { n: cards.length, starred: deck?.starredCount ?? 0 }) : cardsLoading ? t('카드 불러오는 중...') : t('카드를 불러오지 못했어요')}
+              {cardsLoaded ? t('카드 {n}장 · 별표 {starred}장', { n: cards.length, starred: starredCount }) : cardsLoading ? t('카드 불러오는 중...') : t('카드를 불러오지 못했어요')}
               <select
                 className="vis-select"
                 value={deck?.visibility ?? 'PRIVATE'}
@@ -317,10 +322,10 @@ function DeckDetailScreen() {
                       {ICON.review}
                       <span>{t('전체 복습')}<small>{t('알아요·몰라요로 복습 일정 관리')}</small></span>
                     </Link>
-                    {deck !== null && deck.starredCount > 0 ? (
+                    {deck !== null && starredCount > 0 ? (
                       <Link role="menuitem" className="menu-2line" to={`/study?deckId=${id}&starredOnly=1`}>
                         {ICON.star}
-                        <span>{t('별표만 복습 ({n}장)', { n: deck.starredCount })}<small>{t('⭐ 표시한 카드만')}</small></span>
+                        <span>{t('별표만 복습 ({n}장)', { n: starredCount })}<small>{t('⭐ 표시한 카드만')}</small></span>
                       </Link>
                     ) : (
                       <span role="menuitem" aria-disabled="true" className="menu-disabled menu-2line" title={t('별표한 카드가 없어요')}>

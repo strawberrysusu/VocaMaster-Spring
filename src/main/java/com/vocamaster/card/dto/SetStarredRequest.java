@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * 별표 일괄 설정 — 값을 지정하는 멱등 요청 (토글 {@code PATCH /cards/{id}/star}와 달리 두 번 보내도 결과가 같다).
- * 온라인 시험지에서 틀린 카드를 한 번에 ⭐ 하고, '맞음으로'를 누르면 되돌린다.
+ * 온라인 시험지에서 틀린 카드를 한 번에 ⭐ 하고, 맞힌 카드와 '맞음으로' 한 카드의 ⭐를 끈다 (ADR-053, ADR-063).
  */
 @Getter @Setter
 public class SetStarredRequest {

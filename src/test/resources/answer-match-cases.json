@@ -29,6 +29,15 @@
   { "typed": "ice  cream", "answer": "ice cream", "expected": true, "why": "연속 공백은 하나로 (그대로)" },
   { "typed": "貴ぶ・尊ぶ", "answer": "尊ぶ・貴ぶ", "expected": true, "why": "ADR-062: 표기 두 가지를 순서 바꿔 다 적어도" },
 
+  { "typed": "icecream/아이스크림", "answer": "ice cream/아이스크림", "expected": false, "why": "Codex 8차 검산 P2: 구분자로 묶인 답에서도 로마자 뜻의 띄어쓰기는 철자다 — #43에서는 한글이 섞였다는 이유로 정답이 됐다" },
+  { "typed": "아이스크림/icecream", "answer": "ice cream/아이스크림", "expected": false, "why": "Codex 8차 검산 P2: 순서를 바꿔 적어도 같은 판정" },
+  { "typed": "icecream (아이스크림)", "answer": "ice cream (아이스크림)", "expected": false, "why": "Codex 8차 검산 P2와 같은 모양: 괄호 설명에 한글이 있어도 영어 철자의 띄어쓰기는 그대로 본다" },
+  { "typed": "ice cream/아이스크림", "answer": "ice cream/아이스크림", "expected": true, "why": "그대로 친 것은 정답 (전체 일치를 먼저 본다)" },
+  { "typed": "아이스크림/ice cream", "answer": "ice cream/아이스크림", "expected": true, "why": "ADR-062: 순서만 바꾼 것은 정답" },
+  { "typed": "아이스 크림/ice cream", "answer": "ice cream/아이스크림", "expected": true, "why": "ADR-062: 한글 뜻 쪽은 띄어쓰기가 달라도 정답 — 낱개 뜻마다 따로 판단한다" },
+  { "typed": "\uFA19 \uFA4C", "answer": "\uFA19\uFA4C", "expected": true, "why": "Codex 8차 검산 P3: 호환 한자(U+FA19·U+FA4C)만으로 된 답도 띄어쓰기를 빼고 비교한다" },
+  { "typed": "\uD842\uDFB7 \uD842\uDFB7", "answer": "\uD842\uDFB7\uD842\uDFB7", "expected": true, "why": "Codex 8차 검산 P3: BMP 밖 확장 한자(U+20BB7)만으로 된 답도 띄어쓰기를 빼고 비교한다" },
+
   { "typed": "멸사봉공", "answer": "멸사봉공 (사사로운 이익을 버리고 나라·조직을 위해 힘씀)", "expected": true, "why": "괄호 설명은 안 쳐도 정답" },
   { "typed": "사사로운 이익을 버리고 나라·조직을 위해 힘씀", "answer": "멸사봉공 (사사로운 이익을 버리고 나라·조직을 위해 힘씀)", "expected": false, "why": "괄호 속 설명만 친 것은 정답이 아님" },
   { "typed": "멸사봉공 (사사로운 이익을 버리고 나라·조직을 위해 힘씀)", "answer": "멸사봉공 (사사로운 이익을 버리고 나라·조직을 위해 힘씀)", "expected": true, "why": "뒤로 호환: 예전처럼 통째로 쳐도 정답" },

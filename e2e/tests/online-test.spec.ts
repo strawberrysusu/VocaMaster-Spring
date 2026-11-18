@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { test, expect, makeDeck, listCards, isStarred, toggleStar, overflowX, LONG, makeEmptyDeck, addCard, deleteCard } from './support'
 
-// 온라인 시험지(ADR-053): 채점하면 틀리거나 비운 단어는 자동 ⭐, '맞음으로'는 이 시험이 켠 ⭐만 끈다
+// 온라인 시험지(ADR-053 → ADR-063): 채점하면 틀리거나 비운 단어는 자동 ⭐, 맞힌 단어와 '맞음으로'는 ⭐를 끈다(예전부터 켜져 있던 것도)
 
 const open = (page: Page, deckId: number) => page.goto(`/app/test/${deckId}?scope=all&count=all&shuffle=0`)
 const row = (page: Page, word: string) =>
@@ -10,34 +10,92 @@ const summary = (page: Page) => page.locator('.otest-summary')
 const grade = (page: Page) => page.getByRole('button', { name: /채점하기/ }).click()
 const STAR_API = '**/decks/*/cards/star'
 
-test('채점: 틀리거나 비운 단어만 ⭐, 맞음으로는 이 시험이 켠 ⭐만 끈다', async ({ page, request }) => {
-  const deckId = await makeDeck(request, '온라인', ['感謝|かんしゃ|감사', '会議|かいぎ|회의', 'ジャンケン|가위바위보'])
-  const janken = (await listCards(request, deckId)).find((c) => c.front === 'ジャンケン')!
-  await toggleStar(request, janken.id) // 시험 전부터 ⭐였던 카드
+// ADR-063 (11/18 사용자 결정 "시험으로 맞춰야만 정답으로 인정"): 맞힌 단어와 '맞음으로'는 시험 전부터 켜져 있던 ⭐도 끈다.
+// 그 전(ADR-053)에는 이 시험이 켠 ⭐만 껐다 — 원래 ⭐였던 ジャンケン은 맞음으로를 눌러도 남았고, 맞힌 단어의 ⭐는 건드리지 않았다
+test('채점: 틀리거나 비운 단어는 ⭐, 맞힌 단어와 맞음으로는 예전부터 켜져 있던 ⭐도 끈다', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '온라인', ['感謝|かんしゃ|감사', '会議|かいぎ|회의', 'ジャンケン|가위바위보', '運輸|うんゆ|운수'])
+  const cards = await listCards(request, deckId)
+  await toggleStar(request, cards.find((c) => c.front === 'ジャンケン')!.id) // 시험 전부터 ⭐, 이번에 틀린다
+  await toggleStar(request, cards.find((c) => c.front === '運輸')!.id) // 시험 전부터 ⭐, 이번에 맞힌다
 
   await open(page, deckId)
   await row(page, '感謝').getByLabel(/읽기$/).fill('カンシャ') // 가타카나로 써도 정답
   await row(page, '感謝').getByLabel(/뜻$/).fill('감사')
+  await row(page, '運輸').getByLabel(/읽기$/).fill('うんゆ')
+  await row(page, '運輸').getByLabel(/뜻$/).fill('운수')
   await row(page, 'ジャンケン').getByLabel(/뜻$/).fill('보') // 오답
   // 会議는 비워 둔다 = 모름
   await grade(page)
 
-  await expect(summary(page)).toContainText('점수 1/3')
-  await expect(summary(page)).toContainText('⭐ 완료')
+  await expect(summary(page)).toContainText('점수 2/4')
+  await expect(summary(page)).toContainText('틀린 2개 ⭐ 완료 (새로 켠 별표 1개)') // 会議만 새로 켰다
+  await expect(summary(page)).toContainText('맞힌 단어의 ⭐ 1개 해제') // 運輸
   expect(await isStarred(request, deckId, '会議')).toBe(true)
   expect(await isStarred(request, deckId, 'ジャンケン')).toBe(true)
   expect(await isStarred(request, deckId, '感謝')).toBe(false)
+  expect(await isStarred(request, deckId, '運輸')).toBe(false) // 맞히면 예전 ⭐도 꺼진다
 
   await row(page, '会議').getByRole('button', { name: '맞음으로' }).click()
   await expect(row(page, '会議').getByRole('button', { name: '다시 오답으로' })).toBeVisible()
   await row(page, 'ジャンケン').getByRole('button', { name: '맞음으로' }).click()
   await expect(row(page, 'ジャンケン').getByRole('button', { name: '다시 오답으로' })).toBeVisible()
   expect(await isStarred(request, deckId, '会議')).toBe(false) // 이 시험이 켠 ⭐ → 끔
-  expect(await isStarred(request, deckId, 'ジャンケン')).toBe(true) // 원래 ⭐ → 그대로
+  expect(await isStarred(request, deckId, 'ジャンケン')).toBe(false) // 원래 ⭐였어도 끔 (ADR-063)
+  await expect(summary(page)).toContainText('점수 4/4')
+  await expect(summary(page)).toContainText('맞힌 단어의 ⭐ 3개 해제')
+  await expect(summary(page)).not.toContainText('틀린') // 틀린 단어가 없으면 '틀린 N개' 문구도 없다
 
+  // 다시 오답으로 → 다시 켠다. 원래 ⭐였던 카드를 되돌린 것은 '새로 켠 별표'로 세지 않는다
   await row(page, '会議').getByRole('button', { name: '다시 오답으로' }).click()
   await expect(row(page, '会議').getByRole('button', { name: '맞음으로' })).toBeVisible()
+  await row(page, 'ジャンケン').getByRole('button', { name: '다시 오답으로' }).click()
+  await expect(row(page, 'ジャンケン').getByRole('button', { name: '맞음으로' })).toBeVisible()
   expect(await isStarred(request, deckId, '会議')).toBe(true)
+  expect(await isStarred(request, deckId, 'ジャンケン')).toBe(true)
+  await expect(summary(page)).toContainText('틀린 2개 ⭐ 완료 (새로 켠 별표 1개)')
+  await expect(summary(page)).toContainText('맞힌 단어의 ⭐ 1개 해제')
+})
+
+// ADR-063: 다시 풀기에서 맞히면 앞 풀이가 켠 ⭐가 꺼지고, 전부 맞힌 풀이에도 별표 정리 결과가 보인다
+test('다시 풀기에서 맞힌 단어는 앞 풀이가 켠 ⭐가 꺼진다', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '다시풀기해제', ['apple|사과', 'banana|바나나'])
+  await open(page, deckId)
+  await row(page, 'apple').getByLabel(/뜻$/).fill('사과')
+  await grade(page) // banana는 비움 → ⭐
+  await expect(summary(page)).toContainText('틀린 1개 ⭐ 완료 (새로 켠 별표 1개)')
+  await expect(summary(page)).not.toContainText('해제') // apple은 원래 ⭐가 없었다 — 끈 별표 0개면 문구도 없다
+  expect(await isStarred(request, deckId, 'banana')).toBe(true)
+
+  await page.getByRole('button', { name: /다시 풀기/ }).click()
+  await expect(page.locator('.otest-row')).toHaveCount(1)
+  await row(page, 'banana').getByLabel(/뜻$/).fill('바나나')
+  await grade(page)
+  await expect(summary(page)).toContainText('점수 1/1')
+  await expect(summary(page)).toContainText('맞힌 단어의 ⭐ 1개 해제')
+  await expect(summary(page)).not.toContainText('틀린')
+  expect(await isStarred(request, deckId, 'banana')).toBe(false)
+})
+
+// ADR-063: 전부 맞힌 풀이에서도 별표 끄기 요청이 나간다 — 실패하면 '별표 다시 시도'가 보여야 한다
+// (예전에는 틀린 단어가 없으면 별표 줄 자체를 그리지 않았다)
+test('전부 맞혔는데 별표 끄기가 실패하면 별표 다시 시도로 끈다', async ({ page, request, errors }) => {
+  const deckId = await makeDeck(request, '해제실패', ['apple|사과'])
+  const apple = (await listCards(request, deckId)).find((c) => c.front === 'apple')!
+  await toggleStar(request, apple.id) // 시험 전부터 ⭐
+  await open(page, deckId)
+  await row(page, 'apple').getByLabel(/뜻$/).fill('사과')
+  await page.route(STAR_API, (route) => route.abort('failed'), { times: 1 }) // 서버까지 안 감 = 아직 안 꺼짐
+  await grade(page)
+  await expect(summary(page)).toContainText('점수 1/1')
+  await expect(page.getByRole('button', { name: '별표 다시 시도' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('맞힌 단어의 별표를 끄지 못했어요')
+  expect(await isStarred(request, deckId, 'apple')).toBe(true)
+  errors.length = 0 // 일부러 끊은 요청의 콘솔 오류는 빼고 본다
+
+  await page.getByRole('button', { name: '별표 다시 시도' }).click()
+  await expect(summary(page)).toContainText('맞힌 단어의 ⭐ 1개 해제')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  expect(await isStarred(request, deckId, 'apple')).toBe(false)
 })
 
 // ADR-062 (11/18 사용자 결정): 띄어쓰기가 달라도, 뜻을 순서 바꿔 쉼표로 적어도 정답. 카드에 없는 뜻이 섞이면 오답
