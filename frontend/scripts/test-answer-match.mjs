@@ -33,6 +33,8 @@ check('예문 괄호 읽기', mod.matchesAnswer('あやぶまれる', '(開催�
 check('읽기 없는 카드', mod.matchesAnswer('apple', 'apple', null), true, 'null 칸은 건너뜀')
 check('빈 입력', mod.matchesAnswer('', '感謝', 'かんしゃ'), false, '빈 입력은 오답')
 check('null 입력', mod.matchesAnswer(null, '感謝'), false, 'null 입력은 오답')
+check('단어와 읽기를 함께', mod.matchesAnswer('かんしゃ, 感謝', '感謝', 'かんしゃ'), true, 'ADR-062: 조각이 서로 다른 칸의 후보여도 전부 맞으면 정답')
+check('한 조각이 틀리면', mod.matchesAnswer('感謝, かいぎ', '感謝', 'かんしゃ'), false, 'ADR-062: 후보에 없는 조각이 섞이면 오답')
 
 // 읽기 채점 (온라인 시험지) — 프론트에만 있음
 check('읽기 그대로', mod.matchesReading('かんしゃ', 'かんしゃ'), true, '기본')
@@ -40,11 +42,12 @@ check('가타카나로 써도', mod.matchesReading('カンシャ', 'かんしゃ
 check('읽기 두 가지 중 하나', mod.matchesReading('つの', 'かど／つの'), true, '전각 빗금')
 check('예문 괄호 문맥 없이', mod.matchesReading('あやぶまれる', '(かいさいが)あやぶまれる'), true, '괄호 문맥')
 check('장음 다르면 오답', mod.matchesReading('こうじょ', 'こうじょう'), false, '장음까지 정확히')
+check('읽기 두 가지를 순서 바꿔 다', mod.matchesReading('つの／カド', 'かど／つの'), true, 'ADR-062: 전부 적어도 정답 (가타카나 섞여도)')
 check('읽기 없는 카드는 채점 불가', mod.matchesReading('かんしゃ', null), false, 'null')
 check('빈 입력 오답', mod.matchesReading('', 'かんしゃ'), false, '빈 입력')
 check('foldKana', mod.foldKana('ジャンケン・ポン') === 'じゃんけん・ぽん', true, '가타카나만 바꾸고 가운뎃점은 그대로')
 
-const total = cases.length + 6 + 8
+const total = cases.length + 8 + 9
 if (failed) {
   console.error(`\n${failed}/${total} 실패`)
   process.exit(1)

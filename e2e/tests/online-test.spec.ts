@@ -40,6 +40,28 @@ test('채점: 틀리거나 비운 단어만 ⭐, 맞음으로는 이 시험이 �
   expect(await isStarred(request, deckId, '会議')).toBe(true)
 })
 
+// ADR-062 (11/18 사용자 결정): 띄어쓰기가 달라도, 뜻을 순서 바꿔 쉼표로 적어도 정답. 카드에 없는 뜻이 섞이면 오답
+test('채점: 띄어쓰기·뜻 순서가 달라도 정답, 카드에 없는 뜻이 섞이면 오답', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '채점규칙', [
+    'unavoidable|a. 불가피한, 피할 수 없는',
+    'tenacity|n. 고집, 끈기',
+    'odd|a. 이상한, 기묘한; 홀수의',
+  ])
+
+  await open(page, deckId)
+  await row(page, 'unavoidable').getByLabel(/뜻$/).fill('피할수없는') // 띄어쓰기 없이
+  await row(page, 'tenacity').getByLabel(/뜻$/).fill('끈기,고집') // 순서를 바꿔 둘 다
+  await row(page, 'odd').getByLabel(/뜻$/).fill('더하다, 이상한') // '더하다'는 카드에 없는 뜻
+  await grade(page)
+
+  await expect(summary(page)).toContainText('점수 2/3')
+  await expect(row(page, 'unavoidable').getByRole('button', { name: '맞음으로' })).toHaveCount(0)
+  await expect(row(page, 'tenacity').getByRole('button', { name: '맞음으로' })).toHaveCount(0)
+  await expect(row(page, 'odd').getByRole('button', { name: '맞음으로' })).toBeVisible()
+  expect(await isStarred(request, deckId, 'odd')).toBe(true)
+  expect(await isStarred(request, deckId, 'tenacity')).toBe(false)
+})
+
 test('폰 화면: 채점 뒤 정답·설명 줄이 붙어도 가로로 넘치지 않는다', async ({ page, request }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   const deckId = await makeEmptyDeck(request, '온라인폰')
