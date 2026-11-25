@@ -84,7 +84,7 @@ public final class AnswerMatcher {
      * 끝은 $ 대신 \z — Java의 $는 끝에 줄바꿈 글자가 있으면 그 앞에서도 맞아 JS와 달라진다
      */
     private static final Pattern PART_OF_SPEECH =
-            Pattern.compile("(^|[^A-Za-z])(?:n|v|a|ad|adv|adj|prep|conj|pron|int|phr|pl)\\.(?=" + SPACE + "|\\z)");
+            Pattern.compile("(^|[^A-Za-z])(?:n|v|a|ad|adv|adj|prep|conj|pron|int|phr|pl|aux)\\.(?=" + SPACE + "|\\z)");   // aux. = 11/25 추가 (ADR-066 보완 2)
     /** ① ~ ⑳ */
     private static final Pattern CIRCLED_NUMBER = Pattern.compile("[\\u2460-\\u2473]");
     private static final Pattern SEPARATORS = Pattern.compile("[,，;；/／\\u30FB]");
