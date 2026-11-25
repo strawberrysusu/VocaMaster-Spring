@@ -252,7 +252,7 @@ function DeckDetailScreen() {
   return (
     <>
       <TopNav />
-      <div className="shell">
+      <main className="shell">
         <p style={{ margin: '0 0 14px', display: 'flex', justifyContent: 'space-between' }}>
           <Link to="/decks" className="hero-secondary">{t('← 내 덱')}</Link>
           <button className="danger-link" onClick={removeDeck}>{t('덱 삭제')}</button>
@@ -489,7 +489,7 @@ function DeckDetailScreen() {
             </p>
           )}
         </div>
-      </div>
+      </main>
       {sheetOpen && deck && (
         <TestSheetDialog deckId={id!} deckTitle={deck.title} cards={cards} onClose={() => setSheetOpen(false)} />
       )}

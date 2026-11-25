@@ -134,7 +134,7 @@ export default function Typing() {
   return (
     <>
       <TopNav />
-      <div className="shell study-shell">
+      <main className="shell study-shell">
         <div className="study-top">
           <Link to={`/decks/${deckId}`} className="hero-secondary">{t('← 덱으로')}</Link>
           {session && !summary && (
@@ -293,7 +293,7 @@ export default function Typing() {
             </div>
           </div>
         )}
-      </div>
+      </main>
     </>
   )
 }

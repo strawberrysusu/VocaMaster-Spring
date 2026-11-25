@@ -87,7 +87,7 @@ export default function Home() {
     return (
       <>
         <TopNav />
-        <div className="shell">
+        <main className="shell">
           <div className="section-head">
             <h1>{t('시작하기')}</h1>
             <span className="date">{today}</span>
@@ -114,7 +114,7 @@ export default function Home() {
             </div>
             <Link to="/decks" className="cta">{t('첫 덱 만들기')}</Link>
           </section>
-        </div>
+        </main>
       </>
     )
   }
@@ -122,7 +122,7 @@ export default function Home() {
   return (
     <>
       <TopNav streak={summary?.streak} />
-      <div className="shell">
+      <main className="shell">
         <div className="section-head">
           <h1>{t('오늘의 복습')}</h1>
           <span className="date">{today}</span>
@@ -289,7 +289,7 @@ export default function Home() {
             </div>
           </div>
         )}
-      </div>
+      </main>
     </>
   )
 }

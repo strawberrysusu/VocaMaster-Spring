@@ -192,7 +192,7 @@ export default function Listening() {
   return (
     <>
       <TopNav />
-      <div className="shell">
+      <main className="shell">
         <p style={{ margin: '0 0 14px' }}>
           <Link to={`/decks/${deckId}`} className="hero-secondary">{t('← 덱으로')}</Link>
         </p>
@@ -359,7 +359,7 @@ export default function Listening() {
             </div>
           </>
         )}
-      </div>
+      </main>
     </>
   )
 }

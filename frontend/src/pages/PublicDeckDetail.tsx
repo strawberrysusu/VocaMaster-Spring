@@ -72,7 +72,7 @@ function PublicDeckScreen() {
   return (
     <>
       <TopNav />
-      <div className="shell">
+      <main className="shell">
         <p style={{ margin: '0 0 14px' }}>
           <Link to="/explore" className="hero-secondary">{t('← 탐색')}</Link>
         </p>
@@ -129,7 +129,7 @@ function PublicDeckScreen() {
             )}
           </div>
         )}
-      </div>
+      </main>
     </>
   )
 }

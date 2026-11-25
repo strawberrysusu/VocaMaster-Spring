@@ -190,7 +190,7 @@ export default function Settings() {
   return (
     <>
       <TopNav />
-      <div className="shell">
+      <main className="shell">
         <div className="page-head">
           <div>
             <h1>{t('설정')}</h1>
@@ -386,7 +386,7 @@ export default function Settings() {
             </button>
           </div>
         </section>
-      </div>
+      </main>
     </>
   )
 }

@@ -92,7 +92,7 @@ export default function Explore() {
   return (
     <>
       <TopNav />
-      <div className="shell">
+      <main className="shell">
         <div className="page-head">
           <div>
             <h1>{t('탐색')}</h1>
@@ -176,7 +176,7 @@ export default function Explore() {
             <button disabled={page === totalPages - 1} onClick={() => goPage(page + 1)}>{t('다음 ▶')}</button>
           </div>
         )}
-      </div>
+      </main>
     </>
   )
 }

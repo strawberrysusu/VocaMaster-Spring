@@ -80,7 +80,7 @@ export default function Search() {
   return (
     <>
       <TopNav />
-      <div className="shell">
+      <main className="shell">
         <div className="page-head">
           <div>
             <h1>{t('검색')}</h1>
@@ -167,7 +167,7 @@ export default function Search() {
             </section>
           </>
         )}
-      </div>
+      </main>
     </>
   )
 }
