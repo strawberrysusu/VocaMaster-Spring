@@ -101,5 +101,17 @@
   { "typed": "n. 사과", "answer": "사과", "expected": true, "why": "11/18 Codex 9차: 카드에 없는 품사 표시를 붙여 적어도 뜻이 맞으면 정답" },
   { "typed": "n. icecream", "answer": "ice cream/아이스크림", "expected": false, "why": "11/18 Codex 9차: 걷어낸 뒤에도 영어 뜻의 띄어쓰기는 철자다" },
   { "typed": "①능금 ②사과", "answer": "사과, 능금", "expected": true, "why": "11/18 Codex 9차: 입력의 ①②도 구분자로 본다" },
-  { "typed": "피할수없는 (불가피한", "answer": "피할 수 없는 (불가피한)", "expected": false, "why": "11/18 Codex 9차: 닫지 않은 괄호는 설명으로 보지 않는다" }
+  { "typed": "피할수없는 (불가피한", "answer": "피할 수 없는 (불가피한)", "expected": false, "why": "11/18 Codex 9차: 닫지 않은 괄호는 설명으로 보지 않는다" },
+
+  { "typed": "아무도~않다", "answer": "pron. 아무도[아무것도] ~않다", "expected": true, "why": "ADR-066: 낱말에 붙은 [ ]는 '그 낱말 대신 쓸 수 있는 말' — 앞 낱말 그대로 (11/25 온라인 시험에서 오답이 됐던 입력)" },
+  { "typed": "아무것도 않다", "answer": "pron. 아무도[아무것도] ~않다", "expected": true, "why": "ADR-066: [ ] 안의 말로 바꿔 적어도 정답" },
+  { "typed": "아무도[아무것도] 않다", "answer": "pron. 아무도[아무것도] ~않다", "expected": true, "why": "ADR-066: 카드 그대로 따라 적어도 정답" },
+  { "typed": "아무", "answer": "pron. 아무도[아무것도] ~않다", "expected": false, "why": "ADR-066: 일부만 적으면 오답" },
+  { "typed": "살균이 되는", "answer": "a. 소독[살균]이 되는 n. 소독제, 방부제", "expected": true, "why": "ADR-066: 낱말 중간에 붙은 [ ]도 같은 규칙" },
+  { "typed": "소독이되는", "answer": "a. 소독[살균]이 되는 n. 소독제, 방부제", "expected": true, "why": "ADR-066: 앞 낱말 그대로 + 띄어쓰기 무시(ADR-062)" },
+  { "typed": "살균", "answer": "a. 소독[살균]이 되는 n. 소독제, 방부제", "expected": false, "why": "ADR-066: [ ] 안의 말만 적으면 오답" },
+  { "typed": "향", "answer": "n. [ˈɪnsens] 향 v. [ɪnˈsens] 몹시 화나게 하다", "expected": true, "why": "ADR-066: 띄어 쓴 [ ]는 설명(발음 기호) — 지우고 본다 (전에는 '향'이 오답이었다)" },
+  { "typed": "몹시 화나게 하다, 향", "answer": "n. [ˈɪnsens] 향 v. [ɪnˈsens] 몹시 화나게 하다", "expected": true, "why": "ADR-066: 발음 기호를 지운 뜻 둘을 순서 바꿔 적어도 정답" },
+  { "typed": "ˈɪnsens", "answer": "n. [ˈɪnsens] 향 v. [ɪnˈsens] 몹시 화나게 하다", "expected": false, "why": "ADR-066: 발음 기호는 뜻이 아니다" },
+  { "typed": "사과[능금]", "answer": "사과, 능금", "expected": true, "why": "ADR-066: 입력의 [ ]도 같은 규칙 — 사과·능금 둘 다 후보" }
 ]

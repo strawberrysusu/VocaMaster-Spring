@@ -4,7 +4,7 @@ import { api } from '../api/client'
 import { fetchAllCards, setStarred, trackStarWrite, type CardDto, type SetStarredResult } from '../api/cards'
 import TopNav from '../components/TopNav'
 import { buildSheet, type SheetRow, type SheetScope } from '../lib/testSheet'
-import { matchesAnswer, matchesReading } from '../lib/answerMatch'
+import { foldKana, isNearMiss, matchesAnswer, matchesReading } from '../lib/answerMatch'
 import { isPlainEnter } from '../lib/keys'
 import { t } from '../i18n'
 
@@ -51,6 +51,16 @@ const withoutId = (prev: Set<number>, id: number) => {
 const mergeStarResult = (prev: Set<number>, r: { changedIds: number[]; skippedIds: number[] }) => {
   const skipped = new Set(r.skippedIds)
   return new Set([...withIds(prev, r.changedIds)].filter((id) => !skipped.has(id)))
+}
+
+const WRONG_ONLY_KEY = 'vm.onlineTest.wrongOnly'
+/** '틀린 것만 보기'를 켜 둔 적이 있으면 다음 시험에도 켠다 — 이 브라우저에만 (ADR-066) */
+function readWrongOnly(): boolean {
+  try {
+    return localStorage.getItem(WRONG_ONLY_KEY) === '1'
+  } catch {
+    return false
+  }
 }
 
 function readDraft(key: string): Draft | null {
@@ -100,6 +110,8 @@ export default function OnlineTest() {
   const [skippedCount, setSkippedCount] = useState(0)
   // '맞음으로'·'다시 오답으로' 요청 중인 카드 — 이 동안은 '다시 풀기'를 막는다
   const [busyCards, setBusyCards] = useState<Set<number>>(new Set())
+  // 채점 뒤 '틀린 것만 보기' — 켜면 비슷하게 쓴 답을 위, 틀린 답을 아래로 묶는다 (ADR-066)
+  const [wrongOnly, setWrongOnly] = useState(readWrongOnly)
   // 몇 번째 풀이인지 — 문항이 바뀐 뒤(다시 풀기·다른 덱) 늦게 온 응답이 새 결과를 건드리지 않게
   const attemptRef = useRef(0)
   const sheetRef = useRef<HTMLDivElement>(null)
@@ -331,6 +343,38 @@ export default function OnlineTest() {
     window.scrollTo({ top: 0 })
   }
 
+  // 채점할 때 틀린 문항을 두 묶음으로 — 정답과 겹치는 데가 있는 답(확인할 것)과 없는 답 (ADR-066).
+  // '맞음으로'를 눌러도 묶음에서 빼지 않는다 — 그 자리에서 '다시 오답으로'로 되돌릴 수 있게
+  const review = useMemo(() => {
+    if (!results) return null
+    const near: number[] = []
+    const far: number[] = []
+    results.forEach((res, i) => {
+      if ((res.readingOk ?? true) && res.meaningOk) return
+      const a = answers[i] ?? emptyAnswer()
+      const meaningNear = res.meaningOk || isNearMiss(a.meaning, rows[i].meaning)
+      const readingNear = res.readingOk !== false || isNearMiss(foldKana(a.reading), foldKana(rows[i].reading))
+      if (meaningNear && readingNear) near.push(i)
+      else far.push(i)
+    })
+    return { near, far }
+  }, [results, answers, rows])
+  const wrongTotal = review ? review.near.length + review.far.length : 0
+  // 화면에 그릴 순서 — '틀린 것만 보기'면 묶음 제목 + 비슷하게 쓴 답 + 틀린 답, 아니면 문항 순서 그대로
+  const order: Array<number | 'near' | 'far'> =
+    review && wrongOnly
+      ? [...(review.near.length ? (['near'] as const) : []), ...review.near, ...(review.far.length ? (['far'] as const) : []), ...review.far]
+      : rows.map((_, i) => i)
+
+  function toggleWrongOnly(on: boolean) {
+    setWrongOnly(on)
+    try {
+      localStorage.setItem(WRONG_ONLY_KEY, on ? '1' : '0')
+    } catch {
+      /* 저장이 막힌 브라우저 — 이번 화면에서만 켜진다 */
+    }
+  }
+
   const scopeLabel = scope === 'starred' ? t('⭐ 별표만') : t('전체')
   // 새로 켠 별표 = 이 시험이 켠 것 중 서버가 켰다고 확인한 것만
   const newlyStarred = [...addedStars].filter((id) => confirmedOn.has(id)).length
@@ -384,6 +428,13 @@ export default function OnlineTest() {
           </div>
         )}
 
+        {wrongTotal > 0 && (
+          <label className="otest-filter">
+            <input type="checkbox" checked={wrongOnly} onChange={(e) => toggleWrongOnly(e.target.checked)} />
+            {t('틀린 것만 보기 ({n})', { n: wrongTotal })}
+          </label>
+        )}
+
         {rows.length > 0 && (
           <div className={`otest-sheet${japanese ? ' jp' : ''}`} ref={sheetRef}>
             <div className="otest-head" aria-hidden="true">
@@ -392,7 +443,21 @@ export default function OnlineTest() {
               {japanese && <span>{t('읽기')}</span>}
               <span>{t('뜻')}</span>
             </div>
-            {rows.map((r, i) => {
+            {order.map((item) => {
+              if (item === 'near')
+                return (
+                  <h2 key="group-near" className="otest-group">
+                    {t('비슷하게 썼어요 — 맞았는지 확인해 보세요 ({n})', { n: review?.near.length ?? 0 })}
+                  </h2>
+                )
+              if (item === 'far')
+                return (
+                  <h2 key="group-far" className="otest-group">
+                    {t('틀렸어요 ({n})', { n: review?.far.length ?? 0 })}
+                  </h2>
+                )
+              const i = item
+              const r = rows[i]
               const res = results?.[i]
               const ok = res ? rowOk(res) : null
               return (

@@ -1,22 +1,34 @@
-import { test, expect } from './support'
+import { test, expect, makeEmptyDeck } from './support'
 
 // 11/25 Lighthouse(운영 /app/login, 데스크톱)가 찾은 것 — ADR-065
 // 접근성: 본문 표시(main) 없음·버튼 글자 대비 3.35:1 / SEO: 페이지 설명 없음 / 성능: 구글 글꼴 CSS가 첫 그리기를 막음
 
 const FONT_CSS = 'fonts.googleapis.com/css2'
 
-/** 글자색과 로그인 카드 배경의 대비 (WCAG 2 공식). 브라우저 안에서 돈다 — 바깥 변수를 쓰지 말 것 */
-function contrastOnCard(el: Element): number {
-  const lum = (css: string) => {
-    const [r, g, b] = (css.match(/[\d.]+/g) ?? []).slice(0, 3).map((v) => {
-      const c = Number(v) / 255
+/**
+ * 글자색과 실제 배경(자신부터 위로 올라가며 처음 만나는 투명하지 않은 배경)의 대비 (WCAG 2 공식).
+ * 브라우저 안에서 돈다 — 바깥 변수를 쓰지 말 것
+ */
+function contrastOnBackground(el: Element): number {
+  const parts = (css: string) => (css.match(/[\d.]+/g) ?? []).map(Number)
+  const lum = ([r, g, b]: number[]) => {
+    const f = (v: number) => {
+      const c = v / 255
       return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-    })
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
   }
-  const fg = lum(getComputedStyle(el).color)
-  const bg = lum(getComputedStyle(el.closest('.auth-card')!).backgroundColor)
-  return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05)
+  let bg = [255, 255, 255]
+  for (let cur: Element | null = el; cur; cur = cur.parentElement) {
+    const c = parts(getComputedStyle(cur).backgroundColor)
+    if (c.length >= 3 && (c.length < 4 || c[3] > 0)) {
+      bg = c.slice(0, 3)
+      break
+    }
+  }
+  const fg = lum(parts(getComputedStyle(el).color))
+  const b = lum(bg)
+  return (Math.max(fg, b) + 0.05) / (Math.min(fg, b) + 0.05)
 }
 
 test.describe('로그인 화면 (로그인 전)', () => {
@@ -31,7 +43,7 @@ test.describe('로그인 화면 (로그인 전)', () => {
   test('글자 대비 — 「구글로 로그인」·「회원가입」 버튼이 4.5:1 이상', async ({ page }) => {
     await page.goto('/app/login')
     for (const name of ['구글로 로그인', '계정이 없어요 → 회원가입']) {
-      const ratio = await page.getByRole('button', { name }).evaluate(contrastOnCard)
+      const ratio = await page.getByRole('button', { name }).evaluate(contrastOnBackground)
       expect(ratio, name).toBeGreaterThanOrEqual(4.5)
     }
   })
@@ -53,6 +65,15 @@ test.describe('로그인 화면 (로그인 전)', () => {
     await page.goto('/app/login')
     await expect(page.locator(`link[href*="${FONT_CSS}"]`)).toHaveAttribute('rel', 'stylesheet')
   })
+})
+
+// ADR-066: 더 연한 회색(--muted-2, 날짜·카드 장수·학습 안내)도 4.5:1 이상 — 전에는 #9b9cab로 2.71:1
+test('덱 화면의 연한 회색 글자(카드 장수)도 4.5:1 이상', async ({ page, request }) => {
+  await makeEmptyDeck(request, `대비${Date.now()}`)
+  await page.goto('/app/decks')
+  const meta = page.locator('.deck-card .meta', { hasText: '카드 0장' }).first()
+  await expect(meta).toBeVisible()
+  expect(await meta.evaluate(contrastOnBackground)).toBeGreaterThanOrEqual(4.5)
 })
 
 test('로그인한 화면들도 본문 표시(main)가 하나씩', async ({ page }) => {
