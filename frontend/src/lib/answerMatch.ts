@@ -37,6 +37,10 @@ const ALT_BRACKET = new RegExp('([^' + SPACE_CHARS + '\\[\\]［］()（）,，;�
 const NOTE_BRACKET = /[[［][^[\]［］]*[\]］]/g
 // 한 칸에 '대신 쓸 수 있는 말'이 이보다 많으면 나머지 [ ]는 설명으로 보고 지운다 (경우의 수가 2^n으로 늘지 않게)
 const MAX_BRACKET_ALTS = 4
+// 짧은 괄호 (ADR-066 보완, 11/25) — 안에 구분자·쌍점·마침표·등호가 없는 괄호. 정답 칸에서는 이 괄호를 '벗긴 모양'도
+// 후보로 본다: "(돈을) 걸다" → "돈을 걸다". 구분자가 든 설명 괄호("(fill out/in)")·품사 표시가 든 괄호("(a. tenacious)")는
+// 벗기지 않는다 — 괄호 속 낱말 하나가 정답이 되지 않게. 서버 AnswerMatcher.SIMPLE_PAREN과 똑같이 유지
+const SIMPLE_PAREN = /[(（]([^()（）,，;；/／・:：.=]*)[)）]/g
 // 폭이 없는 글자(제로폭 공백·제로폭 결합자·단어 결합자·BOM) — 복사해 붙인 글에 숨어 들어와도 없는 것으로 본다
 // eslint-disable-next-line no-misleading-character-class -- 폭 없는 글자를 한 글자씩 지우려는 것 (이모지처럼 이어 붙인 글자가 아님)
 const ZERO_WIDTH = /[\u200B\u200C\u200D\u2060\uFEFF]/g
@@ -94,14 +98,28 @@ function bracketVariants(s: string, depth = 0): string[] {
  * 모든 구분자로 나눈다. 폭 없는 글자를 먼저 지운 문자열을 받는다.
  */
 function cleanPieces(a: string): string[] {
-  return bracketVariants(a).flatMap((v) =>
-    stripParentheses(v)
-      .replace(PART_OF_SPEECH, '$1,')
-      .replace(CIRCLED_NUMBER, ',')
-      .split(SEPARATORS)
-      .map(normalizeAnswer)
-      .filter((p) => p !== ''),
-  )
+  return bracketVariants(a).flatMap((v) => splitPieces(stripParentheses(v)))
+}
+
+/** 괄호를 걷어낸 문자열 → 품사 표시·①②·구분자로 나눈 조각 (정규화된 값) */
+function splitPieces(cleaned: string): string[] {
+  return cleaned
+    .replace(PART_OF_SPEECH, '$1,')
+    .replace(CIRCLED_NUMBER, ',')
+    .split(SEPARATORS)
+    .map(normalizeAnswer)
+    .filter((p) => p !== '')
+}
+
+/**
+ * 정답 칸에만 쓰는 조각 (ADR-066 보완) — 짧은 괄호는 벗기고 나머지 괄호는 지운 모양.
+ * 짧은 괄호가 없으면 빈 배열 (cleanPieces와 같아지므로). 입력 쪽에는 쓰지 않는다 — 입력의 괄호 안은 전처럼 채점하지 않는다
+ */
+function unwrappedPieces(a: string): string[] {
+  return bracketVariants(a).flatMap((v) => {
+    const u = v.replace(SIMPLE_PAREN, ' $1 ')
+    return u === v ? [] : splitPieces(stripParentheses(u))
+  })
 }
 
 /** 정답 칸에서 뽑은 후보 (정규화된 값) */
@@ -116,6 +134,7 @@ export function answerCandidates(answer: string | null | undefined): Set<string>
     if (n) out.add(n)
   }
   for (const p of cleanPieces(a)) out.add(p) // 2) 설명·표기 기호 걷어내기
+  for (const p of unwrappedPieces(a)) out.add(p) // 3) 짧은 괄호는 벗긴 모양도 (ADR-066 보완)
   return out
 }
 
@@ -141,7 +160,8 @@ export function matchesAnswer(typed: string | null | undefined, ...answers: Arra
     for (const c of answerCandidates(answer)) candidates.add(c)
     // 띄어쓰기를 빼고 비교하는 것은 낱개 뜻뿐이다. "ice cream/아이스크림"처럼 구분자로 묶인 예전 후보를 통째로 쓰면
     // 한글이 섞여 있다는 이유로 영어 쪽 띄어쓰기까지 무시돼, "icecream/아이스크림"이 정답이 됐다 (Codex 8차 검산 P2, 11/18)
-    for (const c of cleanPieces(answer.replace(ZERO_WIDTH, ''))) if (CJK.test(c)) spaceless.add(c.replace(PLAIN_SPACES, ''))
+    const a = answer.replace(ZERO_WIDTH, '')
+    for (const c of [...cleanPieces(a), ...unwrappedPieces(a)]) if (CJK.test(c)) spaceless.add(c.replace(PLAIN_SPACES, ''))
   }
   if (hits(t, candidates, spaceless)) return true
   const allHit = (pieces: string[]) => pieces.length > 0 && pieces.every((p) => hits(p, candidates, spaceless))

@@ -69,6 +69,12 @@ public final class AnswerMatcher {
     private static final Pattern NOTE_BRACKET = Pattern.compile("[\\[［][^\\[\\]［］]*[\\]］]");
     /** 한 칸에 '대신 쓸 수 있는 말'이 이보다 많으면 나머지 [ ]는 설명으로 보고 지운다 (경우의 수가 2^n으로 늘지 않게) */
     private static final int MAX_BRACKET_ALTS = 4;
+    /**
+     * 짧은 괄호 (ADR-066 보완, 11/25) — 안에 구분자·쌍점·마침표·등호가 없는 괄호. 정답 칸에서는 이 괄호를 '벗긴 모양'도
+     * 후보로 본다: {@code "(돈을) 걸다"} → {@code "돈을 걸다"}. 구분자가 든 설명 괄호·품사 표시가 든 괄호는 벗기지 않는다
+     * — 괄호 속 낱말 하나가 정답이 되지 않게. 프론트 answerMatch.ts의 SIMPLE_PAREN과 똑같이 유지
+     */
+    private static final Pattern SIMPLE_PAREN = Pattern.compile("[(（]([^()（）,，;；/／\\u30FB:：.=]*)[)）]");
     /** 폭이 없는 글자(제로폭 공백·제로폭 결합자·단어 결합자·BOM) — 복사해 붙인 글에 숨어 들어와도 없는 것으로 본다 */
     private static final Pattern ZERO_WIDTH = Pattern.compile("[\\u200B\\u200C\\u200D\\u2060\\uFEFF]");
     /** 가장 안쪽 괄호 한 쌍 — 반복 적용하면 겹괄호도 바깥까지 지워진다 */
@@ -119,7 +125,10 @@ public final class AnswerMatcher {
         // 띄어쓰기를 빼고 비교하는 것은 낱개 뜻뿐이다. "ice cream/아이스크림"처럼 구분자로 묶인 예전 후보를 통째로 쓰면
         // 한글이 섞여 있다는 이유로 영어 쪽 띄어쓰기까지 무시돼 "icecream/아이스크림"이 정답이 됐다 (Codex 8차 검산 P2, 11/18)
         Set<String> spaceless = new HashSet<>();
-        for (String c : cleanPieces(ZERO_WIDTH.matcher(answer).replaceAll(""))) {
+        String a = ZERO_WIDTH.matcher(answer).replaceAll("");
+        List<String> answerPieces = new ArrayList<>(cleanPieces(a));
+        answerPieces.addAll(unwrappedPieces(a));                       // 짧은 괄호를 벗긴 뜻도 (ADR-066 보완)
+        for (String c : answerPieces) {
             if (CJK.matcher(c).find()) {
                 spaceless.add(c.replace(" ", ""));   // 정규화한 뒤에는 보통 공백(U+0020)만 남는다
             }
@@ -173,6 +182,7 @@ public final class AnswerMatcher {
             add(out, piece);
         }
         out.addAll(cleanPieces(a));                                     // 2) 설명·표기 기호 걷어내기
+        out.addAll(unwrappedPieces(a));                                 // 3) 짧은 괄호는 벗긴 모양도 (ADR-066 보완)
         return out;
     }
 
@@ -183,17 +193,36 @@ public final class AnswerMatcher {
     static List<String> cleanPieces(String a) {
         List<String> out = new ArrayList<>();
         for (String variant : bracketVariants(a, 0)) {
-            String cleaned = stripParentheses(variant);
-            cleaned = PART_OF_SPEECH.matcher(cleaned).replaceAll("$1,");
-            cleaned = CIRCLED_NUMBER.matcher(cleaned).replaceAll(",");
-            for (String piece : SEPARATORS.split(cleaned)) {
-                String n = normalize(piece);
-                if (!n.isEmpty()) {
-                    out.add(n);
-                }
+            addPieces(out, stripParentheses(variant));
+        }
+        return out;
+    }
+
+    /**
+     * 정답 칸에만 쓰는 조각 (ADR-066 보완) — 짧은 괄호는 벗기고 나머지 괄호는 지운 모양.
+     * 짧은 괄호가 없으면 빈 목록 (cleanPieces와 같아지므로). 입력 쪽에는 쓰지 않는다 — 입력의 괄호 안은 전처럼 채점하지 않는다
+     */
+    static List<String> unwrappedPieces(String a) {
+        List<String> out = new ArrayList<>();
+        for (String variant : bracketVariants(a, 0)) {
+            String u = SIMPLE_PAREN.matcher(variant).replaceAll(" $1 ");
+            if (!u.equals(variant)) {
+                addPieces(out, stripParentheses(u));
             }
         }
         return out;
+    }
+
+    /** 괄호를 걷어낸 문자열 → 품사 표시·①②·구분자로 나눈 조각 (정규화된 값, 빈 조각 제외) */
+    private static void addPieces(List<String> out, String cleaned) {
+        String c = PART_OF_SPEECH.matcher(cleaned).replaceAll("$1,");
+        c = CIRCLED_NUMBER.matcher(c).replaceAll(",");
+        for (String piece : SEPARATORS.split(c)) {
+            String n = normalize(piece);
+            if (!n.isEmpty()) {
+                out.add(n);
+            }
+        }
     }
 
     /**
