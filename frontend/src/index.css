@@ -6,7 +6,7 @@
   --ink: #1a1b26;
   --ink-2: #22232f;
   --sub: #4e4f60;
-  --muted: #8a8b9c;
+  --muted: #68697a;         /* 11/25: #8a8b9c는 흰 배경 3.4:1로 글자 대비 기준(4.5:1) 미달 → 앱의 밝은 배경 전부(#fff~#ececf7)에서 4.6:1 이상 (ADR-065) */
   --muted-2: #9b9cab;
   --border: #efeff3;
   --bar-rest: color-mix(in srgb, var(--a) 16%, #fff);   /* 사다리 휴면 칸 — 테마색에서 자동 파생 (고정 연보라는 틸 테마와 충돌했음) */

@@ -100,7 +100,7 @@ export default function ImportFiles() {
   return (
     <>
       <TopNav />
-      <div className="shell">
+      <main className="shell">
         <p style={{ margin: '0 0 14px' }}>
           <Link to="/decks" className="hero-secondary">{t('← 내 덱')}</Link>
         </p>
@@ -211,7 +211,7 @@ export default function ImportFiles() {
             </div>
           </div>
         )}
-      </div>
+      </main>
     </>
   )
 }

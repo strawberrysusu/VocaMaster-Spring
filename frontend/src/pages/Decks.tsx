@@ -292,7 +292,7 @@ export default function Decks() {
   return (
     <>
       <TopNav />
-      <div className="shell">
+      <main className="shell">
         <div className="page-head">
           <div>
             <h1>{t('내 덱')}</h1>
@@ -431,7 +431,7 @@ export default function Decks() {
             <button disabled={safePage === totalPages - 1} onClick={() => setPage(safePage + 1)}>{t('다음 ▶')}</button>
           </div>
         )}
-      </div>
+      </main>
 
       {/* 폴더 담기 창 — .shell 밖에 둔다(시험지 창과 같은 자리). .shell 안에 두면 화면 전체가 아니라 그 칸을 기준으로 떠서
           어두운 막이 위쪽 바·사이드바를 못 덮고, 덱이 많아 칸이 길면 창이 화면 밖에 떴다 (11/15 점검에서 실측) */}

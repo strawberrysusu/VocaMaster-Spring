@@ -77,7 +77,7 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-page">
+    <main className="auth-page">
       <div className="auth-lang">
         <LangSwitch />
       </div>
@@ -140,6 +140,6 @@ export default function Login() {
       <p className="auth-foot">
         <a className="doc-link" href="/privacy.html" target="_blank" rel="noreferrer">{getLang() === 'ko' ? t('개인정보처리방침') : t('개인정보처리방침 (한국어)')}</a>
       </p>
-    </div>
+    </main>
   )
 }

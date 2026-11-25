@@ -5,11 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VocaMaster</title>
+    <meta
+      name="description"
+      content="일본어·영어 단어장을 만들고 낱말카드·퀴즈·타이핑·듣기·시험지로 외우는 단어 학습 서비스"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- 글꼴 CSS는 첫 화면 그리기를 막지 않게 미리 받아 두고(preload), 다 받으면 그때 적용한다 (ADR-065).
+         onload를 HTML 안에 쓰므로 나중에 CSP를 켜면 이 줄을 허용해 줘야 한다 -->
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@700&display=swap"
-      rel="stylesheet"
+      onload="this.onload=null;this.rel='stylesheet'"
     />
   </head>
   <body>

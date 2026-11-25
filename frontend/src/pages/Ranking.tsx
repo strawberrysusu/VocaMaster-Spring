@@ -28,7 +28,7 @@ export default function Ranking() {
   return (
     <>
       <TopNav />
-      <div className="shell">
+      <main className="shell">
         <div className="page-head">
           <div>
             <h1>{t('학습 랭킹')}</h1>
@@ -68,7 +68,7 @@ export default function Ranking() {
         <p className="muted" style={{ fontSize: 13, marginTop: 18 }}>
           {t('닉네임은 기본으로 가려져요. 설정에서 공개할 수 있어요')} <Link to="/settings" className="link">{t('설정')} →</Link>
         </p>
-      </div>
+      </main>
     </>
   )
 }

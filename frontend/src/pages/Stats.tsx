@@ -34,7 +34,7 @@ export default function Stats() {
   return (
     <>
       <TopNav streak={data?.streak} />
-      <div className="shell">
+      <main className="shell">
         <div className="page-head">
           <div>
             <h1>{t('통계')}</h1>
@@ -129,7 +129,7 @@ export default function Stats() {
             </div>
           </>
         )}
-      </div>
+      </main>
     </>
   )
 }
