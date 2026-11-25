@@ -113,5 +113,15 @@
   { "typed": "향", "answer": "n. [ˈɪnsens] 향 v. [ɪnˈsens] 몹시 화나게 하다", "expected": true, "why": "ADR-066: 띄어 쓴 [ ]는 설명(발음 기호) — 지우고 본다 (전에는 '향'이 오답이었다)" },
   { "typed": "몹시 화나게 하다, 향", "answer": "n. [ˈɪnsens] 향 v. [ɪnˈsens] 몹시 화나게 하다", "expected": true, "why": "ADR-066: 발음 기호를 지운 뜻 둘을 순서 바꿔 적어도 정답" },
   { "typed": "ˈɪnsens", "answer": "n. [ˈɪnsens] 향 v. [ɪnˈsens] 몹시 화나게 하다", "expected": false, "why": "ADR-066: 발음 기호는 뜻이 아니다" },
-  { "typed": "사과[능금]", "answer": "사과, 능금", "expected": true, "why": "ADR-066: 입력의 [ ]도 같은 규칙 — 사과·능금 둘 다 후보" }
+  { "typed": "사과[능금]", "answer": "사과, 능금", "expected": true, "why": "ADR-066: 입력의 [ ]도 같은 규칙 — 사과·능금 둘 다 후보" },
+
+  { "typed": "돈을 걸다", "answer": "v. (돈을) 걸다, 내기하다", "expected": true, "why": "ADR-066 보완: 짧은 괄호 속 말까지 적은 답 — 11/25 day02 bet에서 오답이 됐던 입력" },
+  { "typed": "어깨를 으쓱하다", "answer": "v. (어깨를) 으쓱하다", "expected": true, "why": "ADR-066 보완: 11/25 day03 shrug에서 오답이 됐던 입력" },
+  { "typed": "돈을걸다", "answer": "v. (돈을) 걸다, 내기하다", "expected": true, "why": "ADR-066 보완: 괄호를 벗긴 뜻도 띄어쓰기 무시(ADR-062)" },
+  { "typed": "교통량", "answer": "n. 교통(량)", "expected": true, "why": "ADR-066 보완: 낱말에 붙은 괄호도 벗겨 본다" },
+  { "typed": "채우다, 서류를 작성하다", "answer": "v. 채우다, (서류를) 작성하다 (fill out/in)", "expected": true, "why": "ADR-066 보완: 짧은 괄호는 벗기고, 빗금이 든 설명 괄호는 지운다" },
+  { "typed": "걸다", "answer": "v. (돈을) 걸다, 내기하다", "expected": true, "why": "ADR-066 보완: 괄호를 지운 뜻은 전처럼 정답" },
+  { "typed": "돈을", "answer": "v. (돈을) 걸다, 내기하다", "expected": false, "why": "ADR-066 보완: 괄호 속 말만 적으면 오답" },
+  { "typed": "fill out/in", "answer": "v. 채우다, (서류를) 작성하다 (fill out/in)", "expected": false, "why": "ADR-066 보완: 구분자가 든 괄호는 설명 — 벗기지 않는다" },
+  { "typed": "tenacious", "answer": "n. 끈기 (a. tenacious)", "expected": false, "why": "ADR-066 보완: 마침표(품사 표시)가 든 괄호는 벗기지 않는다 — 괄호 속 낱말 하나가 정답이 되지 않게" }
 ]
