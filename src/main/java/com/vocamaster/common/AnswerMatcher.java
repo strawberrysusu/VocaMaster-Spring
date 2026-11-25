@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -17,6 +18,7 @@ import java.util.regex.Pattern;
  *   <li><b>예전 규칙 그대로</b> — 쉼표로 나눈 조각. 전에 정답이던 입력은 계속 정답이다(뒤로 호환).</li>
  *   <li><b>설명·표기 기호를 걷어낸 조각</b>
  *     <ul>
+ *       <li>대괄호 — 낱말에 붙은 {@code [ ]}는 그 낱말 대신 쓸 수 있는 말, 띄어 쓴 {@code [ ]}는 설명이라 삭제 (ADR-066)</li>
  *       <li>괄호 안 설명 삭제 — {@code ( )} {@code （ ）}, 겹괄호는 안쪽부터</li>
  *       <li>영어 품사 표시 {@code n. v. a. ad.} 등은 구분자로 — {@code "n. 바닥, 아래 v. 근거를 두다"}</li>
  *       <li>{@code ① ②} … 는 구분자로</li>
@@ -53,7 +55,20 @@ public final class AnswerMatcher {
      * 여러 폭의 공백(U+2000~U+200A: 얇은 공백 U+2009 포함), 줄·문단 구분자(U+2028·U+2029),
      * 좁은 NBSP(U+202F), 수학 공백(U+205F), 전각 공백(U+3000)
      */
-    static final String SPACE = "[\\t\\n\\u000B\\f\\r \\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]";
+    private static final String SPACE_CHARS = "\\t\\n\\u000B\\f\\r \\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000";
+    static final String SPACE = "[" + SPACE_CHARS + "]";
+    /**
+     * 대괄호 [ ] (ADR-066, 11/25) — 카드가 쓰는 두 모양 (19,156장 중 3장). 프론트 answerMatch.ts와 똑같이 유지.
+     * <ul>
+     *   <li>낱말에 바로 붙은 [ ] = 그 낱말 대신 쓸 수 있는 말: {@code "아무도[아무것도] ~않다"} → {@code "아무도 ~않다"} 또는 {@code "아무것도 ~않다"}</li>
+     *   <li>띄어 쓴 [ ] = 설명(발음 기호 등) → 지운다: {@code "n. [ˈɪnsens] 향"} → {@code "n. 향"}</li>
+     * </ul>
+     */
+    private static final Pattern ALT_BRACKET =
+            Pattern.compile("([^" + SPACE_CHARS + "\\[\\]［］()（）,，;；/／\\u30FB]+)[\\[［]([^\\[\\]［］]+)[\\]］]");
+    private static final Pattern NOTE_BRACKET = Pattern.compile("[\\[［][^\\[\\]［］]*[\\]］]");
+    /** 한 칸에 '대신 쓸 수 있는 말'이 이보다 많으면 나머지 [ ]는 설명으로 보고 지운다 (경우의 수가 2^n으로 늘지 않게) */
+    private static final int MAX_BRACKET_ALTS = 4;
     /** 폭이 없는 글자(제로폭 공백·제로폭 결합자·단어 결합자·BOM) — 복사해 붙인 글에 숨어 들어와도 없는 것으로 본다 */
     private static final Pattern ZERO_WIDTH = Pattern.compile("[\\u200B\\u200C\\u200D\\u2060\\uFEFF]");
     /** 가장 안쪽 괄호 한 쌍 — 반복 적용하면 겹괄호도 바깥까지 지워진다 */
@@ -163,19 +178,37 @@ public final class AnswerMatcher {
 
     /**
      * 정답 칸을 '낱개 뜻'으로 나눈 조각 (정규화된 값, 빈 조각 제외, 나온 순서) —
-     * 괄호 설명·품사 표시·①②를 걷어내고 모든 구분자로 나눈다. 폭 없는 글자를 먼저 지운 문자열을 받는다.
+     * 대괄호를 풀고(ADR-066), 괄호 설명·품사 표시·①②를 걷어내고 모든 구분자로 나눈다. 폭 없는 글자를 먼저 지운 문자열을 받는다.
      */
     static List<String> cleanPieces(String a) {
-        String cleaned = stripParentheses(a);
-        cleaned = PART_OF_SPEECH.matcher(cleaned).replaceAll("$1,");
-        cleaned = CIRCLED_NUMBER.matcher(cleaned).replaceAll(",");
         List<String> out = new ArrayList<>();
-        for (String piece : SEPARATORS.split(cleaned)) {
-            String n = normalize(piece);
-            if (!n.isEmpty()) {
-                out.add(n);
+        for (String variant : bracketVariants(a, 0)) {
+            String cleaned = stripParentheses(variant);
+            cleaned = PART_OF_SPEECH.matcher(cleaned).replaceAll("$1,");
+            cleaned = CIRCLED_NUMBER.matcher(cleaned).replaceAll(",");
+            for (String piece : SEPARATORS.split(cleaned)) {
+                String n = normalize(piece);
+                if (!n.isEmpty()) {
+                    out.add(n);
+                }
             }
         }
+        return out;
+    }
+
+    /**
+     * 대괄호를 푼 모양들 (ADR-066) — 낱말에 붙은 [ ]마다 '앞 낱말 그대로'와 '[ ] 안의 말로 바꾼 것' 두 갈래,
+     * 남은 [ ](띄어 쓴 것·너무 많은 것)는 지운다. [ ]가 없으면 받은 문자열 하나.
+     */
+    static List<String> bracketVariants(String s, int depth) {
+        Matcher m = ALT_BRACKET.matcher(s);
+        if (depth >= MAX_BRACKET_ALTS || !m.find()) {
+            return List.of(NOTE_BRACKET.matcher(s).replaceAll(""));
+        }
+        String head = s.substring(0, m.start());
+        String tail = s.substring(m.end());
+        List<String> out = new ArrayList<>(bracketVariants(head + m.group(1) + tail, depth + 1));
+        out.addAll(bracketVariants(head + m.group(2) + tail, depth + 1));
         return out;
     }
 

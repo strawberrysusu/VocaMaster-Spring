@@ -27,7 +27,16 @@
 // NBSP(U+00A0), 오검 공백(U+1680), 여러 폭의 공백(U+2000~U+200A), 줄·문단 구분자(U+2028·2029),
 // 좁은 NBSP(U+202F), 수학 공백(U+205F), 전각 공백(U+3000)
 // 글자 그대로 서버와 같게 적는다 — 특히 VT는 \\v가 아니라 \\u000B: Java 정규식의 \v는 '세로 공백 묶음 전체'라 옮겨 적으면 함정
-const SPACE = '[\\t\\n\\u000B\\f\\r \\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000]'
+const SPACE_CHARS = '\\t\\n\\u000B\\f\\r \\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000'
+const SPACE = '[' + SPACE_CHARS + ']'
+// 대괄호 [ ] (ADR-066, 11/25) — 카드가 쓰는 두 모양 (19,156장 중 3장):
+//  · 낱말에 바로 붙은 [ ] = 그 낱말 대신 쓸 수 있는 말: "아무도[아무것도] ~않다" → "아무도 ~않다" 또는 "아무것도 ~않다"
+//  · 띄어 쓴 [ ] = 설명(발음 기호 등) → 지운다: "n. [ˈɪnsens] 향" → "n. 향"
+// 서버 AnswerMatcher.ALT_BRACKET·NOTE_BRACKET과 똑같이 유지
+const ALT_BRACKET = new RegExp('([^' + SPACE_CHARS + '\\[\\]［］()（）,，;；/／・]+)[\\[［]([^\\[\\]［］]+)[\\]］]')
+const NOTE_BRACKET = /[[［][^[\]［］]*[\]］]/g
+// 한 칸에 '대신 쓸 수 있는 말'이 이보다 많으면 나머지 [ ]는 설명으로 보고 지운다 (경우의 수가 2^n으로 늘지 않게)
+const MAX_BRACKET_ALTS = 4
 // 폭이 없는 글자(제로폭 공백·제로폭 결합자·단어 결합자·BOM) — 복사해 붙인 글에 숨어 들어와도 없는 것으로 본다
 // eslint-disable-next-line no-misleading-character-class -- 폭 없는 글자를 한 글자씩 지우려는 것 (이모지처럼 이어 붙인 글자가 아님)
 const ZERO_WIDTH = /[\u200B\u200C\u200D\u2060\uFEFF]/g
@@ -69,16 +78,30 @@ function stripParentheses(s: string): string {
 }
 
 /**
- * 정답 칸을 '낱개 뜻'으로 나눈 조각 (정규화된 값) — 괄호 설명·품사 표시·①②를 걷어내고 모든 구분자로 나눈다.
- * 폭 없는 글자를 먼저 지운 문자열을 받는다.
+ * 대괄호를 푼 모양들 (ADR-066) — 낱말에 붙은 [ ]마다 '앞 낱말 그대로'와 '[ ] 안의 말로 바꾼 것' 두 갈래,
+ * 남은 [ ](띄어 쓴 것·너무 많은 것)는 지운다. [ ]가 없으면 받은 문자열 하나.
+ */
+function bracketVariants(s: string, depth = 0): string[] {
+  const m = depth < MAX_BRACKET_ALTS ? ALT_BRACKET.exec(s) : null
+  if (!m) return [s.replace(NOTE_BRACKET, '')]
+  const head = s.slice(0, m.index)
+  const tail = s.slice(m.index + m[0].length)
+  return [...bracketVariants(head + m[1] + tail, depth + 1), ...bracketVariants(head + m[2] + tail, depth + 1)]
+}
+
+/**
+ * 정답 칸을 '낱개 뜻'으로 나눈 조각 (정규화된 값) — 대괄호를 풀고(ADR-066), 괄호 설명·품사 표시·①②를 걷어내고
+ * 모든 구분자로 나눈다. 폭 없는 글자를 먼저 지운 문자열을 받는다.
  */
 function cleanPieces(a: string): string[] {
-  return stripParentheses(a)
-    .replace(PART_OF_SPEECH, '$1,')
-    .replace(CIRCLED_NUMBER, ',')
-    .split(SEPARATORS)
-    .map(normalizeAnswer)
-    .filter((p) => p !== '')
+  return bracketVariants(a).flatMap((v) =>
+    stripParentheses(v)
+      .replace(PART_OF_SPEECH, '$1,')
+      .replace(CIRCLED_NUMBER, ',')
+      .split(SEPARATORS)
+      .map(normalizeAnswer)
+      .filter((p) => p !== ''),
+  )
 }
 
 /** 정답 칸에서 뽑은 후보 (정규화된 값) */
@@ -126,6 +149,89 @@ export function matchesAnswer(typed: string | null | undefined, ...answers: Arra
   // 입력도 정답 칸과 같은 방법으로 걷어내고 본다 — 카드에 적힌 대로 괄호 설명·품사 표시까지 따라 적은 답
   // ("피할수없는 (불가피한)", "a. 피할수없는"). 괄호 안에만 적은 입력은 조각이 하나도 안 남아 오답이다
   return allHit(cleanPieces(raw))
+}
+
+// ── 비슷하게 쓴 답 (ADR-066, 11/25) — 화면에만 있다(서버에는 없다) ──
+// 채점은 바꾸지 않는다. 온라인 시험 결과에서 틀린 답 가운데 정답과 겹치는 데가 있는 답을 위로 모아,
+// 사람이 '맞음으로'를 고르기 쉽게 하는 데만 쓴다 (11/25 시험 75문항으로 맞춰 본 규칙 — ADR-066).
+const LATIN_ONLY = /^[a-z0-9 '.-]+$/
+
+/** 한 글자만 다른가 (바꾸기·넣기·빼기 하나) */
+function oneEditApart(a: string, b: string): boolean {
+  if (a === b || Math.abs(a.length - b.length) > 1) return false
+  let i = 0
+  while (i < a.length && i < b.length && a[i] === b[i]) i++
+  let j = 0
+  while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j]) j++
+  return Math.max(a.length, b.length) - i - j === 1
+}
+
+/** 한글 음절을 자모(초성·중성·종성) 번호로 — 앞부분이 같은지 글자보다 잘게 본다 (놀래키다/놀라게 하다, 기쁜/기쁨) */
+function jamo(s: string): number[] {
+  const out: number[] = []
+  for (const ch of s) {
+    const code = ch.codePointAt(0)!
+    if (code >= 0xac00 && code <= 0xd7a3) {
+      const n = code - 0xac00
+      out.push(0x1100 + Math.floor(n / 588), 0x1161 + Math.floor((n % 588) / 28))
+      if (n % 28) out.push(0x11a7 + (n % 28))
+    } else out.push(code)
+  }
+  return out
+}
+
+function commonPrefix(a: ArrayLike<unknown>, b: ArrayLike<unknown>): number {
+  let k = 0
+  while (k < a.length && k < b.length && a[k] === b[k]) k++
+  return k
+}
+
+/** 가장 길게 겹치는 부분의 길이 — 둘 다의 끝(어미 '시키다' 같은)에서만 겹치는 것은 세지 않는다 */
+function longestSharedMiddle(a: string, b: string): number {
+  let best = 0
+  const prev = new Array<number>(b.length + 1).fill(0)
+  for (let i = 1; i <= a.length; i++) {
+    let diag = 0
+    for (let j = 1; j <= b.length; j++) {
+      const up = prev[j]
+      prev[j] = a[i - 1] === b[j - 1] ? diag + 1 : 0
+      diag = up
+      if (prev[j] > best && !(i === a.length && j === b.length)) best = prev[j]
+    }
+  }
+  return best
+}
+
+/** 낱개 뜻 둘(띄어쓰기를 뺀 모양)이 가까운가 */
+function closePiece(p: string, c: string): boolean {
+  if (p === c) return true // 뜻 여러 개 중 일부만 맞음
+  const latin = LATIN_ONLY.test(p) && LATIN_ONLY.test(c)
+  const min = latin ? 4 : 2 // 영어는 짧은 겹침이 흔해서 더 길게 본다
+  const [short, long] = p.length <= c.length ? [p, c] : [c, p]
+  if (short.length >= min && long.includes(short)) return true // 당기다 ⊂ 잡아당기다
+  if (!latin && c.length === 1 && p.includes(c)) return true // 한 글자 뜻을 품은 답: 이 ⊂ 이빨, 쥐 ⊂ 들쥐
+  if (commonPrefix(p, c) >= min) return true // 앞부분이 같음: 사진가/사진사, 두려워하다/두려워하는
+  if (Math.min(p.length, c.length) >= min + 1 && oneEditApart(p, c)) return true // 한 글자만 다름: 엳듣다/엿듣다
+  if (latin) return false
+  // 한글은 더 잘게: 자모 넷 이상이 앞에서 같거나(놀래키다/놀라게 하다, 기쁜/기쁨),
+  // 가운데가 세 글자 이상 겹친다(받을만한/~을 받을 만하다)
+  return commonPrefix(jamo(p), jamo(c)) >= 4 || longestSharedMiddle(p, c) >= 3
+}
+
+/**
+ * 틀린 답이 정답과 가까운가 — 입력의 낱개 뜻 하나라도 정답의 낱개 뜻과 같거나, 한쪽이 다른 쪽을 품거나,
+ * 앞 두 글자(영어는 네 글자) 이상이 같거나, 한 글자만 다르면 true. 빈 입력은 false.
+ * 뜻은 같은데 겹치는 글자가 없는 답(하지만/그러나)은 못 잡는다 — 그건 사람이 본다.
+ */
+export function isNearMiss(typed: string | null | undefined, ...answers: Array<string | null | undefined>): boolean {
+  const raw = (typed ?? '').replace(ZERO_WIDTH, '')
+  if (!normalizeAnswer(raw)) return false
+  const squash = (s: string) => s.replace(PLAIN_SPACES, '')
+  const typedPieces = new Set([...raw.split(SEPARATORS).map(normalizeAnswer), ...cleanPieces(raw)].filter((p) => p !== '').map(squash))
+  const candidates = new Set<string>()
+  for (const a of answers) if (a != null) for (const c of cleanPieces(a.replace(ZERO_WIDTH, ''))) candidates.add(squash(c))
+  for (const p of typedPieces) for (const c of candidates) if (closePiece(p, c)) return true
+  return false
 }
 
 /** 가타카나 → 히라가나 (읽기 채점용 — カンシャ로 써도 かんしゃ와 같게 본다) */

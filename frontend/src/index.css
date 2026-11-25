@@ -7,7 +7,7 @@
   --ink-2: #22232f;
   --sub: #4e4f60;
   --muted: #68697a;         /* 11/25: #8a8b9c는 흰 배경 3.4:1로 글자 대비 기준(4.5:1) 미달 → 앱의 밝은 배경 전부(#fff~#ececf7)에서 4.6:1 이상 (ADR-065) */
-  --muted-2: #9b9cab;
+  --muted-2: #707182;       /* 11/25: #9b9cab는 2.7:1 → 페이지 배경(#fafafb)에서도 4.6:1 이상 (ADR-066) */
   --border: #efeff3;
   --bar-rest: color-mix(in srgb, var(--a) 16%, #fff);   /* 사다리 휴면 칸 — 테마색에서 자동 파생 (고정 연보라는 틸 테마와 충돌했음) */
 }
@@ -133,7 +133,7 @@ input {
 .side-folder:hover { background: #f6f6fa; }
 .side-folder.active { background: var(--a-soft); color: var(--a); font-weight: 700; }
 .side-folder-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.side-folder-count { font-size: 12px; color: #b0b1bf; }
+.side-folder-count { font-size: 12px; color: var(--muted-2); }
 .side-folder.active .side-folder-count { color: var(--a); }
 
 .side-foot {
@@ -531,7 +531,7 @@ html:has(.topbar) {
 
 .hero-secondary {
   font-size: 13.5px;
-  color: #7c7d8e;
+  color: var(--muted);
   font-weight: 500;
   text-decoration: none;
 }
@@ -687,7 +687,7 @@ html:has(.topbar) {
   background: #f5f5f9;
   font-size: 11.5px;
   font-weight: 500;
-  color: #7c7d8e;
+  color: var(--muted);
 }
 
 .deck-card .title {
@@ -819,7 +819,7 @@ html:has(.topbar) {
 }
 
 .error {
-  color: #d33;
+  color: #cc2e2e;   /* 11/25: #d33은 페이지 배경에서 4.4:1 → 5.0:1 (ADR-066) */
   font-size: 13.5px;
   margin: 4px 0 0;
 }
@@ -935,7 +935,7 @@ html:has(.topbar) {
 .word-idx {
   width: 26px;
   font-size: 12.5px;
-  color: #c3c4cf;
+  color: var(--muted-2);
   font-weight: 700;
 }
 
@@ -1118,8 +1118,8 @@ html:has(.topbar) {
   color: var(--sub);
   text-align: center;
 }
-.word-memo { display: block; margin-top: 3px; font-size: 12.5px; line-height: 1.5; color: #9a9aaa; }
-.otest-memo { color: #8a8a99; font-weight: 400; }
+.word-memo { display: block; margin-top: 3px; font-size: 12.5px; line-height: 1.5; color: var(--muted-2); }
+.otest-memo { color: var(--muted-2); font-weight: 400; }
 .create-row .memo-input { flex: 1.2; }
 /* 카드 수정 행: 설명 칸은 둘째 줄 전체 (번호 칸 26px + 간격 18px만큼 들여서 단어 칸과 맞춤) */
 .word-row.row-edit { flex-wrap: wrap; }
@@ -1567,7 +1567,7 @@ button:disabled {
 .star-action.on {
   border-color: #e6b422;
   background: #fffaeb;
-  color: #a97a06;
+  color: #8c6404;   /* 11/25: #a97a06은 3.7:1 → 5.1:1 (ADR-066) */
 }
 
 .star-action:disabled {
@@ -1820,7 +1820,7 @@ button:disabled {
 }
 
 .choice.correct .choice-num {
-  background: #2f9e6b;
+  background: #237f55;   /* 흰 숫자 3.4:1 → 5.0:1 (ADR-066) */
   color: #fff;
 }
 
@@ -1831,7 +1831,7 @@ button:disabled {
 }
 
 .choice.wrong .choice-num {
-  background: #d45a72;
+  background: #bd4560;   /* 흰 숫자 3.8:1 → 5.0:1 (ADR-066) */
   color: #fff;
 }
 
@@ -2149,7 +2149,7 @@ button:disabled {
 }
 
 .star-btn.on {
-  color: #e3a72f;
+  color: #bd820d;   /* 11/25: 별 아이콘 2.1:1 → 페이지 배경에서도 3.2:1 (그림은 3:1이 기준, ADR-066) */
 }
 
 .star-btn:hover,
@@ -2198,7 +2198,7 @@ button:disabled {
 .pp-nick { font-weight: 700; margin: 0 0 2px; font-size: 15px; overflow-wrap: anywhere; }
 .pp-email { font-size: 13px; color: #667; margin: 0 0 10px; word-break: break-all; }
 /* 배지와 가입일이 한 줄에 안 들어가면(일본어·영어) 가입일을 다음 줄로 — 예전엔 배지 안에서 글자가 두 줄로 깨졌다 (11/15 점검에서 실측) */
-.pp-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin: 0; font-size: 12px; color: #889; }
+.pp-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin: 0; font-size: 12px; color: var(--muted); }
 .pp-badge { background: var(--a-soft, #eef); color: var(--a, #55c); padding: 2px 9px; border-radius: 999px; font-weight: 600; white-space: nowrap; }
 
 /* 덱 공개 범위 셀렉트 (덱 상세) */
@@ -2212,7 +2212,7 @@ button:disabled {
 .btn-ghost-link:hover { border-color: var(--a, #55c); color: var(--a, #55c); }
 
 /* 후리가나 (ruby) — 목록에서 단어 위에 작게 */
-ruby rt { font-size: 0.56em; color: #8a93a5; font-weight: 500; user-select: none; }
+ruby rt { font-size: 0.56em; color: var(--muted-2); font-weight: 500; user-select: none; }
 
 /* 듣기 받아쓰기 (백로그 ⑭ — 시험지 레이아웃) */
 .listen-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -2343,7 +2343,7 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
   cursor: pointer;
 }
 .folder-chip-op:hover { opacity: 1; }
-.folder-add { border-style: dashed; color: #888; }
+.folder-add { border-style: dashed; color: var(--muted); }
 
 /* ── 홈 대시보드 2차 (8/30 리디자인) — 최근 학습 덱 + 내 폴더 패널 ── */
 .home-2col {
@@ -2456,7 +2456,7 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
 }
 .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .modal-head h2 { margin: 0; font-size: 17px; }
-.modal-close { border: none; background: none; font-size: 15px; color: #888; cursor: pointer; padding: 4px 8px; }
+.modal-close { border: none; background: none; font-size: 15px; color: var(--muted); cursor: pointer; padding: 4px 8px; }
 .picker-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
 .picker-tools input {
   flex: 1;
@@ -2477,7 +2477,7 @@ h1 .edit-btn { margin-left: 10px; vertical-align: 6px; }
 .pick-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
 .pick-row:hover { background: #f5f5fb; }
 .pick-title { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pick-where { font-size: 12px; color: #999; white-space: nowrap; }
+.pick-where { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .modal-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .modal-foot .muted { font-size: 12px; }
 
@@ -2502,11 +2502,11 @@ button.mode-btn { cursor: pointer; font-family: inherit; }
 .otest-sheet { display: flex; flex-direction: column; border: 1px solid var(--border, #e2e2ea); border-radius: 14px; background: #fff; overflow: hidden; }
 .otest-head, .otest-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.3fr); gap: 8px 10px; align-items: center; padding: 10px 14px; }
 .otest-sheet.jp .otest-head, .otest-sheet.jp .otest-row { grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr); }
-.otest-head { background: #f6f6f9; font-size: 12.5px; font-weight: 700; color: #888; border-bottom: 1px solid var(--border, #e2e2ea); }
+.otest-head { background: #f6f6f9; font-size: 12.5px; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--border, #e2e2ea); }
 .otest-row + .otest-row { border-top: 1px solid #f0f0f4; }
 .otest-row.ok { background: #f3faf5; }
 .otest-row.wrong { background: #fdf4f6; }
-.otest-no { color: #999; font-size: 13px; text-align: center; }
+.otest-no { color: var(--muted-2); font-size: 13px; text-align: center; }
 .otest-word { font-size: 17px; font-weight: 700; color: var(--ink-2, #333); overflow-wrap: anywhere; }
 .otest-word.jp { font-family: "Yu Gothic", "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 19px; }
 .otest-input { min-width: 0; width: 100%; box-sizing: border-box; border: 1px solid var(--border, #e2e2ea); border-radius: 9px; padding: 8px 10px; font-size: 15px; background: #fff; color: inherit; }
@@ -2518,6 +2518,10 @@ button.mode-btn { cursor: pointer; font-family: inherit; }
 .otest-correct { color: #555; overflow-wrap: anywhere; }
 .otest-row.wrong .otest-correct { color: #99566a; font-weight: 600; }
 .otest-override { padding: 4px 10px; font-size: 12.5px; }
+/* 채점 뒤 '틀린 것만 보기' — 비슷하게 쓴 답(확인할 것)을 위, 틀린 답을 아래로 묶어 보여 준다 (ADR-066) */
+.otest-filter { display: flex; width: fit-content; align-items: center; gap: 7px; margin: 0 0 12px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.otest-filter input { width: 16px; height: 16px; margin: 0; accent-color: var(--a); }
+.otest-group { margin: 0; padding: 9px 14px; font-size: 13px; font-weight: 700; color: var(--sub); background: #f6f6f9; border-top: 1px solid var(--border, #e2e2ea); }
 @media (max-width: 640px) {
   .otest-head { display: none; }
   .otest-row, .otest-sheet.jp .otest-row { grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1fr); padding: 10px; }

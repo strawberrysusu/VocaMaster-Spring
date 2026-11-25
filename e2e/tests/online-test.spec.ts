@@ -121,6 +121,49 @@ test('채점: 띄어쓰기·뜻 순서가 달라도 정답, 카드에 없는 뜻
   expect(await isStarred(request, deckId, 'tenacity')).toBe(false)
 })
 
+// ADR-066 (11/25): 채점 뒤 '틀린 것만 보기' — 정답과 겹치는 데가 있는 답(확인할 것)은 위, 없는 답은 아래, 맞힌 답은 숨긴다.
+// 대괄호 [ ]가 붙은 뜻은 '앞 낱말 대신 쓸 수 있는 말'로 채점한다 (전에는 none — "아무것도 않다"가 오답이었다)
+test('틀린 것만 보기 — 비슷하게 쓴 답은 위, 틀린 답은 아래 + 대괄호 뜻 채점', async ({ page, request }) => {
+  const deckId = await makeDeck(request, '틀린것만', [
+    'apple|n. 사과',
+    'pull|v. 잡아당기다, 끌다',
+    'wealth|n. 부, 재산',
+    'none|pron. 아무도[아무것도] ~않다',
+    'photographer|n. 사진사',
+  ])
+  await open(page, deckId)
+  await row(page, 'apple').getByLabel(/뜻$/).fill('사과') // 정답
+  await row(page, 'pull').getByLabel(/뜻$/).fill('당기다') // 비슷 — '잡아당기다'를 품음
+  await row(page, 'wealth').getByLabel(/뜻$/).fill('건강한') // 틀림 — health와 헷갈림
+  await row(page, 'none').getByLabel(/뜻$/).fill('아무것도 않다') // 정답 — [ ] 안의 말로 바꿔 적음
+  await row(page, 'photographer').getByLabel(/뜻$/).fill('사진가') // 비슷 — 앞 두 글자
+  await grade(page)
+  await expect(summary(page)).toContainText('점수 2/5')
+  await expect(summary(page)).toContainText('⭐ 완료')
+
+  await expect(page.locator('.otest-row')).toHaveCount(5) // 처음엔 다 보인다
+  await page.getByLabel('틀린 것만 보기 (3)').check()
+  await expect(page.locator('.otest-row')).toHaveCount(3)
+  await expect(page.locator('.otest-group')).toHaveText(['비슷하게 썼어요 — 맞았는지 확인해 보세요 (2)', '틀렸어요 (1)'])
+  const words = await page.locator('.otest-row .otest-word').allTextContents()
+  expect(words.slice(0, 2).sort()).toEqual(['photographer', 'pull']) // 위 묶음
+  expect(words[2]).toBe('wealth') // 아래 묶음
+
+  // 맞음으로를 눌러도 그 자리에 남는다 — 바로 '다시 오답으로'로 되돌릴 수 있게
+  await row(page, 'pull').getByRole('button', { name: '맞음으로' }).click()
+  await expect(row(page, 'pull').getByRole('button', { name: '다시 오답으로' })).toBeVisible()
+  await expect(page.locator('.otest-row')).toHaveCount(3)
+  await expect(summary(page)).toContainText('점수 3/5')
+
+  // 켜 둔 것은 이 브라우저에 기억 — 다음 시험의 결과도 처음부터 묶어서 보여 준다
+  await page.reload()
+  await row(page, 'apple').getByLabel(/뜻$/).fill('사과')
+  await grade(page)
+  await expect(summary(page)).toContainText('⭐ 완료')
+  await expect(page.getByLabel('틀린 것만 보기 (4)')).toBeChecked()
+  await expect(page.locator('.otest-row')).toHaveCount(4)
+})
+
 test('폰 화면: 채점 뒤 정답·설명 줄이 붙어도 가로로 넘치지 않는다', async ({ page, request }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   const deckId = await makeEmptyDeck(request, '온라인폰')
