@@ -123,5 +123,10 @@
   { "typed": "걸다", "answer": "v. (돈을) 걸다, 내기하다", "expected": true, "why": "ADR-066 보완: 괄호를 지운 뜻은 전처럼 정답" },
   { "typed": "돈을", "answer": "v. (돈을) 걸다, 내기하다", "expected": false, "why": "ADR-066 보완: 괄호 속 말만 적으면 오답" },
   { "typed": "fill out/in", "answer": "v. 채우다, (서류를) 작성하다 (fill out/in)", "expected": false, "why": "ADR-066 보완: 구분자가 든 괄호는 설명 — 벗기지 않는다" },
-  { "typed": "tenacious", "answer": "n. 끈기 (a. tenacious)", "expected": false, "why": "ADR-066 보완: 마침표(품사 표시)가 든 괄호는 벗기지 않는다 — 괄호 속 낱말 하나가 정답이 되지 않게" }
+  { "typed": "tenacious", "answer": "n. 끈기 (a. tenacious)", "expected": false, "why": "ADR-066 보완: 마침표(품사 표시)가 든 괄호는 벗기지 않는다 — 괄호 속 낱말 하나가 정답이 되지 않게" },
+
+  { "typed": "~일지도 모른다", "answer": "aux. ~일지도 모른다 n. 힘, 세력", "expected": true, "why": "ADR-066 보완 2: 조동사 표시 aux.도 품사 표시 — 11/25 day04 might에서 덱 정답 그대로 적었는데 오답이었다" },
+  { "typed": "힘, 일지도 모른다", "answer": "aux. ~일지도 모른다 n. 힘, 세력", "expected": true, "why": "ADR-066 보완 2: aux. 뒤의 뜻도 다른 뜻과 순서 바꿔 적어도 정답" },
+  { "typed": "aux. ~일지도 모른다", "answer": "aux. ~일지도 모른다 n. 힘, 세력", "expected": true, "why": "ADR-066 보완 2: 입력에 따라 적은 aux.도 걷어낸다" },
+  { "typed": "aux", "answer": "aux. ~일지도 모른다 n. 힘, 세력", "expected": false, "why": "ADR-066 보완 2: 품사 표시만 적으면 오답" }
 ]

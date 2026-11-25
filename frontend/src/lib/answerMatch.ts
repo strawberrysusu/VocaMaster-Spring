@@ -45,7 +45,8 @@ const SIMPLE_PAREN = /[(（]([^()（）,，;；/／・:：.=]*)[)）]/g
 // eslint-disable-next-line no-misleading-character-class -- 폭 없는 글자를 한 글자씩 지우려는 것 (이모지처럼 이어 붙인 글자가 아님)
 const ZERO_WIDTH = /[\u200B\u200C\u200D\u2060\uFEFF]/g
 const INNER_PAREN = /[(（][^()（）]*[)）]/g
-const PART_OF_SPEECH = new RegExp('(^|[^A-Za-z])(?:n|v|a|ad|adv|adj|prep|conj|pron|int|phr|pl)\\.(?=' + SPACE + '|$)', 'g')
+// 영어 품사 표시 — aux.(조동사)는 11/25 추가(ADR-066 보완 2: might "aux. ~일지도 모른다"가 덱 정답 그대로 적어도 오답이었다)
+const PART_OF_SPEECH = new RegExp('(^|[^A-Za-z])(?:n|v|a|ad|adv|adj|prep|conj|pron|int|phr|pl|aux)\\.(?=' + SPACE + '|$)', 'g')
 const CIRCLED_NUMBER = /[①-⑳]/g
 const SEPARATORS = /[,，;；/／・]/
 const TILDE = /[~～〜]/g
